@@ -19,7 +19,7 @@ x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=666)
 
 from sklearn.linear_model import LogisticRegression
 
-# 没有使用交叉验证选正则项值（roc_auc评分标准）  或  直接使用 LogisticRegressionCV 类自带的交叉验证功能。
+# 没有使用交叉验证选正则项值（roc_auc评分标准）  或  直接使用 LogisticRegressionCV 类自带的交叉验证功能
 log_reg = LogisticRegression()
 log_reg.fit(x_train, y_train)
 
