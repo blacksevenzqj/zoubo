@@ -56,12 +56,23 @@ print("-------------------------------------------------------------------------
 # 2、使用sklearn包：
 from sklearn.ensemble import VotingClassifier
 
-# hard：少数服从多数
+# 2.1、hard：少数服从多数
 voting_clf = VotingClassifier(estimators=[
     ('log_clf', LogisticRegression()),
     ('svm_clf', SVC()),
-    ('dt_clf', DecisionTreeClassifier())
+    ('dt_clf', DecisionTreeClassifier(random_state=666))
 ], voting='hard')
 
 voting_clf.fit(X_train, y_train)
 print(voting_clf.score(X_text, y_test))
+
+
+# 2.2、SoftVoting：权值
+voting_clf2 = VotingClassifier(estimators=[
+    ('log_clf', LogisticRegression()),
+    ('svm_clf', SVC(probability=True)),
+    ('dt_clf', DecisionTreeClassifier(random_state=666))
+], voting='soft')
+voting_clf2.fit(X_train, y_train)
+print(voting_clf2.score(X_text, y_test))
+
