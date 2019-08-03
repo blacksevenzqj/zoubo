@@ -21,7 +21,7 @@ from sklearn.linear_model import LogisticRegression
 
 # 没有使用交叉验证选正则项值（roc_auc评分标准）  或  直接使用 LogisticRegressionCV 类自带的交叉验证功能
 log_reg = LogisticRegression()
-log_reg.fit(x_train, y_train)
+log_reg.fit(x_train, y_train) # 模型训练时：是不用阈值的，具体细看损失函数及其求偏导的过程。
 
 score = log_reg.score(x_test, y_test) # 直接求 准确率
 # print(score)
