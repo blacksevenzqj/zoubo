@@ -24,6 +24,7 @@ if __name__ == "__main__":
 
     mpl.rcParams['font.sans-serif'] = ['SimHei']
     mpl.rcParams['axes.unicode_minus'] = False
+
     plt.figure(facecolor='w')
     plt.plot(x, y, 'r*', markersize=10, markeredgecolor='k', label='实际值')
     plt.plot(x_test, y_hat, 'g-', linewidth=2, label='预测值')

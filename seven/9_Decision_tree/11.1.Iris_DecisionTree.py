@@ -68,6 +68,9 @@ if __name__ == "__main__":
     # f.write(graph.create_png())
     # f.close()
 
+    # 生成JPG图片：CMD命令行中执行：dot -Tjpg -o new.jpg iris.dot
+
+
     # 画图
     N, M = 100, 100  # 横纵各采样多少个值
     x1_min, x2_min = x.min() # x.iloc[:,0].min(), x.iloc[:,1].min() --- 4.3 2.0
