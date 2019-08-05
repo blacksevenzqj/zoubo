@@ -46,14 +46,16 @@ if __name__ == "__main__":
         t2 = np.linspace(x2_min, x2_max, M)
         x1, x2 = np.meshgrid(t1, t2)  # 生成网格采样点
         x_show = np.stack((x1.flat, x2.flat), axis=1)  # 测试点
+        y_show_hat = model.predict(x_show)
+        y_show_hat = y_show_hat.reshape(x1.shape)
+
 
         cm_light = mpl.colors.ListedColormap(['#A0FFA0', '#FFA0A0', '#A0A0FF'])
         cm_dark = mpl.colors.ListedColormap(['g', 'r', 'b'])
-        y_hat = model.predict(x_show)
-        y_hat = y_hat.reshape(x1.shape)
+
         plt.subplot(2, 3, i+1)
-        plt.contour(x1, x2, y_hat, colors='k', levels=[0, 1], antialiased=True, linewidths=1)
-        plt.pcolormesh(x1, x2, y_hat, cmap=cm_light)  # 预测值
+        plt.contour(x1, x2, y_show_hat, colors='k', levels=[0, 1], antialiased=True, linewidths=1)
+        plt.pcolormesh(x1, x2, y_show_hat, cmap=cm_light)  # 预测值
         plt.scatter(x_train[pair[0]], x_train[pair[1]], c=y_train, s=20, edgecolors='k', cmap=cm_dark, label=u'训练集')
         plt.scatter(x_test[pair[0]], x_test[pair[1]], c=y_test, s=80, marker='*', edgecolors='k', cmap=cm_dark, label=u'测试集')
         plt.xlabel(iris_feature[pair[0]], fontsize=12)

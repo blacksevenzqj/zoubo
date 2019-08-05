@@ -7,38 +7,51 @@ import matplotlib.pyplot as plt
 from sklearn.tree import DecisionTreeRegressor
 
 
+# “10、决策树和随机森林实践.mp4”：2小时10分钟
+
+# 多输出决策树回归模型
+
 if __name__ == "__main__":
-    N = 400
+    N = 400 # 400
     x = np.random.rand(N) * 8 - 4     # [-4,4)
-    x = np.random.rand(N) * 4*np.pi     # [-4,4)
+    x = np.random.rand(N) * 4 * np.pi     # [-4,4)
     x.sort()
-    print(x)
+    # print(x)
     print('====================')
+
+    # Z字型
     # y1 = np.sin(x) + 3 + np.random.randn(N) * 0.1
     # y2 = np.cos(0.3*x) + np.random.randn(N) * 0.01
+
+    # 圆形
     # y1 = np.sin(x) + np.random.randn(N) * 0.05
     # y2 = np.cos(x) + np.random.randn(N) * 0.1
-    y1 = 16 * np.sin(x) ** 3 + np.random.randn(N)*0.5
+
+    # 心型
+    y1 = 16 * np.sin(x) ** 3 + np.random.randn(N) * 0.5
     y2 = 13 * np.cos(x) - 5 * np.cos(2*x) - 2 * np.cos(3*x) - np.cos(4*x) + np.random.randn(N)*0.5
+
     np.set_printoptions(suppress=True)
-    print(y1)
-    print(y2)
+    # print(y1)
+    # print(y2)
     y = np.vstack((y1, y2)).T
-    print(y)
-    print('Data = \n', np.vstack((x, y1, y2)).T)
+    # print(y)
+    # print('Data = \n', np.vstack((x, y1, y2)).T)
     print('=================')
     x = x.reshape(-1, 1)  # 转置后，得到N个样本，每个样本都是1维的
 
     deep = 10
+    # 由于y是2列，所以训练的模型的𝜃 也对应着 改变。
     reg = DecisionTreeRegressor(criterion='mse', max_depth=deep)
     dt = reg.fit(x, y)
 
     x_test = np.linspace(x.min(), x.max(), num=1000).reshape(-1, 1)
-    print(x_test)
-    y_hat = dt.predict(x_test)
-    print(y_hat)
+    # print(x_test)
+    y_hat = dt.predict(x_test) # 由于训练出来的模型是针对 2列y的，所以预测输出的y_hat也是2列的。
+    # print(y_hat)
     mpl.rcParams['font.sans-serif'] = ['SimHei']
     mpl.rcParams['axes.unicode_minus'] = False
+
     plt.figure(facecolor='w')
     plt.scatter(y[:, 0], y[:, 1], c='r', marker='s', edgecolor='k', s=60, label='真实值', alpha=0.8)
     plt.scatter(y_hat[:, 0], y_hat[:, 1], c='g', marker='o', edgecolor='k', edgecolors='g', s=30, label='预测值', alpha=0.8)

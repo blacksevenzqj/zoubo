@@ -143,7 +143,7 @@ from sklearn.metrics import recall_score
 recallScore = recall_score(y_test, y_log_predict)
 print(recallScore)
 
-# 多分类综合指标
+# 多分类综合指标：只有这个指标能计算多分类，以上的都是计算二分类的
 from sklearn.metrics import classification_report
 classificationReport = classification_report(y_test, y_log_predict)
 print(classificationReport)

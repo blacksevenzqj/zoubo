@@ -16,7 +16,7 @@ if __name__ == "__main__":
     x = x.reshape(-1, 1)
     print(x)
 
-    dt = DecisionTreeRegressor(criterion='mse', max_depth=9) # 决策树回归：均方误差
+    dt = DecisionTreeRegressor(criterion='mse', max_depth=9) # 决策树回归：以均方误差最小值为分割条件
     dt.fit(x, y)
     # 因为 上面生成100个随机数，数值范围[-3,3)。所以这里范围也是[-3,3)，50个数
     x_test = np.linspace(-3, 3, 50).reshape(-1, 1)
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # 比较决策树的深度影响
     depth = [2, 4, 6, 8, 10]
     clr = 'rgbmy'
-    dtr = DecisionTreeRegressor(criterion='mse')
+    dtr = DecisionTreeRegressor(criterion='mse') # 决策树回归：以均方误差最小值为分割条件
     plt.figure(facecolor='w')
     plt.plot(x, y, 'ro', ms=5, mec='k', label='实际值')
     x_test = np.linspace(-3, 3, 50).reshape(-1, 1)
