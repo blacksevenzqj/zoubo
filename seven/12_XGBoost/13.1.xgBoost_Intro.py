@@ -5,6 +5,8 @@ import xgboost as xgb
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 
+# 52分钟
+
 # 1、xgBoost的基本使用
 # 2、自定义损失函数的梯度和二阶导
 # 3、binary:logistic/logitraw
@@ -30,20 +32,20 @@ if __name__ == "__main__":
     print(type(data_train))
 
     # # 设置参数
-    # param = {'max_depth': 3, 'eta': 1, 'silent': 1, 'objective': 'binary:logistic'} # logitraw
-    # # param = {'max_depth': 3, 'eta': 0.3, 'silent': 1, 'objective': 'reg:logistic'}
-    # watchlist = [(data_test, 'eval'), (data_train, 'train')]
-    # n_round = 7
-    # # bst = xgb.train(param, data_train, num_boost_round=n_round, evals=watchlist)
-    # bst = xgb.train(param, data_train, num_boost_round=n_round, evals=watchlist, obj=g_h, feval=error_rate)
-    # 
-    # # 计算错误率
-    # y_hat = bst.predict(data_test)
-    # y = data_test.get_label()
-    # print(y_hat)
-    # print(y)
-    # error = sum(y != (y_hat > 0.5))
-    # error_rate = float(error) / len(y_hat)
-    # print('样本总数：\t', len(y_hat))
-    # print('错误数目：\t%4d' % error)
-    # print('错误率：\t%.5f%%' % (100*error_rate))
+    param = {'max_depth': 3, 'eta': 1, 'silent': 1, 'objective': 'binary:logistic'} # logitraw
+    # param = {'max_depth': 3, 'eta': 0.3, 'silent': 1, 'objective': 'reg:logistic'}
+    watchlist = [(data_test, 'eval'), (data_train, 'train')]
+    n_round = 7
+    # bst = xgb.train(param, data_train, num_boost_round=n_round, evals=watchlist)
+    bst = xgb.train(param, data_train, num_boost_round=n_round, evals=watchlist, obj=g_h, feval=error_rate)
+
+    # 计算错误率
+    y_hat = bst.predict(data_test)
+    y = data_test.get_label()
+    print(y_hat)
+    print(y)
+    error = sum(y != (y_hat > 0.5))
+    error_rate = float(error) / len(y_hat)
+    print('样本总数：\t', len(y_hat))
+    print('错误数目：\t%4d' % error)
+    print('错误率：\t%.5f%%' % (100*error_rate))

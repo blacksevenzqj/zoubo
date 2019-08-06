@@ -27,7 +27,6 @@ test_data = pd.read_csv('C:\\Users\\dell\\Desktop\\titanic\\test.csv')
 # train_data['Survived'].value_counts().plot.pie(autopct = '%1.2f%%') # 342/891
 
 
-
 # 2. 缺失值处理的方法
 # 2.1、Embarked---在哪上船 属性：只有2个缺失值，使用众数填充。
 # train_data.Embarked[train_data.Embarked.isnull()] = train_data.Embarked.dropna().mode().values # 889 -> 891
@@ -52,7 +51,7 @@ train_data.loc[train_data['Age'].isnull(), ['Age']] = predictAges
 # print(train_data.info())
 
 
-
+'''
 # 3. 分析数据关系
 # 3.1、性别与是否生存的关系 Sex
 print(train_data.groupby(['Sex', 'Survived'])['Survived'].count())
@@ -168,4 +167,4 @@ train_data = pd.concat([train_data, age_bin_dummies_df], axis=1)
 
 
 train_data.to_csv('C:\\Users\\dell\\Desktop\\titanic\\out\\train_data.csv')
-
+'''

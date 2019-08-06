@@ -129,12 +129,27 @@ from sklearn.metrics import confusion_matrix
 # print(10 ** -2)
 
 
-y_true = [2, 1, 0, 1, 2, 0]
-y_pred = [2, 0, 0, 1, 2, 1]
-c = confusion_matrix(y_true, y_pred, labels=[0,1,2])
-print(c)
+# y_true = [2, 1, 0, 1, 2, 0]
+# y_pred = [2, 0, 0, 1, 2, 1]
+# c = confusion_matrix(y_true, y_pred, labels=[0,1,2])
+# print(c)
+#
+# y_true = ["cat", "ant", "cat", "cat", "ant", "bird"]
+# y_pred = ["ant", "ant", "cat", "cat", "ant", "cat"]
+# c = confusion_matrix(y_true, y_pred, labels=["ant", "bird", "cat"])
+# print(c)
 
-y_true = ["cat", "ant", "cat", "cat", "ant", "bird"]
-y_pred = ["ant", "ant", "cat", "cat", "ant", "cat"]
-c = confusion_matrix(y_true, y_pred, labels=["ant", "bird", "cat"])
-print(c)
+# e = 0.6
+# e1 = (1 - e) / e
+# print(e1)
+# a = np.log2(e1)
+# print(a)
+
+
+e = 0.55
+e1 = (1 - e) / e
+print(e1)
+a = np.log2(e1)
+print(a)
+
+# print(np.exp(-0.58))
