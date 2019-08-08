@@ -36,8 +36,13 @@ from sklearn.metrics import confusion_matrix
 # b = np.sum(np.exp([1,-2,0]))
 # print(a / b)
 
-# table = pd.DataFrame(np.zeros((4,2)), index=['a','b','c','d'], columns=['left', 'right'])
-# print(table.values)
+table = pd.DataFrame(np.zeros((4,2)), index=['a','b','c','d'], columns=['left', 'right'])
+print(table.values)
+print(table)
+table["center"] = [1,1,1,1]
+print(table)
+table.to_csv("C:\\Users\\dell\\Desktop\\abc\\sample.csv")
+
 
 # a = [1,2,3]
 # b = a
