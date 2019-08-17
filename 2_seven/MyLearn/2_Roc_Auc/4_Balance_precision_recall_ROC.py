@@ -188,9 +188,9 @@ thresholds = np.arange(np.min(decision_scores), np.max(decision_scores), 0.1)
 for threshold in thresholds:
     my_predict = np.array(decision_scores >= threshold, dtype='int')
     precisions.append(precision_score(y_test, my_predict))
-    recalls.append(recall_score(y_test, my_predict))
+    recalls.append(recall_score(y_test, my_predict)) # TPR
     f1Scores.append(f1_score(y_test, my_predict))
-    tprs.append(TPR(y_test, my_predict))
+    tprs.append(TPR(y_test, my_predict)) # recalls
     fprs.append(FPR(y_test, my_predict))
     # print(confusion_matrix(y_test, my_predict))
 
@@ -212,18 +212,47 @@ from sklearn.metrics import roc_auc_score
 
 rocAucScore = roc_auc_score(y_test, decision_scores)
 
+# 1.4、计算KS值及其阈值：KS=max(TPR-FPR)
+print(len(thresholds), len(recalls), len(fprs))
+tempValue = 0.00
+maxKsValue = 0.00
+maxKsThresholds = 0.00
+recallsValue = 0.00
+fprsValue = 0.00
+for i in np.arange(len(thresholds)):
+    tempValue = abs(recalls[i] - fprs[i])
+    if tempValue > maxKsValue:
+        maxKsValue = tempValue
+        maxKsThresholds = thresholds[i]
+        recallsValue = recalls[i]
+        fprsValue = fprs[i]
+print('max(TPR-FPR) = %.6f，' % maxKsValue, '最大阈值 = %.6f' % maxKsThresholds)
+
+# 1.5、计算F1分数最大值及其阈值：
+maxF1ScoresValue = max(f1Scores)
+maxF1ScoresIndex = f1Scores.index(max(f1Scores)) # 从左到右：第一个出现的最大数的索引
+maxF1Thresholds = thresholds[maxF1ScoresIndex]
+print('F1最大值 = %.6f，' % maxF1ScoresValue, '最大阈值 = %.6f' % maxF1Thresholds)
+# 1.5.1、计算F1分数最大值阈值 与 KS值阈值 距离：
+diffValue = maxF1Thresholds - maxKsThresholds
+print('F1最大值阈值 - KS阈值 = %.6f' % diffValue)
+
 
 fig = plt.figure(figsize = (24,12))
 # 1、A1图
+# 以阈值为横坐标，分别以TPR和FPR的值为纵坐标，就可以画出两个曲线，这就是K-S曲线
 ax1 = fig.add_subplot(2,2,1)
 plt.plot(thresholds, precisions, color = 'blue', label='精准率')
 plt.plot(thresholds, recalls, color='black', label='召回率/TPR')
-plt.plot(thresholds, f1Scores, color='green', label='F1分数')
+plt.plot(thresholds, f1Scores, color='green', label='F1分数阈值 = %.6f' % maxF1Thresholds)
 plt.plot(thresholds, fprs, color='pink', label='FPR')
+plt.plot((maxKsThresholds,maxKsThresholds), (recallsValue,fprsValue), c='r', lw=1.5, ls='--', alpha=0.7, label='KS阈值 = %.6f' % maxKsThresholds)
+plt.plot((maxKsThresholds,maxF1Thresholds), (maxF1ScoresValue,maxF1ScoresValue), c='purple', lw=1.5, ls='-', alpha=0.7, label='(F1-KS)阈值 = %.4f' % diffValue)
 plt.legend()  # 图例
 plt.xlabel('阈值')  # x轴标签
-plt.ylabel('精准率、召回率/TPR、F1分数、FPR') # y轴标签
-plt.title('手动-阈值与精准率、召回率/TPR、F1分数、FPR')  # 图名
+plt.ylabel('精准率、召回率/TPR、F1分数、FPR、KS') # y轴标签
+plt.title('手动-阈值与精准率、召回率/TPR、F1分数、FPR、KS=max(TPR-FPR)')  # 图名
+
 
 # 2、A2图
 ax2 = fig.add_subplot(2,2,2)
@@ -244,7 +273,7 @@ plt.title('手动-ROC曲线')  # 图名
 # 4、B2图
 ax4 = fig.add_subplot(2,2,4)
 plt.plot(fprs2, tprs2, color='purple', label='AUC=%.3f' % rocAucScore)
-plt.plot((0, 1), (0, 1), c='b', lw=1.5, ls='--', alpha=0.7)
+plt.plot((0, 1), (0, 1), c='b', lw=1.5, ls='--', alpha=0.7) # 横轴fprs2：0→1范围；竖轴tprs2：0→1范围
 plt.xlabel('FPR')  # x轴标签
 plt.ylabel('TPR') # y轴标签
 plt.grid(b=True)

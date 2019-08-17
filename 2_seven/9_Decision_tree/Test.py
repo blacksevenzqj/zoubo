@@ -16,15 +16,18 @@ import pydotplus
 from sklearn.metrics import confusion_matrix
 
 
-print(np.log2(8) + np.log2(8))
-print(np.log2(64))
-print(np.log10(500) + np.log10(500))
-print(np.log10(500 * 500))
-print(2 * np.log10(500))
-print(np.log10(500)-np.log10(200))
-print(np.log10(800)-np.log10(500))
+# print(np.log2(8) + np.log2(8))
+# print(np.log2(64))
+# print(np.log10(500) + np.log10(500))
+# print(np.log10(500 * 500))
+# print(2 * np.log10(500))
+# print(np.log10(500)-np.log10(200))
+# print(np.log10(800)-np.log10(500))
 
 # print(np.log(0))
+
+# ccc = [0,1,3,1,2,3,3]
+# print(max(ccc), ccc.index(max(ccc)))
 
 # feature_pairs = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]
 # for i, pair in enumerate(feature_pairs):
@@ -161,10 +164,10 @@ print(np.log10(800)-np.log10(500))
 # print(a)
 
 
-e = 0.55
-e1 = (1 - e) / e
-print(e1)
-a = np.log2(e1)
-print(a)
+# e = 0.55
+# e1 = (1 - e) / e
+# print(e1)
+# a = np.log2(e1)
+# print(a)
 
 # print(np.exp(-0.58))
