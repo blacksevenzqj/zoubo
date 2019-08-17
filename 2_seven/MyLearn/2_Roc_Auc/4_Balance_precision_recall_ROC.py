@@ -217,12 +217,13 @@ fig = plt.figure(figsize = (24,12))
 # 1、A1图
 ax1 = fig.add_subplot(2,2,1)
 plt.plot(thresholds, precisions, color = 'blue', label='精准率')
-plt.plot(thresholds, recalls, color='black', label='召回率')
+plt.plot(thresholds, recalls, color='black', label='召回率/TPR')
 plt.plot(thresholds, f1Scores, color='green', label='F1分数')
+plt.plot(thresholds, fprs, color='pink', label='FPR')
 plt.legend()  # 图例
 plt.xlabel('阈值')  # x轴标签
-plt.ylabel('精准率、召回率、F1分数') # y轴标签
-plt.title('手动-阈值与精准率、召回率、F1分数')  # 图名
+plt.ylabel('精准率、召回率/TPR、F1分数、FPR') # y轴标签
+plt.title('手动-阈值与精准率、召回率/TPR、F1分数、FPR')  # 图名
 
 # 2、A2图
 ax2 = fig.add_subplot(2,2,2)

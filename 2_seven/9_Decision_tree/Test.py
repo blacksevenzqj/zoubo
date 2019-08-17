@@ -16,6 +16,16 @@ import pydotplus
 from sklearn.metrics import confusion_matrix
 
 
+print(np.log2(8) + np.log2(8))
+print(np.log2(64))
+print(np.log10(500) + np.log10(500))
+print(np.log10(500 * 500))
+print(2 * np.log10(500))
+print(np.log10(500)-np.log10(200))
+print(np.log10(800)-np.log10(500))
+
+# print(np.log(0))
+
 # feature_pairs = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]]
 # for i, pair in enumerate(feature_pairs):
 #     print(i, pair)
@@ -36,12 +46,12 @@ from sklearn.metrics import confusion_matrix
 # b = np.sum(np.exp([1,-2,0]))
 # print(a / b)
 
-table = pd.DataFrame(np.zeros((4,2)), index=['a','b','c','d'], columns=['left', 'right'])
-print(table.values)
-print(table)
-table["center"] = [1,1,1,1]
-print(table)
-table.to_csv("C:\\Users\\dell\\Desktop\\abc\\sample.csv")
+# table = pd.DataFrame(np.zeros((4,2)), index=['a','b','c','d'], columns=['left', 'right'])
+# print(table.values)
+# print(table)
+# table["center"] = [1,1,1,1]
+# print(table)
+# table.to_csv("C:\\Users\\dell\\Desktop\\abc\\sample.csv")
 
 
 # a = [1,2,3]
