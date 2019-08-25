@@ -1,3 +1,6 @@
+'''
+分解学习 bank_attrition.py 的代码
+'''
 import pandas as pd
 import numbers
 import numpy as np
