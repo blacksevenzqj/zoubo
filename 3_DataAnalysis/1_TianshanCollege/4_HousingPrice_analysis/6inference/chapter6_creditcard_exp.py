@@ -9,27 +9,21 @@
 #%%
 
 import os
-os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\4_HousingPrice_analysis\6inference")
-# In[1]:
+os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\4_HousingPrice_analysis\6inference")
 
+# In[1]:
 import pandas as pd
 
 house_price_gr = pd.read_csv(r'house_price_gr.csv', encoding='gbk')
 house_price_gr.head()
 
-
 # ## 6.1 参数估计
 # 进行描述性统计分析
-
 # In[2]:
-
 house_price_gr.describe(include='all')
 
-
 # Histograph
-
 # In[3]:
-
 get_ipython().magic('matplotlib inline')
 import seaborn as sns
 from scipy import stats
@@ -84,24 +78,18 @@ plt.grid()
 
 
 # Box Plots
-
 # In[5]:
-
 house_price_gr.plot(kind='box') # Box Plots
 
 
 # 置信度区间估计
-
 # In[6]:
-
 se = house_price_gr.rate.std() / len(house_price_gr) ** 0.5
 LB = house_price_gr.rate.mean() - 1.98 * se
 UB = house_price_gr.rate.mean() + 1.98 * se
 (LB, UB)
 
-
 # In[7]:
-
 # 如果要求任意置信度下的置信区间的话，可以自己编一个函数
 def confint(x, alpha=0.05):
     n = len(x)
@@ -112,11 +100,10 @@ def confint(x, alpha=0.05):
 
 confint(house_price_gr.rate, 0.05)
 
-
 # In[8]:
 # 或者使用DescrStatsW
 d1 = sm.stats.DescrStatsW(house_price_gr.rate)
-d1.tconfint_mean(0.05) # 
+d1.tconfint_mean(0.05) #
 
 # 6.2 假设检验与单样本T检验
 # 当年住宅价格的增长率是否超过了10%的阈值
@@ -170,7 +157,7 @@ Suc1 = creditcard[creditcard['Acc'] == 1]['Income']
 # 第二步:T-test
 # 两样本T检验：equal_var=False/True的设置，没有什么影响
 # 原假设H0为μ0 = μ1，备选假设H1为μ0≠μ1。结果p值<<0.05，所以使用备选假设H1为μ0≠μ1
-stats.stats.ttest_ind(Suc0, Suc1, equal_var=False) 
+stats.stats.ttest_ind(Suc0, Suc1, equal_var=False)
 # Or Try: sm.stats.ttest_ind(gender0, gender1, usevar='pooled')
 
 #%%
@@ -198,7 +185,6 @@ stats.stats.ttest_ind(female, male, equal_var=True)
 
 
 
-
 # ## 6.4 方差分析
 # - 单因素方差分析（edu_class为多分类）
 # In[14]:
@@ -209,6 +195,7 @@ creditcard.groupby('edu_class')[['avg_exp']].describe().T
 # 利用回归模型中的方差分析
 import statsmodels.api as sm
 
+# 两样本T检验
 ana = ols('avg_exp ~ C(edu_class)', creditcard).fit()
 ana.summary()
 
@@ -220,10 +207,11 @@ sm.stats.anova_lm(ols('avg_exp ~ C(edu_class)',data=creditcard).fit())
 
 # 多因素方差分析
 # In[16]:不考虑交互相
+# 连续变量在前，分类变量在后： 因变量Y（连续）~自变量X(分类)
 sm.stats.anova_lm(ols('avg_exp ~ C(edu_class)+C(gender)',data=creditcard).fit())
+
 # In[16]:考虑交互相
 sm.stats.anova_lm(ols('avg_exp ~ C(edu_class)+C(gender)+C(edu_class)*C(gender)',data=creditcard).fit())
-
 
 
 
