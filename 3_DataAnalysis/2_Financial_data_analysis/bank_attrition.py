@@ -53,9 +53,9 @@ def NumVarPerf(df, col, target, filepath, truncation=False):
     ax.margins(0.05)
     ax.set_ylim(bottom=0)
     pyplot.legend(loc='upper right')
-    figSavePath = filepath+str(col)+'.png'
-    pyplot.savefig(figSavePath)
-    pyplot.close(1)
+#    figSavePath = filepath+str(col)+'.png' # 机器会炸
+#    pyplot.savefig(figSavePath)
+    pyplot.close(1) # 只能关闭图片显示，不能关闭图片保存。
 
 
 def CharVarPerf(df,col,target,filepath):
@@ -86,9 +86,9 @@ def CharVarPerf(df,col,target,filepath):
     descStats.percent.plot(kind='bar', color='blue', ax=ax2, width=0.2,position = 1)
     ax.set_ylabel('churn rate')
     ax2.set_ylabel('percentage')
-    figSavePath = filepath+str(col)+'.png'
-    pyplot.savefig(figSavePath)
-    pyplot.close(1)
+#    figSavePath = filepath+str(col)+'.png' # 机器会炸
+#    pyplot.savefig(figSavePath)
+    pyplot.close(1) # 只能关闭图片显示，不能关闭图片保存。
 
 
 
@@ -133,6 +133,7 @@ for val in numericCols:
 '''
 
 #anova test
+# 连续变量在前，分类变量在后： 自变量X(连续)~因变量Y（分类）
 anova_results = anova_lm(ols('ASSET_MON_AVG_BAL~CHURN_CUST_IND',AllData).fit())
 
 '''
@@ -160,7 +161,7 @@ chisquare(chisqTable['churn'],chisqTable['expected'])
 #use short name to replace the raw name, since the raw names are too long to be shown
 col_to_index = {numericCols[i]:'var'+str(i) for i in range(len(numericCols))}
 #sample from the list of columns, since too many columns cannot be displayed in the single plot
-corrCols = random.sample(numericCols,15)
+corrCols = random.sample(numericCols,6) # 15太多，根本看不清
 sampleDf = AllData[corrCols]
 for col in corrCols:
     sampleDf.rename(columns = {col:col_to_index[col]}, inplace = True)
@@ -168,4 +169,3 @@ for col in corrCols:
 scatter_matrix(sampleDf, alpha=0.2, figsize=(6, 6), diagonal='kde')
 
 
-pyplot.show()
