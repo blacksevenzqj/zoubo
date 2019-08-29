@@ -136,16 +136,18 @@ print('t-statistic=%6.4f, p-value=%6.4f, df=%s' %d1.ttest_mean(0.1))
 creditcard= pd.read_csv(r'creditcard_exp.csv', skipinitialspace=True)
 
 # In[11]:
+# 6.3.1、测试一下 Acc 对 Income 的作用.
 creditcard['Income'].groupby(creditcard['Acc']).describe() # 均值有差异
 
 # In[]:
 from statsmodels.formula.api import ols
 
-# 直接用模型做，P>|t|指标就是 两样本T检验 T-test，等同于如下分开计算。
+# 6.3.1.1、直接用statsmodels包做，P>|t|指标就是 两样本T检验 T-test，等同于如下分开计算。
 ana = ols('Income ~ C(Acc)', creditcard).fit()
 ana.summary()
 
 # In[12]:
+# 6.3.1.2、手动分开计算：
 # 第一步:方差齐次检验（对结果影响不大，不做）
 Suc0 = creditcard[creditcard['Acc'] == 0]['Income']
 Suc1 = creditcard[creditcard['Acc'] == 1]['Income']
@@ -160,17 +162,19 @@ Suc1 = creditcard[creditcard['Acc'] == 1]['Income']
 stats.stats.ttest_ind(Suc0, Suc1, equal_var=False)
 # Or Try: sm.stats.ttest_ind(gender0, gender1, usevar='pooled')
 
+
 #%%
-#测试一下性别对是月均消费的作用.
+# 6.3.2、测试一下 性别 对 月均消费 的作用.
 creditcard['avg_exp'].groupby(creditcard['gender']).describe()
 
 #%%
-# 直接用模型做，P>|t|指标就是 两样本T检验 T-test，等同于如下分开计算。
+#  6.3.2.1、直接用statsmodels包做，P>|t|指标就是 两样本T检验 T-test，等同于如下分开计算。
 ana = ols('avg_exp ~ C(gender)', creditcard).fit()
 ana.summary()
 
 #%%
-#注意对缺失值得处理
+# 6.3.2.2、手动分开计算：
+# 注意对缺失值得处理
 female= creditcard[creditcard['gender'] == 0]['avg_exp'].dropna()
 male = creditcard[creditcard['gender'] == 1]['avg_exp'].dropna()
 #leveneTestRes = stats.levene(female, male, center='median')
@@ -185,14 +189,13 @@ stats.stats.ttest_ind(female, male, equal_var=True)
 
 
 
-# ## 6.4 方差分析
-# - 单因素方差分析（edu_class为多分类）
+# 6.4 方差分析
+# 单因素方差分析（edu_class为多分类） 回归模型中的方差分析
 # In[14]:
 pd.set_option('display.max_columns', None) # 设置显示所有列
 creditcard.groupby('edu_class')[['avg_exp']].describe().T
 
 # In[15]:
-# 利用回归模型中的方差分析
 import statsmodels.api as sm
 
 # 两样本T检验
@@ -212,6 +215,7 @@ sm.stats.anova_lm(ols('avg_exp ~ C(edu_class)+C(gender)',data=creditcard).fit())
 
 # In[16]:考虑交互相
 sm.stats.anova_lm(ols('avg_exp ~ C(edu_class)+C(gender)+C(edu_class)*C(gender)',data=creditcard).fit())
+
 
 
 
