@@ -54,7 +54,7 @@ exp[['Income', 'avg_exp', 'Age', 'dist_home_val']].corr(method='pearson')  # 皮
 # 线性回归算法
 # 简单线性回归
 # In[6]:
-# 两样本T检验: 并通过检验结果 得到 预测值 和 残差
+# ols类计算 线性回归模型 并得到 预测值 和 残差
 '''
 P>|t| 解释：
 原假设是：β1 = 0，备选假设是:β1≠0。样本量<100：α=10%
@@ -116,7 +116,7 @@ print(lm_m.rsquared)
 # 7.3 线性回归的诊断
 # 7.3.1 残差分析
 # In[13]:
-# ols类计算 两样本T检验（并得到 预测值 和 残差）
+# ols类计算 线性回归模型 并得到 预测值 和 残差
 ana1 = ols('avg_exp ~ Age + Income + dist_home_val', data=exp).fit()
 exp['Pred'] = ana1.predict(exp)
 exp['resid'] = ana1.resid  # 残差随着x的增大呈现 喇叭口形状，出现异方差
@@ -124,7 +124,7 @@ exp.plot('Pred', 'resid', kind='scatter')  # Pred = β*Income，随着预测值�
 ana1.summary()
 
 # In[15]:
-# ols类计算 两样本T检验（并得到 预测值 和 残差）
+# ols类计算 线性回归模型 并得到 预测值 和 残差
 # 遇到异方差情况,教科书上会介绍使用加权最小二乘法，但是实际上最常用的是对 被解释变量y 取对数
 # R-squared为0.454
 ana1 = ols('avg_exp ~ Income', exp).fit()
@@ -197,6 +197,7 @@ OLSInfluence(ana3).summary_frame().head()
 exp2['dist_home_val_ln'] = np.log(exp2['dist_home_val'])  # 所住小区房屋均价(万元)|
 exp2['dist_avg_income_ln'] = np.log(exp2['dist_avg_income'])  # 当地人均收入
 
+# ols类计算 线性回归模型
 # 第一次： Income_ln 和 dist_avg_income_ln 是强相关性，必须剔除一个（根据方差膨胀因子）
 # ana5 = ols('''avg_exp_ln ~ Income_ln + dist_home_val_ln + dist_avg_income_ln''', exp2).fit()
 # 第二次
@@ -237,6 +238,7 @@ r2 = ols('dist_avg_income_ln ~ Income_ln + dist_home_val_ln', exog).fit().rsquar
 # dist_avg_income_ln的方差膨胀因子：
 vl = 1. / (1. - r2)
 '''
+# ols类计算 线性回归模型
 # 第一次： Income_ln 和 dist_avg_income_ln 是强相关性，必须剔除一个（根据方差膨胀因子）
 # exog = exp2[['Income_ln', 'dist_home_val_ln','dist_avg_income_ln']]
 # 第二次
@@ -265,7 +267,7 @@ ana7 = forward_select(data=var_select, response='avg_exp_ln')
 print(ana7.rsquared)
 
 # In[32]:
-# 两个样本T检验
+# ols类计算 线性回归模型 包括了 两个样本T检验（还是 方差分析？因为带了 多分类特征）：
 formula8 = '''
 avg_exp_ln ~ dist_avg_income_ln + dist_home_val_ln + 
 C(gender) + C(Ownrent) + C(Selfempl) + C(edu_class)
@@ -274,7 +276,7 @@ ana8 = ols(formula8, exp2).fit()
 ana8.summary()
 
 # In[33]:
-# 两个样本T检验，有交互项
+# ols类计算 线性回归模型 包括了 两个样本T检验（还是 方差分析？因为带了 多分类特征），有交互项：
 formula9 = '''
 avg_exp_ln ~ dist_avg_income_ln + dist_home_val_ln + 
 C(Selfempl) + C(gender):C(edu_class)
