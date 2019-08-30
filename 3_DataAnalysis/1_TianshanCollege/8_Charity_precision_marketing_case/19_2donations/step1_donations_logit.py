@@ -27,7 +27,7 @@ from woe import WoE  # 从本地导入
 import os
 
 os.chdir(
-    r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\8_Charity_precision_marketing_case\19_2donations")
+    r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\19_2donations")
 
 # In[2]:
 # 创建一个列表，用来保存所有的建模数据清洗的相关信息
@@ -192,18 +192,37 @@ print(var_d_s)
 注意：因为TARGET_B特征是二分类，取值区间[0,1]，所以求均值 就是 求DemCluster名族的每个类别中 TARGET_B=1的 频次（概率）  
 '''
 DemCluster_grp = model_data[['DemCluster', 'TARGET_B']].groupby('DemCluster', as_index=False)
+# Index索引 变成了 DemCluster
 DemC_C = DemCluster_grp['TARGET_B'].agg({'mean': 'mean', 'count': 'count'}).sort_values("mean")
 
 # In[33]:
 # 自己做的分箱，和 目标意思 不一致，就是练习一下
-##print(4089 // (len(model_data) / 10))
-##print(DemC_C.dtypes)
-##print(model_data['DemCluster'].value_counts(ascending=True))
-# qcats1 = pd.qcut(model_data['DemCluster'].value_counts(ascending=True), q=10, labels=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',]) # Series
+# A、按样本的counts分桶（不能均分样本）
+# model_data['DemCluster'].value_counts(ascending=True)
+## pd.qcut得到Series： 索引是 value_counts 的类别（DemCluster）； 值是 value_counts 的统计值。
+# qcats1 = pd.qcut(model_data['DemCluster'].value_counts(ascending=True), q=10, labels=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) # Series
 # print(qcats1)
-# print(qcats1.value_counts())
+# print(qcats1.value_counts()) # 每个桶中分别有几个 名族
 # X_New = X.copy()
-# X_New["MyDemCluster"] = X["DemCluster"].map(qcats1) # 两个Series索引对齐查找赋值
+## X["DemCluster"]的值  对齐  qcats1的索引 （2个都是Series）
+# X_New["MyDemCluster"] = X["DemCluster"].map(qcats1)
+# print(X_New["MyDemCluster"].value_counts()) # 每个桶中分别有几个 样本
+
+
+# B、按样本分桶（能均分样本）
+# 错的，索引对不齐
+# qcats2 = pd.DataFrame(pd.qcut(model_data['DemCluster'],q=10), index=model_data['DemCluster'])
+# qcats2 = pd.qcut(model_data['DemCluster'],q=10).reindex(model_data['DemCluster'])
+# print(qcats2['DemCluster'].value_counts())
+
+qcats3 = pd.qcut(model_data['DemCluster'], q=10, labels=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])
+print(qcats3.value_counts())
+X_New2 = X.copy()
+X_New2['myIndex'] = X.index
+# X["myIndex"]的值  对齐  qcats3的索引 （2个都是Series）
+X_New2["MyDemCluster"] = X_New2['myIndex'].map(qcats3)
+X_New2.drop('myIndex', axis=1, inplace=True)
+print(X_New2["MyDemCluster"].value_counts())
 
 # In[25]:
 # '''
@@ -229,7 +248,7 @@ print(DATA_CLEAN)
 # In[28]:
 # X中的名族字段 替换为 分箱后的名族字段
 X["DemCluster"] = X["DemCluster"].map(DATA_CLEAN[1]['new_DemCluster'])
-# X["DemCluster"] = X["DemCluster"].map(DemCluster_new_class['new_DemCluster']) # 两个Series索引对齐查找赋值
+# X["DemCluster"] = X["DemCluster"].map(DemCluster_new_class['new_DemCluster'])
 
 # In[29]:
 X.head()
