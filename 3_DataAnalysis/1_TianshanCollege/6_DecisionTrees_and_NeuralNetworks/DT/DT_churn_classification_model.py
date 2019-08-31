@@ -7,7 +7,7 @@
 # [scikit-learn](http://scikit-learn.org/stable/)
 
 # subscriberID="个人客户的ID"
-# churn="是否流失：1=流失";
+# churn="是否流失：1=流失"; 因变量Y（分类）
 # Age="年龄"
 # incomeCode="用户居住区域平均收入的代码"
 # duration="在网时长"
@@ -31,7 +31,7 @@ import numpy as np
 import os
 
 os.chdir(
-    r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\6_DecisionTrees_and_NeuralNetworks\DT")
+    r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\6_DecisionTrees_and_NeuralNetworks\DT")
 
 # In[2]:
 churn = pd.read_csv('telecom_churn.csv')  # 读取已经整理好的数据

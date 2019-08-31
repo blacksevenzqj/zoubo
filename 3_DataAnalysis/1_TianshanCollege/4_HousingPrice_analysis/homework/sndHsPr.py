@@ -25,7 +25,7 @@ from statsmodels.formula.api import ols
 
 import os
 
-os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\4_HousingPrice_analysis\homework")
+os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\4_HousingPrice_analysis\homework")
 
 # 1 描述
 # In[17]:
@@ -250,7 +250,10 @@ plt.scatter(datA.AREA, datA.price, marker='.')
 data1 = array(datA['price'])
 data2 = array(datA['AREA'])
 datB = array([data1, data2])
+# 1、np.corrcoef(矩阵A) 只能进行 两个特征之间 的皮尔森相关度计算
+# 2、np.corrcoef(矩阵A)中 矩阵A 必须是：行是特征，列是样本
 print(corrcoef(datB))  # 基于numpy的皮尔森相关系数矩阵
+# min_periods : int, optional，指定每列所需的最小观察数，可选，目前只适合用在pearson和spearman方法。
 print(datA.corr(method='pearson', min_periods=1))  # 基于DataFrame的皮尔森相关系数矩阵
 
 # In[58]:看到从左至右逐渐稀疏的散点图,第一反应是对Y取对数
@@ -265,6 +268,8 @@ plt.ylabel("单位面积房价（取对数后）")
 data1 = array(datA['price_ln'])
 data2 = array(datA['AREA'])
 datB = array([data1, data2])
+# 1、np.corrcoef(矩阵A) 只能进行 两个特征之间 的皮尔森相关度计算
+# 2、np.corrcoef(矩阵A)中 矩阵A 必须是：行是特征，列是样本
 corrcoef(datB)
 
 # In[58]:
@@ -278,9 +283,13 @@ plt.ylabel("单位面积房价（取对数后）")
 
 # 求AREA_ln和price_ln的相关系数矩阵
 data1 = array(datA['price_ln'])
+print(data1)
 data2 = array(datA['AREA_ln'])
 datB = array([data1, data2])
+# 1、np.corrcoef(矩阵A) 只能进行 两个特征之间 的皮尔森相关度计算
+# 2、np.corrcoef(矩阵A)中 矩阵A 必须是：行是特征，列是样本
 print(corrcoef(datB))  # 基于numpy的皮尔森相关系数矩阵
+# min_periods : int, optional，指定每列所需的最小观察数，可选，目前只适合用在pearson和spearman方法。
 print(datA[['AREA_ln', 'price_ln']].corr(method='pearson', min_periods=1))  # 基于DataFrame的皮尔森相关系数矩阵
 
 

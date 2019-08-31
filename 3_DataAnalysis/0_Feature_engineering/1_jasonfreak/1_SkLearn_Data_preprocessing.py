@@ -128,12 +128,13 @@ from sklearn.preprocessing import PolynomialFeatures
 pdata = PolynomialFeatures().fit_transform(aaa)
 # print(pdata)
 
+
 # 2.5.2、基于函数的数据变换可以使用统一的方式完成，使用preproccessing库的FunctionTransformer对数据进行函数转换的代码如下：
 from numpy import log1p, expm1
 from sklearn.preprocessing import FunctionTransformer
 # 自定义转换函数为对数函数的数据变换
 # 第一个参数是单变元函数：可以是对数变换：np.log1p、np.log；可以是指数变换：np.exp 等等。
-fdata = FunctionTransformer(np.exp).fit_transform(aaa)
+fdata = FunctionTransformer(log1p).fit_transform(aaa)
 print(fdata)
 print(np.log(aaa + 1))
 '''
