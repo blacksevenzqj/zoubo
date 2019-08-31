@@ -197,7 +197,7 @@ DemC_C = DemCluster_grp['TARGET_B'].agg({'mean': 'mean', 'count': 'count'}).sort
 
 # In[33]:
 # 自己做的分箱，和 目标意思 不一致，就是练习一下
-# A、按样本的counts分桶（不能均分样本）
+# A、按名族类别的count值的区间 对 名族代号 进行分箱（不能均分样本）
 # model_data['DemCluster'].value_counts(ascending=True)
 ## pd.qcut得到Series： 索引是 value_counts 的类别（DemCluster）； 值是 value_counts 的统计值。
 # qcats1 = pd.qcut(model_data['DemCluster'].value_counts(ascending=True), q=10, labels=['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) # Series
@@ -209,7 +209,7 @@ DemC_C = DemCluster_grp['TARGET_B'].agg({'mean': 'mean', 'count': 'count'}).sort
 # print(X_New["MyDemCluster"].value_counts()) # 每个桶中分别有几个 样本
 
 
-# B、按样本分桶（能均分样本）
+# B、按名族类别的样本数量分桶（能均分样本）
 # 错的，索引对不齐
 # qcats2 = pd.DataFrame(pd.qcut(model_data['DemCluster'],q=10), index=model_data['DemCluster'])
 # qcats2 = pd.qcut(model_data['DemCluster'],q=10).reindex(model_data['DemCluster'])
