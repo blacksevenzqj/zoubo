@@ -21,7 +21,13 @@ log_reg.fit(x_train, y_train)
 
 score = log_reg.score(x_test, y_test) # 直接求 准确率
 print("准确率为：", score)
+
 y_log_predict = log_reg.predict(x_test) # 求 预测值
+print("准确率为：", np.sum(y_log_predict == y_test) / len(y_test))
+
+y_log_predict_proba = log_reg.predict_proba(x_test)[:, 1]
+y_log_predict_proba_predict = np.array(y_log_predict_proba >= 0.5, dtype='int')
+print(len(y_test), np.sum(y_log_predict == y_log_predict_proba_predict)) # 可见 默认概率为 0.5
 
 
 def TP(y_true, y_predict):

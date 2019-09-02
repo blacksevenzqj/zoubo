@@ -29,6 +29,8 @@ score = log_reg.score(x_test, y_test) # 直接求 准确率
 y_log_predict = log_reg.predict(x_test) # 求 预测值
 
 y_log_predict_proba = log_reg.predict_proba(x_test)[:,1] # 求 预测值 概率
+y_log_predict_proba_predict = np.array(y_log_predict_proba >= 0.5, dtype='int')
+# print(len(y_test), np.sum(y_log_predict == y_log_predict_proba_predict)) # 可见 默认概率为 0.5
 
 decision_scores = log_reg.decision_function(x_test) # 理解为：线性回归 𝜃x+b 的结果
 
