@@ -247,7 +247,7 @@ plt.plot(thresholds, recalls, color='black', label='召回率/TPR')
 plt.plot(thresholds, f1Scores, color='green', label='F1分数阈值 = %.6f' % maxF1Thresholds)
 plt.plot(thresholds, fprs, color='pink', label='FPR')
 plt.plot((maxKsThresholds,maxKsThresholds), (recallsValue,fprsValue), c='r', lw=1.5, ls='--', alpha=0.7, label='KS阈值 = %.6f' % maxKsThresholds)
-plt.plot((maxKsThresholds,maxF1Thresholds), (maxF1ScoresValue,maxF1ScoresValue), c='purple', lw=1.5, ls='-', alpha=0.7, label='(F1-KS)阈值 = %.4f' % diffValue)
+plt.plot((maxKsThresholds,maxF1Thresholds), (maxF1ScoresValue,maxF1ScoresValue), c='purple', lw=1.5, ls='-', alpha=0.7, label='(F1-KS)的阈值差 = %.4f' % diffValue)
 plt.legend()  # 图例
 plt.xlabel('阈值')  # x轴标签
 plt.ylabel('精准率、召回率/TPR、F1分数、FPR、KS') # y轴标签
