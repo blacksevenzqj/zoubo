@@ -25,9 +25,12 @@ log_reg.fit(x_train, y_train) # 模型训练时：是不用阈值的，具体细
 
 score = log_reg.score(x_test, y_test) # 直接求 准确率
 # print(score)
+
 y_log_predict = log_reg.predict(x_test) # 求 预测值
 
-decision_scores = log_reg.decision_function(x_test) # 线性回归 𝜃x+b 的结果
+y_log_predict_proba = log_reg.predict_proba(x_test)[:,1] # 求 预测值 概率
+
+decision_scores = log_reg.decision_function(x_test) # 理解为：线性回归 𝜃x+b 的结果
 
 
 def TP(y_true, y_predict):
@@ -186,6 +189,7 @@ tprs = []
 fprs = []
 thresholds = np.arange(np.min(decision_scores), np.max(decision_scores), 0.1)
 for threshold in thresholds:
+    # 重点：将 decision_scores（线性回归𝜃x+b的结果） 大于（正预测）  其自身区间中的某一个阈值 的结果 设置为 预测结果
     my_predict = np.array(decision_scores >= threshold, dtype='int')
     precisions.append(precision_score(y_test, my_predict))
     recalls.append(recall_score(y_test, my_predict)) # TPR
@@ -204,13 +208,15 @@ for threshold in thresholds:
 
 # 1.2、自动 创建TPR、FPR 得到 ROC：
 from sklearn.metrics import roc_curve
-
-fprs2, tprs2, thresholds2 = roc_curve(y_test, decision_scores)
+fprs2, tprs2, thresholds2 = roc_curve(y_test, decision_scores) # 自动-thresholds2 和 手动-thresholds 是不完全相同的
+fprs3, tprs3, thresholds3 = roc_curve(y_test, y_log_predict_proba)
+# print(len(fprs2), sum(fprs2 == fprs3)) # 两种方式结果相同
 
 # 1.3、自动 创建AUC面积：Area Under Curve
 from sklearn.metrics import roc_auc_score
-
 rocAucScore = roc_auc_score(y_test, decision_scores)
+rocAucScore3 = roc_auc_score(y_test, y_log_predict_proba)
+# print(rocAucScore, rocAucScore3) # 两种方式结果相同
 
 # 1.4、计算KS值及其阈值：KS=max(TPR-FPR)
 print(len(thresholds), len(recalls), len(fprs))
@@ -227,6 +233,7 @@ for i in np.arange(len(thresholds)):
         recallsValue = recalls[i]
         fprsValue = fprs[i]
 print('max(TPR-FPR) = %.6f，' % maxKsValue, '最大阈值 = %.6f' % maxKsThresholds)
+print('max(TPR-FPR) = %.6f' % abs(np.array(recalls) - np.array(fprs)).max())
 
 # 1.5、计算F1分数最大值及其阈值：
 maxF1ScoresValue = max(f1Scores)
@@ -252,7 +259,6 @@ plt.legend()  # 图例
 plt.xlabel('阈值')  # x轴标签
 plt.ylabel('精准率、召回率/TPR、F1分数、FPR、KS') # y轴标签
 plt.title('手动-阈值与精准率、召回率/TPR、F1分数、FPR、KS=max(TPR-FPR)')  # 图名
-
 
 # 2、A2图
 ax2 = fig.add_subplot(2,2,2)
