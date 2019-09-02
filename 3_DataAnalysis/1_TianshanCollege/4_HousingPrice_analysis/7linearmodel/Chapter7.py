@@ -210,6 +210,8 @@ ana5.bse  # The standard errors of the parameter estimates
 
 
 # The function "statsmodels.stats.outliers_influence.variance_inflation_factor" uses "OLS" to fit data, and it will generates a wrong rsquared. So define it ourselves!
+# 函数“statsmodels.stats.outliers_influence.variance_inflation_factor”使用“OLS”来拟合数据，它将生成错误的rsquared。 所以自己定义：方差膨胀因子公式
+# 一个自变量 和 多个自变量 计算 方差膨胀因子， > 10 表示 该变量多重共线性严重
 # In[27]:
 # 方差膨胀因子 公式：
 def vif(df, col_i):
