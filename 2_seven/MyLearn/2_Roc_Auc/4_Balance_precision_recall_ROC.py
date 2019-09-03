@@ -207,21 +207,8 @@ for threshold in thresholds:
 # print("TPR：", tprs[0:10], '维度：', len(tprs))
 # print("FPR：", fprs[0:10], '维度：', len(fprs))
 
-
-# 1.2、自动 创建TPR、FPR 得到 ROC：
-from sklearn.metrics import roc_curve
-fprs2, tprs2, thresholds2 = roc_curve(y_test, decision_scores) # 自动-thresholds2 和 手动-thresholds 是不完全相同的
-fprs3, tprs3, thresholds3 = roc_curve(y_test, y_log_predict_proba)
-# print(len(fprs2), sum(fprs2 == fprs3)) # 两种方式结果相同
-
-# 1.3、自动 创建AUC面积：Area Under Curve
-from sklearn.metrics import roc_auc_score
-rocAucScore = roc_auc_score(y_test, decision_scores)
-rocAucScore3 = roc_auc_score(y_test, y_log_predict_proba)
-# print(rocAucScore, rocAucScore3) # 两种方式结果相同
-
-# 1.4、计算KS值及其阈值：KS=max(TPR-FPR)
-print(len(thresholds), len(recalls), len(fprs))
+# 1.1.1、计算KS值及其阈值：KS=max(TPR-FPR)
+print("手动计算长度：", len(thresholds), len(recalls), len(fprs))
 tempValue = 0.00
 maxKsValue = 0.00
 maxKsThresholds = 0.00
@@ -237,14 +224,55 @@ for i in np.arange(len(thresholds)):
 print('max(TPR-FPR) = %.6f，' % maxKsValue, '最大阈值 = %.6f' % maxKsThresholds)
 print('max(TPR-FPR) = %.6f' % abs(np.array(recalls) - np.array(fprs)).max())
 
-# 1.5、计算F1分数最大值及其阈值：
+# 1.1.2、计算F1分数最大值及其阈值：
 maxF1ScoresValue = max(f1Scores)
 maxF1ScoresIndex = f1Scores.index(max(f1Scores)) # 从左到右：第一个出现的最大数的索引
 maxF1Thresholds = thresholds[maxF1ScoresIndex]
 print('F1最大值 = %.6f，' % maxF1ScoresValue, '最大阈值 = %.6f' % maxF1Thresholds)
-# 1.5.1、计算F1分数最大值阈值 与 KS值阈值 距离：
+# 1.1.3、计算F1分数最大值阈值 与 KS值阈值 距离：
 diffValue = maxF1Thresholds - maxKsThresholds
 print('F1最大值阈值 - KS阈值 = %.6f' % diffValue)
+
+
+print("-------------------------------------------------------------------------------------------------------")
+
+
+# 1.2、自动 创建TPR、FPR 得到 ROC：
+from sklearn.metrics import roc_curve
+fprs2, tprs2, thresholds2 = roc_curve(y_test, decision_scores) # 自动-thresholds2 和 手动-thresholds 是不完全相同的，非常类似
+fprs3, tprs3, thresholds3 = roc_curve(y_test, y_log_predict_proba) # 自动-thresholds2 和 自动-thresholds3 是不完全相同的
+# 两种方式：TPR、FPR相同，阈值不相同
+print("自动计算长度1：", len(thresholds2), len(tprs2), len(fprs2))
+print("对比1：TPR、FPR相同，阈值不相同：", len(fprs2), sum(fprs2 == fprs3), len(tprs2), sum(tprs2 == tprs3), len(thresholds2), sum(thresholds2 == thresholds3))
+
+# 1.2.1、自动 计算KS值及其阈值：KS=max(TPR-FPR)
+tempValue_auto = 0.00
+maxKsValue_auto = 0.00
+maxKsThresholds_auto = 0.00
+recallsValue_auto = 0.00
+fprsValue_auto = 0.00
+for i in np.arange(len(thresholds2)):
+    tempValue_auto = abs(tprs2[i] - fprs2[i])
+    if tempValue_auto > maxKsValue_auto:
+        maxKsValue_auto = tempValue_auto
+        maxKsThresholds_auto = thresholds2[i]
+        recallsValue_auto = tprs2[i]
+        fprsValue_auto = fprs2[i]
+print('max(TPR-FPR) = %.6f，' % maxKsValue_auto, '最大阈值 = %.6f' % maxKsThresholds_auto)
+print('max(TPR-FPR) = %.6f' % abs(np.array(tprs2) - np.array(fprs2)).max())
+
+# 1.3、自动 创建AUC面积：Area Under Curve
+from sklearn.metrics import roc_auc_score
+rocAucScore = roc_auc_score(y_test, decision_scores)
+rocAucScore3 = roc_auc_score(y_test, y_log_predict_proba)
+# print(rocAucScore, rocAucScore3) # 两种方式结果相同
+
+# 1.4、自动 创建 召回率/TPR、F1分数（本意是直接创建P-R曲线，可以用上面分开的公式代替的，都测试使用下）
+from sklearn.metrics import precision_recall_curve # P-R曲线
+precisions4, recalls4, thresholds4 = precision_recall_curve(y_test, decision_scores)
+f1Scores4 = f1_score_my(precisions4[:-1], recalls4[:-1])
+print("自动计算长度2：", len(precisions4), len(recalls4), len(thresholds4), len(f1Scores4))
+# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
 
 
 fig = plt.figure(figsize = (24,12))
@@ -264,19 +292,30 @@ plt.title('手动-阈值与精准率、召回率/TPR、F1分数、FPR、KS=max(T
 
 # 2、A2图
 ax2 = fig.add_subplot(2,2,2)
-plt.plot(precisions, recalls, color='purple', label='P-R曲线')
-plt.legend()  # 图例
-plt.xlabel('精准率')  # x轴标签
-plt.ylabel('召回率') # y轴标签
-plt.title('手动-P-R曲线')  # 图名
-
-# 3、B1图
-ax4 = fig.add_subplot(2,2,3)
 plt.plot(fprs, tprs, color='purple', label='ROC曲线')
 plt.legend()  # 图例
 plt.xlabel('FPR')  # x轴标签
 plt.ylabel('TPR') # y轴标签
 plt.title('手动-ROC曲线')  # 图名
+
+
+# 3、B1图
+ax3 = fig.add_subplot(2,2,3)
+# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
+# plt.plot(thresholds4, precisions4[:-1], color = 'blue', label='精准率')
+# plt.plot(thresholds4, recalls4[:-1], color='black', label='召回率')
+# plt.plot(thresholds4, f1Scores4, color='green', label='F1分数')
+# plt.legend()  # 图例
+# plt.xlabel('阈值')  # x轴标签
+# plt.ylabel('精准率、召回率、F1分数') # y轴标签
+# plt.title('自动-阈值与精准率、召回率、F1分数')  # 图名
+plt.plot(thresholds2, tprs2, color='black', label='召回率/TPR')
+plt.plot(thresholds2, fprs2, color='pink', label='FPR')
+plt.plot((maxKsThresholds_auto,maxKsThresholds_auto), (recallsValue_auto,fprsValue_auto), c='r', lw=1.5, ls='--', alpha=0.7, label='KS阈值 = %.6f' % maxKsThresholds_auto)
+plt.legend()  # 图例
+plt.xlabel('阈值')  # x轴标签
+plt.ylabel('精准率、召回率/TPR、F1分数、FPR、KS') # y轴标签
+plt.title('自动-阈值与召回率/TPR、FPR、KS=max(TPR-FPR)')  # 图名
 
 # 4、B2图
 ax4 = fig.add_subplot(2,2,4)
