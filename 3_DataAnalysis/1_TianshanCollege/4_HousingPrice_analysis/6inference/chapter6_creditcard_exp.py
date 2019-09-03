@@ -184,8 +184,7 @@ male = creditcard[creditcard['gender'] == 1]['avg_exp'].dropna()
 stats.stats.ttest_ind(female, male, equal_var=True)
 # 以上是二分类的两样本T检验。
 # 如果是多分类，如edu_class字段，则edu_class的每两个类别组合都要和avg_exp做：两样本T检验。
-# edu_class有4个分类，则总共要做6次（C4^2） 两两类别组合和avg_exp做：两样本T检验。只要有一组检验值远小于α，则证明
-# avg_exp 和 gender 存在关系。
+# edu_class有4个分类，则总共要做6次（C4^2） 两两类别组合和avg_exp做：两样本T检验。只要有一组检验值远小于α，则证明 avg_exp 和 gender 存在关系。
 
 
 
