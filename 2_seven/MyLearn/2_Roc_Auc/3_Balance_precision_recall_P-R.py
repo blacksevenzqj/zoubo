@@ -25,7 +25,18 @@ log_reg.fit(x_train, y_train) # 模型训练时：是不用阈值的，具体细
 
 score = log_reg.score(x_test, y_test) # 直接求 准确率
 # print(score)
+
 y_log_predict = log_reg.predict(x_test) # 求 预测值
+
+y_log_predict_proba = log_reg.predict_proba(x_test)[:,1] # 求 预测值 概率
+
+'''
+1、predict函数：默认阈值为0，大于0的为一类。（根据线性回归 𝜃x+b 的结果判断，教程上说的！！！）
+2、decision_function 函数：是线性回归 𝜃x+b 的结果。
+'''
+decision_scores = log_reg.decision_function(x_test)
+# print(decision_scores[:10])
+# print(np.min(decision_scores), np.max(decision_scores))
 
 
 # 混淆矩阵
@@ -62,21 +73,12 @@ print("=========================================================================
 mpl.rcParams['font.sans-serif'] = 'SimHei'
 mpl.rcParams['axes.unicode_minus'] = False
 
-# 自定义阀值： P-R曲线、F1分数
-'''
-1、predict函数：默认阈值为0，大于0的为一类。（根据线性回归 𝜃x+b 的结果判断，教程上说的！！！）
-2、decision_function 函数：是线性回归 𝜃x+b 的结果。
-'''
-decision_scores = log_reg.decision_function(x_test)
-# print(decision_scores[:10])
-# print(np.min(decision_scores), np.max(decision_scores))
-
-
+# '''
 # 1、直接用 decision_function 函数的 线性回归 𝜃x+b 的结果 判断：
 # y_predict_2 = np.array(decision_scores >= 0, dtype='int')
-# print(confusion_matrix(y_predict_2, y_test))
-# '''
-# 1.1.1、手动循环 找阈值：
+# print(confusion_matrix(y_test, y_predict_2))
+
+# 1.1.1、手动循环 找阈值：自定义阀值： P-R曲线、F1分数
 precisions = []
 recalls = []
 f1Scores = []
@@ -164,12 +166,13 @@ plt.show()
 
 
 
-print("--------------------------------------------------------------------------------------------------------")
+print("============================================================================================================")
 
 
 
+# 以下两种计算方式 结果非常类似：
 '''
-# 2、转换为概率判断：
+# 2.1、转换为概率判断：（使用decision_scores，有问题）
 def mySigmoid(z): # 计算概率p
     return 1 / (1 + np.exp(-z))
 
@@ -180,13 +183,54 @@ def myPredict(z, threshold): # 根据概率p判断分类
 # print(y_log_predict[:10]) # ndarray
 # print(my_predict[:10]) # list
 
-# 2.1、循环找阈值：
+# 2.1.1、循环找阈值：
 precisions = []
 recalls = []
 f1Scores = []
 thresholds = np.arange(0.02, 0.9, 0.01)
 for threshold in thresholds:
     my_predict = myPredict(decision_scores, threshold)
+    precisions.append(precision_score(y_test, my_predict))
+    recalls.append(recall_score(y_test, my_predict))
+    f1Scores.append(f1_score(y_test, my_predict))
+    # print(confusion_matrix(my_predict, y_test))
+
+print("阈值：", thresholds)
+print("准确率：", precisions)
+print("召回率：", recalls)
+print("F1分数：", f1Scores)
+
+fig = plt.figure(figsize = (12,4))
+# 1、A图
+ax1 = fig.add_subplot(1,2,1)
+plt.plot(thresholds, precisions, color = 'blue', label='精准率')
+plt.plot(thresholds, recalls, color='black', label='召回率')
+plt.plot(thresholds, f1Scores, color='green', label='F1分数')
+plt.legend()  # 图例
+plt.xlabel('阈值')  # x轴标签
+plt.ylabel('精准率、召回率、F1分数') # y轴标签
+
+# 2、B图
+ax2 = fig.add_subplot(1,2,2)
+plt.plot(precisions, recalls, color='purple', label='P-R曲线')
+plt.legend()  # 图例
+plt.xlabel('精准率')  # x轴标签
+plt.ylabel('召回率') # y轴标签
+
+plt.show()
+
+
+print("--------------------------------------------------------------------------------------------------------")
+
+
+# 2.2、转换为概率判断：（使用y_log_predict_proba，有问题）
+# 2.2.1、循环找阈值：
+precisions = []
+recalls = []
+f1Scores = []
+thresholds = np.arange(0.01, 0.99, 0.01)
+for threshold in thresholds:
+    my_predict = np.array(y_log_predict_proba >= threshold, dtype='int')
     precisions.append(precision_score(y_test, my_predict))
     recalls.append(recall_score(y_test, my_predict))
     f1Scores.append(f1_score(y_test, my_predict))

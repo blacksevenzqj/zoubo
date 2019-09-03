@@ -122,7 +122,7 @@ def f1_score_my(precisionScore, recallScore):
 # f1Score = f1_score_my(precisionScore, recallScore)
 # print(f1Score)
 
-# TPR：就是就是召回率
+# TPR：就是召回率
 def TPR(y_true, y_predict):
     return recall_score(y_true, y_predict)
 
