@@ -278,6 +278,12 @@ print("自动计算长度2：", len(precisions4), len(recalls4), len(thresholds4
 fig = plt.figure(figsize = (24,12))
 # 1、A1图
 # 以阈值为横坐标，分别以TPR和FPR的值为纵坐标，就可以画出两个曲线，这就是K-S曲线
+'''
+在阈值从最低处-85.68：意味着 几乎所有样本都被预测为正例，所以：
+1、TP预测为1的相对很高，FN漏预测为1（错误预测为0）的=0，TPR = 1；
+2、FP错误预测为1（漏预测为0）的也相对很高，TN预测为0=0，FPR = 1；
+3、也就是说 在 阈值最低点 的模型 TPR = FPR = 1，KS = max(TPR-FPR) = 0，预测没有什么意义。
+'''
 ax1 = fig.add_subplot(2,2,1)
 plt.plot(thresholds, precisions, color = 'blue', label='精准率')
 plt.plot(thresholds, recalls, color='black', label='召回率/TPR')
@@ -292,6 +298,9 @@ plt.title('手动-阈值与精准率、召回率/TPR、F1分数、FPR、KS=max(T
 
 # 2、A2图
 ax2 = fig.add_subplot(2,2,2)
+'''
+从上面 手动阈值 从低到高 计算出的TPR和FPR值的趋势是 从高到低的；而在曲线图中TPR和FPR值被默认设置为 从低到高显示
+'''
 plt.plot(fprs, tprs, color='purple', label='ROC曲线')
 plt.legend()  # 图例
 plt.xlabel('FPR')  # x轴标签
