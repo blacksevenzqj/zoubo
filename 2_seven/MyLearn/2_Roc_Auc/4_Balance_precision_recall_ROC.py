@@ -272,7 +272,7 @@ from sklearn.metrics import precision_recall_curve # P-R曲线
 precisions4, recalls4, thresholds4 = precision_recall_curve(y_test, decision_scores)
 f1Scores4 = f1_score_my(precisions4[:-1], recalls4[:-1])
 print("自动计算长度2：", len(precisions4), len(recalls4), len(thresholds4), len(f1Scores4))
-# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
+# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围非常不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
 
 
 fig = plt.figure(figsize = (24,12))
@@ -301,7 +301,7 @@ plt.title('手动-ROC曲线')  # 图名
 
 # 3、B1图
 ax3 = fig.add_subplot(2,2,3)
-# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
+# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围非常不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
 # plt.plot(thresholds4, precisions4[:-1], color = 'blue', label='精准率')
 # plt.plot(thresholds4, recalls4[:-1], color='black', label='召回率')
 # plt.plot(thresholds4, f1Scores4, color='green', label='F1分数')
