@@ -39,13 +39,13 @@ hstd = np.std(aaa, axis=1) # np.std是总体标准差 除以n；而pandas是样�
 from sklearn.preprocessing import StandardScaler
 # 标准化，返回值为标准化后的数据
 zdata = StandardScaler().fit_transform(aaa) # iris.data
-# print(zdata[0:10])
+print(zdata[0:10], np.mean(zdata, axis=0), np.std(zdata, axis=0))
 zdatamy = np.zeros((3,3))
 for i in range(3):
     zdatamy[0,i] = (aaa[0][i] - lmean[i]) / lstd[i]
     zdatamy[1,i] = (aaa[1][i] - lmean[i]) / lstd[i]
     zdatamy[2,i] = (aaa[2][i] - lmean[i]) / lstd[i]
-# print(zdatamy)
+print(zdatamy, np.mean(zdatamy, axis=0), np.std(zdatamy, axis=0))
 
 
 # 2.1.1.2、归一化：区间缩放法：以 特征列 为计算维度
@@ -135,8 +135,8 @@ from sklearn.preprocessing import FunctionTransformer
 # 自定义转换函数为对数函数的数据变换
 # 第一个参数是单变元函数：可以是对数变换：np.log1p、np.log；可以是指数变换：np.exp 等等。
 fdata = FunctionTransformer(log1p).fit_transform(aaa)
-print(fdata)
-print(np.log(aaa + 1))
+# print(fdata)
+# print(np.log(aaa + 1))
 '''
 # 先了解下 log1p 和 expm1：
 x = 10**-16
