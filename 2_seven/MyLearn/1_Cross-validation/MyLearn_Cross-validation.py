@@ -89,6 +89,11 @@ print("cross_val_score测试结果：", testScore)
 '''
 from sklearn.model_selection import GridSearchCV
 
+# estimator：创建的对象，如上的knn_clf
+# param_grid：是一个列表，列表里是算法对象的超参数的取值，用字典存储
+# n_jobs：使用电脑的CPU个数，-1代表全部使用
+# verbose：每次CV时输出的格式
+
 knn_clf = KNeighborsClassifier()
 param_grid = [
     {
