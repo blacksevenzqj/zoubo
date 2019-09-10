@@ -1,5 +1,8 @@
 import numpy as np
 from sklearn import datasets
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 
 digits = datasets.load_digits()
 x = digits.data
@@ -30,6 +33,9 @@ y_log_predict_proba_predict = np.array(y_log_predict_proba >= 0.5, dtype='int')
 print(len(y_test), np.sum(y_log_predict == y_log_predict_proba_predict)) # 可见 默认概率为 0.5
 
 
+'''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
 def TP(y_true, y_predict):
     assert len(y_true) == len(y_predict)
     return np.sum((y_true == 1) & (y_predict == 1))
@@ -129,6 +135,9 @@ print(fprScore)
 print("=============================================================================================")
 
 
+'''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
 # 混淆矩阵
 from sklearn.metrics import confusion_matrix
 confusionMatrix = confusion_matrix(y_test, y_log_predict)
@@ -154,3 +163,39 @@ from sklearn.metrics import classification_report
 classificationReport = classification_report(y_test, y_log_predict)
 print(classificationReport)
 
+
+
+'''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
+import itertools
+def plot_confusion_matrix(cm, classes,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues):
+    """
+    This function prints and plots the confusion matrix.
+    """
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=0)
+    plt.yticks(tick_marks, classes)
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, cm[i, j],
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+confusionMatrix = confusion_matrix(y_test, y_log_predict)
+class_names = [0,1] # 必须是 [0,1] 这个顺序
+plot_confusion_matrix(confusionMatrix
+                      , classes=class_names
+                      , title='Confusion matrix')
+
+plt.show()

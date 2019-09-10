@@ -35,6 +35,9 @@ y_log_predict_proba_predict = np.array(y_log_predict_proba >= 0.5, dtype='int')
 decision_scores = log_reg.decision_function(x_test) # 理解为：线性回归 𝜃x+b 的结果
 
 
+'''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
 def TP(y_true, y_predict):
     assert len(y_true) == len(y_predict)
     return np.sum((y_true == 1) & (y_predict == 1))
@@ -145,6 +148,9 @@ def FPR(y_true, y_predict):
 print("=============================================================================================")
 
 
+'''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
 # 混淆矩阵
 from sklearn.metrics import confusion_matrix
 confusionMatrix = confusion_matrix(y_test, y_log_predict)

@@ -39,6 +39,9 @@ decision_scores = log_reg.decision_function(x_test)
 # print(np.min(decision_scores), np.max(decision_scores))
 
 
+'''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
 # 混淆矩阵
 from sklearn.metrics import confusion_matrix
 confusionMatrix = confusion_matrix(y_test, y_log_predict)

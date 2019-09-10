@@ -24,6 +24,9 @@ print(score)
 y_log_predict = log_reg.predict(x_test) # 求 预测值
 
 
+'''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
 # 混淆矩阵
 from sklearn.metrics import confusion_matrix
 confusionMatrix = confusion_matrix(y_test, y_log_predict)
