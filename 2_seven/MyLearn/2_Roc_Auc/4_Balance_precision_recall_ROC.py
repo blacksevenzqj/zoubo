@@ -247,7 +247,8 @@ fprs2, tprs2, thresholds2 = roc_curve(y_test, decision_scores) # 自动-threshol
 fprs3, tprs3, thresholds3 = roc_curve(y_test, y_log_predict_proba) # 自动-thresholds2 和 自动-thresholds3 完全不同，自动-thresholds3 不能用。
 # 两种方式：TPR、FPR相同，阈值不相同
 print("自动计算长度1：", len(thresholds2), len(tprs2), len(fprs2))
-print("对比1：TPR、FPR相同，阈值不相同：", len(fprs2), sum(fprs2 == fprs3), len(tprs2), sum(tprs2 == tprs3), len(thresholds2), sum(thresholds2 == thresholds3))
+print("自动计算长度2：", len(thresholds3), len(tprs3), len(fprs3))
+print("对比1：TPR、FPR相同，阈值不相同：", len(fprs2)==len(fprs3), sum(fprs2 == fprs3), len(tprs2)==len(tprs3), sum(tprs2 == tprs3), len(thresholds2)==len(thresholds3), sum(thresholds2 == thresholds3))
 # TPR、FPR相同，而阈值不相同，所以 自动-thresholds3 不能用，有问题。
 print("对比1：阈值比较：", np.min(thresholds2), np.max(thresholds2), np.min(thresholds3), np.max(thresholds3))
 
@@ -277,13 +278,13 @@ rocAucScore3 = roc_auc_score(y_test, y_log_predict_proba)
 from sklearn.metrics import precision_recall_curve # P-R曲线
 precisions4, recalls4, thresholds4 = precision_recall_curve(y_test, decision_scores)
 f1Scores4 = f1_score_my(precisions4[:-1], recalls4[:-1])
-print("自动计算长度2：", len(precisions4), len(recalls4), len(thresholds4), len(f1Scores4))
+print("自动计算长度3：", len(precisions4), len(recalls4), len(thresholds4), len(f1Scores4))
 # 注意：precision_recall_curve 和 roc_curve 两函数使用 decision_scores 计算的 阈值区间范围非常不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
 
 precisions5, recalls5, thresholds5 = precision_recall_curve(y_test, y_log_predict_proba)# 自动-thresholds4 和 自动-thresholds5 完全不同，自动-thresholds5 不能用。
 f1Scores5 = f1_score_my(precisions5[:-1], recalls5[:-1])
-print("自动计算长度3：", len(precisions5), len(recalls5), len(thresholds5), len(f1Scores4))
-print("对比2：精准率、召回率、F1相同，阈值不相同：", len(precisions4), sum(precisions4 == precisions5), len(recalls4), sum(recalls4 == recalls5), len(f1Scores4), sum(f1Scores4 == f1Scores5), len(thresholds4), sum(thresholds4 == thresholds5))
+print("自动计算长度4：", len(precisions5), len(recalls5), len(thresholds5), len(f1Scores4))
+print("对比2：精准率、召回率、F1相同，阈值不相同：", len(precisions4)==len(precisions5), sum(precisions4 == precisions5), len(recalls4)==len(recalls5), sum(recalls4 == recalls5), len(f1Scores4)==len(f1Scores5), sum(f1Scores4 == f1Scores5), len(thresholds4)==len(thresholds5), sum(thresholds4 == thresholds5))
 # 精准率、召回率、F1相同，而阈值不相同，所以 自动-thresholds5 不能用，有问题。
 print("对比2：阈值比较：", np.min(thresholds4), np.max(thresholds4), np.min(thresholds5), np.max(thresholds5))
 
