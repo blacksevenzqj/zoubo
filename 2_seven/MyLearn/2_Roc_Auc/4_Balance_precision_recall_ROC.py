@@ -237,13 +237,19 @@ print('F1最大值阈值 - KS阈值 = %.6f' % diffValue)
 print("-------------------------------------------------------------------------------------------------------")
 
 
+'''
+1、roc_curve 函数使用 decision_scores 和 y_log_predict_proba 计算得到的 fprs 和 tprs 相同，而 阈值不同；y_log_predict_proba 计算的阈值 不能使用。  
+2、precision_recall_curve 函数使用 decision_scores 和 y_log_predict_proba 计算得到的 精准率、召回率、F1 相同，而 阈值不同；y_log_predict_proba 计算的阈值 不能使用。  
+'''
 # 1.2、自动 创建TPR、FPR 得到 ROC：
 from sklearn.metrics import roc_curve
 fprs2, tprs2, thresholds2 = roc_curve(y_test, decision_scores) # 自动-thresholds2 和 手动-thresholds 是不完全相同的，非常类似
-fprs3, tprs3, thresholds3 = roc_curve(y_test, y_log_predict_proba) # 自动-thresholds2 和 自动-thresholds3 是不完全相同的
+fprs3, tprs3, thresholds3 = roc_curve(y_test, y_log_predict_proba) # 自动-thresholds2 和 自动-thresholds3 完全不同，自动-thresholds3 不能用。
 # 两种方式：TPR、FPR相同，阈值不相同
 print("自动计算长度1：", len(thresholds2), len(tprs2), len(fprs2))
 print("对比1：TPR、FPR相同，阈值不相同：", len(fprs2), sum(fprs2 == fprs3), len(tprs2), sum(tprs2 == tprs3), len(thresholds2), sum(thresholds2 == thresholds3))
+# TPR、FPR相同，而阈值不相同，所以 自动-thresholds3 不能用，有问题。
+print("对比1：阈值比较：", np.min(thresholds2), np.max(thresholds2), np.min(thresholds3), np.max(thresholds3))
 
 # 1.2.1、自动 计算KS值及其阈值：KS=max(TPR-FPR)
 tempValue_auto = 0.00
@@ -272,7 +278,15 @@ from sklearn.metrics import precision_recall_curve # P-R曲线
 precisions4, recalls4, thresholds4 = precision_recall_curve(y_test, decision_scores)
 f1Scores4 = f1_score_my(precisions4[:-1], recalls4[:-1])
 print("自动计算长度2：", len(precisions4), len(recalls4), len(thresholds4), len(f1Scores4))
-# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围非常不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
+# 注意：precision_recall_curve 和 roc_curve 两函数使用 decision_scores 计算的 阈值区间范围非常不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
+
+precisions5, recalls5, thresholds5 = precision_recall_curve(y_test, y_log_predict_proba)# 自动-thresholds4 和 自动-thresholds5 完全不同，自动-thresholds5 不能用。
+f1Scores5 = f1_score_my(precisions5[:-1], recalls5[:-1])
+print("自动计算长度3：", len(precisions5), len(recalls5), len(thresholds5), len(f1Scores4))
+print("对比2：精准率、召回率、F1相同，阈值不相同：", len(precisions4), sum(precisions4 == precisions5), len(recalls4), sum(recalls4 == recalls5), len(f1Scores4), sum(f1Scores4 == f1Scores5), len(thresholds4), sum(thresholds4 == thresholds5))
+# 精准率、召回率、F1相同，而阈值不相同，所以 自动-thresholds5 不能用，有问题。
+print("对比2：阈值比较：", np.min(thresholds4), np.max(thresholds4), np.min(thresholds5), np.max(thresholds5))
+
 
 
 fig = plt.figure(figsize = (24,12))
@@ -296,6 +310,7 @@ plt.xlabel('阈值')  # x轴标签
 plt.ylabel('精准率、召回率/TPR、F1分数、FPR、KS') # y轴标签
 plt.title('手动-阈值与精准率、召回率/TPR、F1分数、FPR、KS=max(TPR-FPR)')  # 图名
 
+
 # 2、A2图
 ax2 = fig.add_subplot(2,2,2)
 '''
@@ -308,23 +323,26 @@ plt.ylabel('TPR') # y轴标签
 plt.title('手动-ROC曲线')  # 图名
 
 
+
 # 3、B1图
 ax3 = fig.add_subplot(2,2,3)
-# 注意：precision_recall_curve 和 roc_curve 两函数计算的 阈值区间范围非常不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
-# plt.plot(thresholds4, precisions4[:-1], color = 'blue', label='精准率')
+# 注意：precision_recall_curve 和 roc_curve 两函数使用 decision_scores 计算的 阈值区间范围非常不相同，所以不能合并使用指标。除非像 手动-1.1、1.1.1、1.1.2、1.1.3 那样全部重新计算。
+# plt.plot(thresholds4, precisions4[:-1], color = 'blue', label='精准率') # thresholds4 和 thresholds5 的 精准率、召回率、F1相同，而阈值不相同，所以 自动-thresholds5 不能用，有问题。
 # plt.plot(thresholds4, recalls4[:-1], color='black', label='召回率')
 # plt.plot(thresholds4, f1Scores4, color='green', label='F1分数')
 # plt.legend()  # 图例
 # plt.xlabel('阈值')  # x轴标签
 # plt.ylabel('精准率、召回率、F1分数') # y轴标签
 # plt.title('自动-阈值与精准率、召回率、F1分数')  # 图名
-plt.plot(thresholds2, tprs2, color='black', label='召回率/TPR')
+
+plt.plot(thresholds2, tprs2, color='black', label='召回率/TPR') # thresholds2 和 thresholds3 的 TPR、FPR相同，而阈值不相同，所以 自动-thresholds3 不能用，有问题。
 plt.plot(thresholds2, fprs2, color='pink', label='FPR')
 plt.plot((maxKsThresholds_auto,maxKsThresholds_auto), (recallsValue_auto,fprsValue_auto), c='r', lw=1.5, ls='--', alpha=0.7, label='KS阈值 = %.6f' % maxKsThresholds_auto)
 plt.legend()  # 图例
 plt.xlabel('阈值')  # x轴标签
-plt.ylabel('精准率、召回率/TPR、F1分数、FPR、KS') # y轴标签
+plt.ylabel('召回率/TPR、FPR、KS') # y轴标签
 plt.title('自动-阈值与召回率/TPR、FPR、KS=max(TPR-FPR)')  # 图名
+
 
 # 4、B2图
 ax4 = fig.add_subplot(2,2,4)
@@ -335,5 +353,6 @@ plt.ylabel('TPR') # y轴标签
 plt.grid(b=True)
 plt.legend(loc='lower right', fancybox=True, framealpha=0.8, fontsize=14)
 plt.title('自动-ROC曲线和AUC值', fontsize=17)
+
 
 plt.show()

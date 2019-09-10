@@ -96,6 +96,9 @@ for threshold in thresholds:
 # print("F1分数：", f1Scores[0:10], '维度：', len(f1Scores)) # 1056
 
 
+'''
+precision_recall_curve 函数使用 decision_scores 和 y_log_predict_proba 计算得到的 精准率、召回率、F1 相同，而 阈值不同；y_log_predict_proba 计算的阈值 不能使用。  
+'''
 # 1.1.2、sklearn的函数 找阈值：
 from sklearn.metrics import precision_recall_curve # P-R曲线
 
