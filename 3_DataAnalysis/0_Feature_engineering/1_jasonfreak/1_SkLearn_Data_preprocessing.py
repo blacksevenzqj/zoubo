@@ -36,10 +36,21 @@ hstd = np.std(aaa, axis=1) # np.std是总体标准差 除以n；而pandas是样�
 
 
 # 2.1.1.1、标准化：以 特征列 为计算维度
+'''
+它是基于原始数据的均值和标准差进行的标准化，其标准化的计算公式为x'=(x-mean)/std,其中mean和std为x所在列的均值和标准差。
+注：
+1、这种方法适合大多数的数据类型的数据，得到的数据是以0为均值，1为方差的正态分布，这个方法被广泛的使用在许多机器学习算法中(例如：支持向量机、逻辑回归和类神经网络)
+2、标准化 的理论取值范围是(-∞,+∞)，但经验上看大多数取值范围在[-4,4]之间：以训练集为标准。
+3、但 标准化 方法改变了原始数据的结构（针对稀疏矩阵而言，并不会改变 预设的高斯分布的结构），因此不适宜用于对稀疏矩阵做数据预处理。
+4、当数据集中含有离群点，即异常值时，可以用z-score进行标准化，但是标准化后的数据并不理想，因为异常点的特征往往在标准化之后容易失去离群特征。
+'''
 from sklearn.preprocessing import StandardScaler
 # 标准化，返回值为标准化后的数据
 zdata = StandardScaler().fit_transform(aaa) # iris.data
 print(zdata[0:10], np.mean(zdata, axis=0), np.std(zdata, axis=0))
+from sklearn import preprocessing
+zdata1 = preprocessing.scale(aaa)
+print(zdata1[0:10], np.mean(zdata1, axis=0), np.std(zdata1, axis=0))
 zdatamy = np.zeros((3,3))
 for i in range(3):
     zdatamy[0,i] = (aaa[0][i] - lmean[i]) / lstd[i]
@@ -49,6 +60,10 @@ print(zdatamy, np.mean(zdatamy, axis=0), np.std(zdatamy, axis=0))
 
 
 # 2.1.1.2、归一化：区间缩放法：以 特征列 为计算维度
+'''
+该方法是用数据的最大值和最小值对原始数据进行预处理其是一种线性变换。其标准化的计算公式为x'=(x-min)/(max-min),min和max是x所在列的最小值和最大值。
+此方法得到的数据会完全落入[0,1]区间内（z-score没有类似区间），而且能使数据归一化落到一定的区间内，同时保留原始数据的结构
+'''
 from sklearn.preprocessing import MinMaxScaler
 #区间缩放，返回值为缩放到[0, 1]区间的数据
 mdata = MinMaxScaler().fit_transform(aaa) # iris.data
@@ -59,6 +74,23 @@ for i in range(3):
     mdatamy[1,i] = (aaa[1][i] - np.min(aaa[:,i], axis=0)) / (np.max(aaa[:,i], axis=0) - np.min(aaa[:,i], axis=0))
     mdatamy[2,i] = (aaa[2][i] - np.min(aaa[:,i], axis=0)) / (np.max(aaa[:,i], axis=0) - np.min(aaa[:,i], axis=0))
 # print(mdatamy)
+
+
+# 2.1.1.3、MaxAbscaler标准化
+'''
+根据最大值得绝对值标准化。其标准化的计算公式为x'=x/|max|，其中max是x所在列的最大值。该方法和Max-Min方法类似，
+但该方法的数据区间为[-1,1]，也不会破坏原始数据的结构，因此也可以用于稀疏矩阵、稀疏的CSR或CSC矩阵。
+'''
+maxab_scaler = preprocessing.MaxAbsScaler()
+madata = maxab_scaler.fit_transform(aaa)
+
+# 2.1.1.4、RobustScaler标准化
+'''
+当数据集中含有离群点，即异常值时，可以用z-score进行标准化，但是标准化后的数据并不理想，
+因为异常点的特征往往在标准化之后容易失去离群特征。此时可以用该方法针对离群点做标准化处理。
+'''
+robustscaler = preprocessing.RobustScaler()
+rdata = robustscaler.fit_transform(aaa)
 
 
 # 2.1.2、归一化：正则化：以 样本行 为计算维度
