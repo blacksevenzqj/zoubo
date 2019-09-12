@@ -84,10 +84,12 @@ for i in range(3):
 maxab_scaler = preprocessing.MaxAbsScaler()
 madata = maxab_scaler.fit_transform(aaa)
 
+
 # 2.1.1.4、RobustScaler标准化
 '''
 当数据集中含有离群点，即异常值时，可以用z-score进行标准化，但是标准化后的数据并不理想，
 因为异常点的特征往往在标准化之后容易失去离群特征。此时可以用该方法针对离群点做标准化处理。
+This Scaler removes the median and scales the data according to the quantile range 移除中位数，并根据四分位距离范围缩放数据，也就是说排除了异常值
 '''
 robustscaler = preprocessing.RobustScaler()
 rdata = robustscaler.fit_transform(aaa)
