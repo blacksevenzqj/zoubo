@@ -69,7 +69,7 @@ for k in range(2, 11):
         '''
         kf = KFold(3, shuffle=True).get_n_splits(x_train)
         # accuracy 准确率指标。当样本比例不平衡时，该指标不准确。
-        score = cross_val_score(knn_clf, x_train, y_train, scoring='accuracy', cv=kf).mean()
+        score = cross_val_score(knn_clf, x_train, y_train, scoring='accuracy', cv=kf).mean() # 3折交叉验证，有3个准确度分数
         if score > best_score:
             best_score, best_p, best_k = score, p, k
 
