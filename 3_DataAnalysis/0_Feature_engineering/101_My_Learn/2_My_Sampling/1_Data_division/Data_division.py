@@ -80,7 +80,7 @@ for train_index, test_index in rs.split(X, y):
 
 print("===============================================================")
 
-rs = ShuffleSplit(n_splits=3, train_size=.5, test_size=.25, random_state=0)
+rs = ShuffleSplit(n_splits=3, train_size=.5, test_size=.25, random_state=0) # 训练集和测试集的比例的和可以小于1
 print(rs.get_n_splits(X))
 print(rs)
 for train_index, test_index in rs.split(X, y):
