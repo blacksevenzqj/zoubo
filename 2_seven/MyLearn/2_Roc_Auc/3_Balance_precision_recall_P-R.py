@@ -129,6 +129,11 @@ f1Scores2 = f1_score_my(precisions2[:-1], recalls2[:-1])
 # print("召回率：", recalls2[0:10], '维度：', recalls2.shape) # 145
 # print("F1分数：", f1Scores2[0:10], '维度：', f1Scores2.shape) # 144
 
+from sklearn.metrics import average_precision_score
+# average_precision_score则会预测值的平均准确率（AP: average precision）。该分值对应于precision-recall曲线下的面积。
+average_precision = average_precision_score(y_test, decision_scores)
+# 注意：precision_recall_curve只用于二分类中。而average_precision_score可用于二分类或multilabel指示器格式
+
 
 fig = plt.figure(figsize = (24,12))
 # 1、A1图
@@ -161,7 +166,7 @@ plt.title('自动-阈值与精准率、召回率、F1分数')  # 图名
 
 # 4、B2图
 ax4 = fig.add_subplot(2,2,4)
-plt.plot(precisions2[:-1], recalls2[:-1], color='purple', label='P-R曲线')
+plt.plot(precisions2[:-1], recalls2[:-1], color='purple', label='P-R曲线下面积=%.3f' % average_precision)
 plt.legend()  # 图例
 plt.xlabel('精准率')  # x轴标签
 plt.ylabel('召回率') # y轴标签
