@@ -93,6 +93,11 @@ from sklearn.model_selection import GridSearchCV
 # param_grid：是一个列表，列表里是算法对象的超参数的取值，用字典存储
 # n_jobs：使用电脑的CPU个数，-1代表全部使用
 # verbose：每次CV时输出的格式
+# cv：
+# None：默认参数，函数会使用默认的3折交叉验证
+# 整数k：k折交叉验证。对于分类任务，使用StratifiedKFold（类别平衡，每类的训练集占比一样多，具体可以查看官方文档）。对于其他任务，使用KFold
+# 交叉验证生成器：得自己写生成器，头疼，略
+# 可以生成训练集与测试集的迭代器：同上，略
 
 knn_clf = KNeighborsClassifier()
 param_grid = [
