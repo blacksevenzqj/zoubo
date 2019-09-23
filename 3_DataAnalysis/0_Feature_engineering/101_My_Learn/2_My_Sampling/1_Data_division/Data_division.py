@@ -14,7 +14,7 @@ from sklearn.model_selection import ShuffleSplit, GroupShuffleSplit, StratifiedS
 X = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]])
 y = np.array([1, 1, 3, 4, 3, 5])
 kf = KFold(n_splits=3)  # 分3折，2折训练=(2/3)*6=4样本； 1折测试=(1/3)*6=2样本。 严格按照 n-1折训练集，1折测试划分
-print(kf.get_n_splits(X))
+print(kf.get_n_splits(X)) # int
 print(kf)
 for train_index, test_index in kf.split(X):
     print("Train Index:", train_index, ",Test Index:", test_index)
