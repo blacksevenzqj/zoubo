@@ -11,3 +11,17 @@ print(np.triu_indices_from(np.zeros_like(data))[1])
 [0 0 0 0 1 1 1 2 2 3]
 [0 1 2 3 1 2 3 2 3 3]
 '''
+
+# 2.1、数组降维
+data = np.random.random((2,1))
+print(data)
+print(data.ravel())
+
+# 2.2、数组增维
+data = np.arange(0.0, 5.0, 0.1)
+# print(data)
+# print(data[:, np.newaxis])
+
+l = np.array([1,2,3,4])
+print(l[:,np.newaxis].shape)
+print(l[np.newaxis,:].shape)
