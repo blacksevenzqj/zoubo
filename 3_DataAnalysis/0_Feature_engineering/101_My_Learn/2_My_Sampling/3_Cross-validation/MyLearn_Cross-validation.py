@@ -47,7 +47,6 @@ kfold = KFold(n_splits=3, shuffle = True, random_state=42)
 for train, test in kfold.split(data):
     print('train: %s, test: %s' % (data[train], data[test]))
 '''
-knn_clf = KNeighborsClassifier()
 best_score, best_p, best_k = 0, 0 ,0
 for k in range(2, 11):
     for p in range(1, 6):
