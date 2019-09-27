@@ -34,7 +34,7 @@ hmean = np.mean(aaa, axis=1)
 hstd = np.std(aaa, axis=1) # np.std是总体标准差 除以n；而pandas是样本标准差 除以n-1。
 # print(hmean, hstd)
 
-
+# 对于StandardScaler和MinMaxScaler来说，空值NaN会被当做是缺失值，在fit的时候忽略，在transform的时候保持缺失NaN的状态显示。
 # 2.1.1.1、标准化：以 特征列 为计算维度
 '''
 它是基于原始数据的均值和标准差进行的标准化，其标准化的计算公式为x'=(x-mean)/std,其中mean和std为x所在列的均值和标准差。
@@ -76,7 +76,7 @@ for i in range(3):
 # print(mdatamy)
 
 
-# 2.1.1.3、MaxAbscaler标准化
+# 2.1.1.3、MaxAbscaler归一化
 '''
 根据最大值得绝对值标准化。其标准化的计算公式为x'=x/|max|，其中max是x所在列的最大值。该方法和Max-Min方法类似，
 但该方法的数据区间为[-1,1]，也不会破坏原始数据的结构，因此也可以用于稀疏矩阵、稀疏的CSR或CSC矩阵。
@@ -85,7 +85,7 @@ maxab_scaler = preprocessing.MaxAbsScaler()
 madata = maxab_scaler.fit_transform(aaa)
 
 
-# 2.1.1.4、RobustScaler标准化
+# 2.1.1.4、RobustScaler归一化
 '''
 当数据集中含有离群点，即异常值时，可以用z-score进行标准化，但是标准化后的数据并不理想，
 因为异常点的特征往往在标准化之后容易失去离群特征。此时可以用该方法针对离群点做标准化处理。
@@ -95,7 +95,7 @@ robustscaler = preprocessing.RobustScaler()
 rdata = robustscaler.fit_transform(aaa)
 
 
-# 2.1.2、归一化：正则化：以 样本行 为计算维度
+# 2.1.2、正则化：以 样本行 为计算维度
 '''
 归一化(正则化)是依照特征矩阵的行处理数据，其目的在于样本向量在点乘运算或其他核函数计算相似性时，
 拥有统一的标准，也就是说都转化为“单位向量”。
