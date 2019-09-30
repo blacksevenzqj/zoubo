@@ -98,10 +98,15 @@ pca.components_ 即为上面PCA模型中训练好的 特征向量矩阵P
 4  0.426504
 点乘 X 就得到 降维后的数据。
 '''
-pd.DataFrame(pca.components_).T
-
 print(pca.components_)
-Dmatrix = pca.components_.dot(data_val)
+print(pd.DataFrame(pca.components_).T) # 以 列 的方式呈现
+
+
+Dmatrix = pca.components_.dot(data_val) # W · X^T
 print(Dmatrix) # 结果和 pca.fit_transform(data) 相同
+
+
+Dmatrix2 = data.dot(pca.components_.T) # X · W^T
+print(Dmatrix2.T)
 
 

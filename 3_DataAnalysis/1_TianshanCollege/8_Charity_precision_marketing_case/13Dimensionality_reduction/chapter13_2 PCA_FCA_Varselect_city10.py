@@ -167,7 +167,8 @@ print(citi10_fa)
 citi10_fa.to_csv("E:\\soft\\Anaconda\\Anaconda_Python3.6_code\\data_analysis\\TianshanCollege\\8_Charity_precision_marketing_case\\13Dimensionality_reduction\\citi10_fa.csv")
 
 # In[49]:
-#如遇中文显示问题可加入以下代码
+# 因子得分散点图：
+# 如遇中文显示问题可加入以下代码
 from pylab import mpl
 mpl.rcParams['font.sans-serif'] = ['SimHei'] # 指定默认字体
 mpl.rcParams['axes.unicode_minus'] = False # 解决保存图像是负号'-'显示为方块的问题
