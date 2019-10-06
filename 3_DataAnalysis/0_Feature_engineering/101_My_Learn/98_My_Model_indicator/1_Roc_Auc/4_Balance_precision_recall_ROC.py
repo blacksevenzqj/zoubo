@@ -310,7 +310,7 @@ plt.plot(thresholds, precisions, color = 'blue', label='精准率')
 plt.plot(thresholds, recalls, color='black', label='召回率/TPR')
 plt.plot(thresholds, f1Scores, color='green', label='F1分数阈值 = %.6f' % maxF1Thresholds)
 plt.plot(thresholds, fprs, color='pink', label='FPR')
-plt.plot((maxKsThresholds,maxKsThresholds), (recallsValue,fprsValue), c='r', lw=1.5, ls='--', alpha=0.7, label='KS阈值 = %.6f' % maxKsThresholds)
+plt.plot((maxKsThresholds,maxKsThresholds), (recallsValue,fprsValue), c='r', lw=1.5, ls='--', alpha=0.7, label='KS = %.4f，KS阈值 = %.4f' % (maxKsValue, maxKsThresholds))
 plt.plot((maxKsThresholds,maxF1Thresholds), (maxF1ScoresValue,maxF1ScoresValue), c='purple', lw=1.5, ls='-', alpha=0.7, label='(F1-KS)的阈值差 = %.4f' % diffValue)
 plt.legend()  # 图例
 plt.xlabel('阈值')  # x轴标签
@@ -344,7 +344,7 @@ ax3 = fig.add_subplot(2,2,3)
 
 plt.plot(thresholds2, tprs2, color='black', label='召回率/TPR') # thresholds2 和 thresholds3 的 TPR、FPR相同，而阈值不相同，所以 自动-thresholds3 不能用，有问题。
 plt.plot(thresholds2, fprs2, color='pink', label='FPR')
-plt.plot((maxKsThresholds_auto,maxKsThresholds_auto), (recallsValue_auto,fprsValue_auto), c='r', lw=1.5, ls='--', alpha=0.7, label='KS阈值 = %.6f' % maxKsThresholds_auto)
+plt.plot((maxKsThresholds_auto,maxKsThresholds_auto), (recallsValue_auto,fprsValue_auto), c='r', lw=1.5, ls='--', alpha=0.7, label='KS = %.4f，KS阈值 = %.4f' % (maxKsValue_auto, maxKsThresholds_auto))
 plt.legend()  # 图例
 plt.xlabel('阈值')  # x轴标签
 plt.ylabel('召回率/TPR、FPR、KS') # y轴标签
