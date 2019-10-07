@@ -32,7 +32,6 @@ sns.distplot(house_price_gr.rate, kde=True, fit=stats.norm) # Histograph
 
 
 # Q-Q图检测
-
 # In[4]:
 
 import statsmodels.api as sm
@@ -73,7 +72,7 @@ plt.grid()
 
 ax3 = fig.add_subplot(3,1,3)  # 创建子图3
 ax3.plot(s_r['p'],s_r['rate'],'k.',alpha = 0.1)
-ax3.plot([x1,x2],[y1,y2],'-r') # 绘制QQ图，直线为四分之一位数、四分之三位数的连线，基本符合正态分布
+ax3.plot([x1,x2],[y1,y2],'-r') # 绘制QQ图，直线为 四分之一位数、四分之三位数的连线，基本符合正态分布
 plt.grid()
 
 
