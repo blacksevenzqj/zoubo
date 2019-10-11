@@ -92,7 +92,7 @@ import sklearn.feature_selection as feature_selection
 churn['gender'] = churn['gender'].astype('int')  # 将Series中的元素转换为int类型，原本就是了，只是教你怎么转换。
 churn['edu_class'] = churn['edu_class'].astype('int')
 churn['feton'] = churn['feton'].astype('int')
-# 每个特征 分别与 churn['churn'] 进行卡方检验（所以 自由度v = (2-1) * (2-1) = 1）
+# 每个特征 分别与 churn['churn'] 进行卡方检验（所以 自由度v = (2-1) * (2-1) = 1）  注意： duration_bins
 feature_selection.chi2(churn[['gender', 'edu_class', 'feton', 'prom',
                               'posPlanChange', 'duration_bins', 'curPlan', 'call_10086']],
                        churn['churn'])  # 选取部分字段进行卡方检验
@@ -112,15 +112,17 @@ sklearn_chi2 = feature_selection.chi2(churn[['prom']], churn['churn'])
 print(sklearn_chi2)  # (array([1.11235701]), array([0.29157016])) 卡方值，显著度α
 
 # 2.2.2、使用scipy的方法对 自变量prom 与 因变量churn 进行手动卡方检验：
-stats_crosstab = pd.crosstab(churn['prom'], churn['churn'], margins=True)
-print(stats_crosstab)
+stats_crosstab = pd.crosstab(churn['prom'], churn['churn'], margins=True)  # 行索引是第一个分类变量，列索引是第二个分类变量
+# print(stats_crosstab)
+# print(churn.groupby(by=['prom','churn'])['prom'].count())
+
 # chisq 卡方值
 # p-value 卡方值对应的 显著度α，用p-value表示。 显著以否 的衡量标准，和 两样本T检验 的P值是一样的意思。
 # expected_freq 卡方检验的 期望频率 = (行合计 * 列合计) / 总和
 print('''chisq = %6.4f
 p-value = %6.4f
 dof = %i 
-expected_freq = %s''' % stats.chi2_contingency(stats_crosstab.iloc[:2, :2]))
+expected_freq = %s''' % stats.chi2_contingency(stats_crosstab.iloc[:-1, :-1]))
 # 具体的分析看笔记： “1.1、卡方检验_例子分析”
 
 # 2.2.3、手动计算的卡方值为：
@@ -137,12 +139,28 @@ print(w00 + w01 + w10 + w11)  # 1.3315217118042797
 2.2.3.2、用1.3315217118042797卡方值查表得到，显著度α在25%左右。显著度α = 0.05对应卡方值为3.84，显著度α = 0.01对应卡方值6.63；我们的计算值需要 >3.84 甚至 >6.63 才能 拒绝原假设，接受备选假设（自变量prom 与 因变量churn 相关）。这里明显只能接受原假设。 
 2.2.3.3、sklearn包的chi2函数得到卡方值：卡方值=1.11235701，显著度α=0.29157016；使用scipy的方法得到的卡方值：卡方值=1.2272，显著度α=0.2680；和 手动计算的结果相差不大。
 '''
+# In[]:
+# 连续变量 分桶 分类变量 与 因变量Y 做卡方检验：
+duration_bins_stats_crosstab = pd.crosstab(churn['duration_bins'], churn['churn'], margins=True)
+print(duration_bins_stats_crosstab.iloc[:-1, :-1])
+print('''chisq = %6.4f
+p-value = %6.4f
+dof = %i 
+expected_freq = %s''' % stats.chi2_contingency(duration_bins_stats_crosstab.iloc[:-1, :-1]))
+# chisq = 1454.8837， p-value = 0.0000
 
+# 分类变量 两两分桶 与 因变量Y 做卡方检验
+print(duration_bins_stats_crosstab.iloc[0:2, :-1])
+print('''chisq = %6.4f
+p-value = %6.4fs
+dof = %i
+expected_freq = %s''' % stats.chi2_contingency(duration_bins_stats_crosstab.iloc[0:2, :-1]))
+
+# In[16]:
 # 建模
 # * 根据数据分析结果选取建模所需字段，同时抽取一定数量的记录作为建模数据
 # * 将建模数据划分为训练集和测试集
 # * 选择模型进行建模
-# In[16]:
 # 根据模型不同，对自变量类型的要求也不同，为了示例，本模型仅引入'AGE'这一个连续型变量
 # model_data = churn[['subscriberID','churn','gender','edu_class','feton','duration_bins']]
 model_data = churn[
