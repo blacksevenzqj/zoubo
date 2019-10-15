@@ -77,7 +77,7 @@ from sklearn.decomposition import PCA, TruncatedSVD
 
 X_z = preprocessing.scale(X) # 标准化
 # X_z = preprocessing.StandardScaler().fit_transform(X)
-X_reduced_pca = PCA(n_components=2, random_state=501).fit_transform(X_z)
+X_reduced_pca = PCA(n_components=2, random_state=501, svd_solver='auto').fit_transform(X_z)
 
 plt.figure(figsize=(8, 8))
 for i in range(X_reduced_pca.shape[0]):
