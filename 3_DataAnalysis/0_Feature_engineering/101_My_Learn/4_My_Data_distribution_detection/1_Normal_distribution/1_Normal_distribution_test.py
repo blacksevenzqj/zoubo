@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 
-os.chdir(r"E:\code\python_workSpace\idea_space\zoubo\3_DataAnalysis\0_Feature_engineering\101_My_Learn\98_My_Model_Statistical_indicators\100_Inferential_statistics\1_Normal_distribution")
+os.chdir(r"E:\code\python_workSpace\idea_space\zoubo\3_DataAnalysis\0_Feature_engineering\101_My_Learn\4_My_Data_distribution_detection\1_Normal_distribution")
 
 
 df = pd.read_csv("countries of the world.csv")
