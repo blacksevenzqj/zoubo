@@ -161,23 +161,25 @@ for train_indices, test_indices in rs.split(x_train_names_all, y_train_labels_al
 # %%
 # 2.3、StratifiedShuffleSplit 把数据集打乱顺序，然后划分测试集和训练集，
 # 训练集额和测试集的比例随机选定，训练集和测试集的比例的和可以小于1,但是还要保证训练集中各类别所占的比例是一样的
-X = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]])
-y = np.array([1, 2, 1, 2, 1, 2])
+X = np.array([[1,2],[3,4],[5,6],[7,8],[9,10],[11,12]])
+y = np.array([1,2,1,2,1,2])
 # 分3折，先保证训练集中各类别所占的比例是一样的（优先），再按再按train_size、test_size划分（可以不满足）
-sss = StratifiedShuffleSplit(n_splits=3, train_size=.75, test_size=.2, random_state=0)
-print(sss.get_n_splits(X, y))
-print(sss)
-for train_index, test_index in sss.split(X, y):
-    print("Train Index:", train_index, ",Test Index:", test_index)
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index], y[test_index]
-    print(len(y_train), len(y_test))
+sss = StratifiedShuffleSplit(n_splits=3,train_size=.75,test_size=.2,random_state=0)
+print(sss.get_n_splits(X,y)) # 折数
+print(sss) # 对象
+print()
+for train_index,test_index in sss.split(X,y):
+    print("Train Index:",train_index,",Test Index:",test_index)
+    X_train,X_test=X[train_index],X[test_index]
+    y_train,y_test=y[train_index],y[test_index]
+    print("训练集长度：%d，测试长度：%d" % (len(y_train), len(y_test)))
+    print("-"*30)
     train_unique_label, train_counts_label = np.unique(y_train, return_counts=True)
-    print(train_unique_label, train_counts_label / len(y_train))
-    print((train_counts_label / len(y_train)) * len(y_train))
+    print("训练集类别：%s，训练集类别数量%s，训练集类别占比：%s" % (train_unique_label, train_counts_label, train_counts_label / len(y_train)))
     test_unique_label, test_counts_label = np.unique(y_test, return_counts=True)
-    print(test_unique_label, test_counts_label / len(y_test))
-    print((test_counts_label / len(y_test)) * len(y_test))
+    print("测试集类别：%s，测试集类别数量%s，测试集类别占比：%s" % (test_unique_label, test_counts_label, test_counts_label / len(y_test)))
+    print("="*30)
+#    break
 
 # In[3]:
 # 3、留一法：
