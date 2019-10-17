@@ -164,7 +164,7 @@ for train_indices, test_indices in rs.split(x_train_names_all, y_train_labels_al
 X = np.array([[1,2],[3,4],[5,6],[7,8],[9,10],[11,12]])
 y = np.array([1,2,1,2,1,2])
 # 分3折，先保证训练集中各类别所占的比例是一样的（优先），再按再按train_size、test_size划分（可以不满足）
-sss = StratifiedShuffleSplit(n_splits=3,train_size=.75,test_size=.2,random_state=0)
+sss = StratifiedShuffleSplit(n_splits=3,train_size=.75,test_size=.2,random_state=10) # random_state保证每次运行划分都相同
 print(sss.get_n_splits(X,y)) # 折数
 print(sss) # 对象
 print()
