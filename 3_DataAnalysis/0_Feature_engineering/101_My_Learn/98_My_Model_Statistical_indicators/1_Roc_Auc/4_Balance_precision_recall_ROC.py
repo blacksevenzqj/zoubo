@@ -244,6 +244,9 @@ print("-------------------------------------------------------------------------
 
 
 '''
+默认是以 目标变量（因变量Y）== 1 为基准：
+'''
+'''
 1、roc_curve 函数使用 decision_scores 和 y_log_predict_proba 计算得到的 fprs 和 tprs 相同，而 阈值不同；y_log_predict_proba 计算的阈值 不能使用。  
 2、precision_recall_curve 函数使用 decision_scores 和 y_log_predict_proba 计算得到的 精准率、召回率、F1 相同，而 阈值不同；y_log_predict_proba 计算的阈值 不能使用。  
 '''
