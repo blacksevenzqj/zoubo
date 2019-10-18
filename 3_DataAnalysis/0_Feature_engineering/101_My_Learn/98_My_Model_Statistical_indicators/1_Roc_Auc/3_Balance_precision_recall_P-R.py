@@ -234,12 +234,14 @@ plt.show()
 print("--------------------------------------------------------------------------------------------------------")
 
 
+'''
 # 2.2、转换为概率判断：（使用y_log_predict_proba，有问题）
 # 2.2.1、循环找阈值：
 precisions = []
 recalls = []
 f1Scores = []
-thresholds = np.arange(0.01, 0.99, 0.01)
+# thresholds = np.arange(0.01, 0.99, 0.01)
+thresholds = np.linspace(y_log_predict_proba.min(),y_log_predict_proba.max(),num=100,endpoint=False)
 for threshold in thresholds:
     my_predict = np.array(y_log_predict_proba >= threshold, dtype='int')
     precisions.append(precision_score(y_test, my_predict))
@@ -270,4 +272,4 @@ plt.xlabel('精准率')  # x轴标签
 plt.ylabel('召回率') # y轴标签
 
 plt.show()
-'''
+# '''
