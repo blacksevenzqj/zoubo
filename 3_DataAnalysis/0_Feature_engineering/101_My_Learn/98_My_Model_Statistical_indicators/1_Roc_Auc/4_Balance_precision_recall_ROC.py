@@ -227,8 +227,9 @@ for i in np.arange(len(thresholds)):
         maxKsThresholds = thresholds[i]
         recallsValue = recalls[i]
         fprsValue = fprs[i]
-print('max(TPR-FPR) = %.6f，' % maxKsValue, '最大阈值 = %.6f' % maxKsThresholds)
-print('max(TPR-FPR) = %.6f' % abs(np.array(recalls) - np.array(fprs)).max())
+print('max(TPR-FPR) = %.6f,' % maxKsValue, '最大阈值 = %.6f,' % maxKsThresholds, '召回率/TPR = %.6f,' % recallsValue, 'FPR = %.6f' % fprsValue)
+maxindex = abs(np.array(recalls) - np.array(fprs)).tolist().index(abs(np.array(recalls) - np.array(fprs)).max())
+print('max(TPR-FPR) = %.6f, 最大阈值 = %.6f, 召回率/TPR = %.6f, FPR = %.6f' % (abs(np.array(recalls) - np.array(fprs)).max(), thresholds[maxindex], recalls[maxindex], fprs[maxindex]))
 
 # 1.1.2、计算F1分数最大值及其阈值：
 maxF1ScoresValue = max(f1Scores)
@@ -274,14 +275,17 @@ for i in np.arange(len(thresholds2)):
         maxKsThresholds_auto = thresholds2[i]
         recallsValue_auto = tprs2[i]
         fprsValue_auto = fprs2[i]
-print('max(TPR-FPR) = %.6f，' % maxKsValue_auto, '最大阈值 = %.6f' % maxKsThresholds_auto)
-print('max(TPR-FPR) = %.6f' % abs(np.array(tprs2) - np.array(fprs2)).max())
+print('max(TPR-FPR) = %.6f,' % maxKsValue_auto, '最大阈值 = %.6f,' % maxKsThresholds_auto, '召回率/TPR = %.6f,' % recallsValue_auto, 'FPR = %.6f' % fprsValue_auto)
+maxindex_auto = abs(np.array(tprs2) - np.array(fprs2)).tolist().index(abs(np.array(tprs2) - np.array(fprs2)).max())
+print('max(TPR-FPR) = %.6f, 最大阈值 = %.6f, 召回率/TPR = %.6f, FPR = %.6f' % (abs(np.array(tprs2) - np.array(fprs2)).max(), thresholds2[maxindex_auto], tprs2[maxindex_auto], fprs2[maxindex_auto]))
+
 
 # 1.3、自动 创建AUC面积：Area Under Curve
 from sklearn.metrics import roc_auc_score
 rocAucScore = roc_auc_score(y_test, decision_scores)
 rocAucScore3 = roc_auc_score(y_test, y_log_predict_proba)
 # print(rocAucScore, rocAucScore3) # 两种方式结果相同
+
 
 # 1.4、自动 创建 召回率/TPR、F1分数（本意是直接创建P-R曲线，可以用上面分开的公式代替的，都测试使用下）
 from sklearn.metrics import precision_recall_curve # P-R曲线
