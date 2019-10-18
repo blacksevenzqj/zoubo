@@ -241,6 +241,7 @@ precisions = []
 recalls = []
 f1Scores = []
 # thresholds = np.arange(0.01, 0.99, 0.01)
+# thresholds = np.arange(y_log_predict_proba.min(), y_log_predict_proba.max(), 0.01)
 thresholds = np.linspace(y_log_predict_proba.min(),y_log_predict_proba.max(),num=100,endpoint=False)
 for threshold in thresholds:
     my_predict = np.array(y_log_predict_proba >= threshold, dtype='int')
