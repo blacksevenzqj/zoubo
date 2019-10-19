@@ -93,7 +93,7 @@ axes[0][1].set_title('box of feature: ' + str('RevolvingUtilizationOfUnsecuredLi
 axes[0][1].set_ylabel('')
 
 sns.distplot(data['RevolvingUtilizationOfUnsecuredLines'][data["SeriousDlqin2yrs"] == 1], bins=100, color='red', ax=axes[1][0])
-sns.distplot(data['age'][data["SeriousDlqin2yrs"] == 0], bins=100, color='blue', ax=axes[1][0])
+sns.distplot(data['RevolvingUtilizationOfUnsecuredLines'][data["SeriousDlqin2yrs"] == 0], bins=100, color='blue', ax=axes[1][0])
 axes[1][0].set_title('histogram of feature: ' + str('RevolvingUtilizationOfUnsecuredLines'))
 axes[1][0].set_xlabel('')
 
