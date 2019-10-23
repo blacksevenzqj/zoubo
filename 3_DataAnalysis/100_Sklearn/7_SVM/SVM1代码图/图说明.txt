@@ -1,0 +1,27 @@
+1：未标准化
+2：标准化
+3：取对数log
+4：取对数log 再 标准化
+
+
+
+不做偏度，做标准化
+The accuracy under kernel linear is 0.976608
+0.003023862838745117
+The accuracy under kernel poly is 0.964912
+0.01003718376159668
+The accuracy under kernel rbf is 0.970760
+0.009963512420654297
+The accuracy under kernel sigmoid is 0.953216
+0.0
+
+
+做偏度，做标准化
+The accuracy under kernel linear is 0.959064
+0.009999752044677734
+The accuracy under kernel poly is 0.970760
+0.010002374649047852
+The accuracy under kernel rbf is 0.970760
+0.010001420974731445
+The accuracy under kernel sigmoid is 0.970760
+0.0
