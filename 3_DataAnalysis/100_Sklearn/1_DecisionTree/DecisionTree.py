@@ -236,7 +236,7 @@ parameters = {'splitter':('best','random')
               ,'min_impurity_decrease':[*np.linspace(0,0.5,20)]
              }
 
-clf = DecisionTreeClassifier(random_state=25)
+clf = tree.DecisionTreeClassifier(random_state=25)
 GS = GridSearchCV(clf, parameters, cv=10)
 GS.fit(Xtrain,Ytrain)
 

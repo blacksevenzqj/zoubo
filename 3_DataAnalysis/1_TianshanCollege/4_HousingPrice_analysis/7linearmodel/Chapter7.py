@@ -63,7 +63,7 @@ P>|t|值越大于0，说明p值越 ＞ α显著性水平（0.1），越不在拒
 如：Income的P>|t|=0.000，说明概率p在拒绝域内，启用备选假设β1≠0，特征Income对模型有用。
 如：Age的P>|t|=0.934，说明概率p不在拒绝域内，启用原假设β1=0，特征Age对模型没有用。
 '''
-lm_s = ols('avg_exp ~ Income + Age + dist_home_val', data=exp).fit()  # 分别做的 两样本T检验
+lm_s = ols('avg_exp ~ Income + Age + dist_home_val', data=exp).fit()
 lm_s.summary()
 
 # 在原始数据集上得到预测值和残差
