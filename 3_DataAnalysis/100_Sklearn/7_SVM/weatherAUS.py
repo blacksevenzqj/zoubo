@@ -8,31 +8,32 @@ Created on Sat Oct 19 15:59:57 2019
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.impute import SimpleImputer # 0.20, conda, pip
+from sklearn.impute import SimpleImputer  # 0.20, conda, pip
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sys
 import re
 import os
+
 os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM")
 
 # In[]:
-weather = pd.read_csv(r"weatherAUS5000.csv",index_col=0) # 第一列变为index
+weather = pd.read_csv(r"weatherAUS5000.csv", index_col=0)  # 第一列变为index
 
-X = weather.iloc[:,:-1]
-Y = weather.iloc[:,-1]
+X = weather.iloc[:, :-1]
+Y = weather.iloc[:, -1]
 
 # In[]:
 import FeatureTools as ft
 
-print(X.isnull().mean()) # 缺失值所占总值的比例 isnull().sum(全部的True)/X.shape[0]
+print(X.isnull().mean())  # 缺失值所占总值的比例 isnull().sum(全部的True)/X.shape[0]
 print(ft.missing_values_table(X))
 
 print(set(Y), Y.isnull().sum())
 
 # In[]:
-#Ori_Xtrain, Ori_Xtest, Ori_Ytrain, Ori_Ytest = train_test_split(X,Y,test_size=0.3,random_state=420) #随机抽样
-Ori_Xtrain, Ori_Xtest, Ori_Ytrain, Ori_Ytest = ft.data_segmentation_skf(X,Y, test_size=0.3)
+# Ori_Xtrain, Ori_Xtest, Ori_Ytrain, Ori_Ytest = train_test_split(X,Y,test_size=0.3,random_state=420) #随机抽样
+Ori_Xtrain, Ori_Xtest, Ori_Ytrain, Ori_Ytest = ft.data_segmentation_skf(X, Y, test_size=0.3)
 
 Xtrain = Ori_Xtrain.copy()
 Xtest = Ori_Xtest.copy()
@@ -51,6 +52,7 @@ ft.sample_category(Ytrain, Ytest)
 # 一、特征工程：
 # 将标签编码
 from sklearn.preprocessing import LabelEncoder
+
 encorder = LabelEncoder().fit(Ytrain)  # 允许一维数据的输入
 
 # 使用训练集进行训练，然后在训练集和测试集上分别进行transform
@@ -61,18 +63,18 @@ Ytest = pd.DataFrame(encorder.transform(Ytest))
 # 而我们的训练集中只有YES和NO， 那么只能 重新建模。
 
 # 备份数据，好习惯
-#Ytrain.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\数据备份\Ytrain.csv")
-#Ytest.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\数据备份\Ytest.csv")
+# Ytrain.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\数据备份\Ytrain.csv")
+# Ytest.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\数据备份\Ytest.csv")
 
 
 # In[]:
 # 描述性统计
-Xtrain.describe([0.01,0.05,0.1,0.25,0.5,0.75,0.9,0.99]).T
+Xtrain.describe([0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99]).T
 
-data_temp = pd.concat([Xtrain, Ytrain], axis=1) # 新对象
+data_temp = pd.concat([Xtrain, Ytrain], axis=1)  # 新对象
 
-f, axes = plt.subplots(2,2, figsize=(16, 13))
-ft.data_distribution(ft.get_notMissing_values(data_temp, 'MinTemp'), "MinTemp", 0, axes)
+f, axes = plt.subplots(2, 2, figsize=(16, 13))
+ft.class_data_distribution(data_temp, "MinTemp", 0, axes)
 
 # In[]:
 linearv = ["MinTemp", "MaxTemp", "Rainfall", "Evaporation", "Sunshine", "WindGustDir",
@@ -80,8 +82,8 @@ linearv = ["MinTemp", "MaxTemp", "Rainfall", "Evaporation", "Sunshine", "WindGus
            "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm", "Temp9am", "Temp3pm"]
 
 for i in linearv[0:3]:
-    f, axes = plt.subplots(2,2, figsize=(16, 13))
-    ft.data_distribution(ft.get_notMissing_values(data_temp, i), i, 0, axes)
+    f, axes = plt.subplots(2, 2, figsize=(16, 13))
+    ft.class_data_distribution(data_temp, i, 0, axes)
 
 # In[]:
 # 特征类别
@@ -101,31 +103,30 @@ Xtrain["Rainfall"].fillna(tRainfall_mean, inplace=True)
 
 Xtrain.loc[Xtrain["Rainfall"] >= 1, "RainToday"] = 1
 Xtrain.loc[Xtrain["Rainfall"] < 1, "RainToday"] = 0
-#Xtrain[Xtrain["Rainfall"].isnull()]["RainToday"] = np.nan
+# Xtrain[Xtrain["Rainfall"].isnull()]["RainToday"] = np.nan
 print(Xtrain["RainToday"].isnull().sum())
 
 # In[]:
 print(Xtest["Rainfall"].isnull().sum())
 Xtest["Rainfall"].fillna(tRainfall_mean, inplace=True)
-Xtest.loc[Xtest["Rainfall"] >= 1,"RainToday"] = 1
-Xtest.loc[Xtest["Rainfall"] < 1,"RainToday"] = 0
-#Xtest.loc[Xtest["Rainfall"].isnull()]["RainToday"] = np.nan
+Xtest.loc[Xtest["Rainfall"] >= 1, "RainToday"] = 1
+Xtest.loc[Xtest["Rainfall"] < 1, "RainToday"] = 0
+# Xtest.loc[Xtest["Rainfall"].isnull()]["RainToday"] = np.nan
 print(Xtest["RainToday"].isnull().sum())
 
 # In[]:
 Xtrain["Month"] = Xtrain["Date"].apply(lambda x: int(x.split("-")[1]))
-Xtest["Month"] = Xtest["Date"].apply(lambda x:int(x.split("-")[1]))
+Xtest["Month"] = Xtest["Date"].apply(lambda x: int(x.split("-")[1]))
 
 # In[]:
 # 训练集中 气象站 名称
-Xtrain.loc[:,"Location"].value_counts().count()
-
-
+Xtrain.loc[:, "Location"].value_counts().count()
 
 # In[]:
 # 爬虫 得到的 澳大利亚城市 和 澳大利亚城市对应气候
 # 澳大利亚城市 经纬度
-cityll = pd.read_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\cityll.csv",index_col=0)
+cityll = pd.read_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\cityll.csv",
+                     index_col=0)
 # 澳大利亚城市对应气候
 city_climate = pd.read_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\Cityclimate.csv")
 
@@ -143,12 +144,11 @@ cityll["Latitudenum"] = cityll['Latitude'].apply(lambda x: float(x[:-1]))
 # 经度
 cityll["Longitudenum"] = cityll['Longitude'].apply(lambda x: float(x[:-1]))
 
-
 # 观察一下所有的经纬度方向都是一致的，全部是南纬，东经，因为澳大利亚在南半球，东半球
 print(cityll['Latitudedir'].value_counts())
 print(cityll['Longitudedir'].value_counts())
 
-citylld = cityll[['City','Latitudenum','Longitudenum']]
+citylld = cityll[['City', 'Latitudenum', 'Longitudenum']]
 
 # In[]:
 # 为 citylld 添加 气候
@@ -158,10 +158,10 @@ citylld['Climate'] = citylld['City'].map(city_climate_index['Climate'])
 # 地图中有8种气候，这里只有7种，是因为 第8种是极地气候，这些城市都不在其范围内
 citylld['Climate'].value_counts()
 
-
 # In[]:
 # 训练集中 气象站 经纬度
-samplecity = pd.read_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\samplecity.csv",index_col=0)
+samplecity = pd.read_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\samplecity.csv",
+                         index_col=0)
 samplecity.head()
 
 # 纬度
@@ -169,10 +169,9 @@ samplecity["Latitudenum"] = samplecity['Latitude'].apply(lambda x: float(x[:-1])
 # 经度
 samplecity["Longitudenum"] = samplecity['Longitude'].apply(lambda x: float(x[:-1]))
 
-samplecityd = samplecity[['City','Latitudenum','Longitudenum']]
+samplecityd = samplecity[['City', 'Latitudenum', 'Longitudenum']]
 
 samplecityd.head()
-
 
 # In[]:
 # 气象站 和 城市 的距离
@@ -180,38 +179,38 @@ samplecityd.head()
 from math import radians, sin, cos, acos
 
 # radians：角度（纬度、经度） 转 弧度
-citylld.loc[:,"slat"] = citylld.iloc[:,1].apply(lambda x : radians(x))
-citylld.loc[:,"slon"] = citylld.iloc[:,2].apply(lambda x : radians(x))
-samplecityd.loc[:,"elat"] = samplecityd.iloc[:,1].apply(lambda x : radians(x))
-samplecityd.loc[:,"elon"] = samplecityd.iloc[:,2].apply(lambda x : radians(x))
+citylld.loc[:, "slat"] = citylld.iloc[:, 1].apply(lambda x: radians(x))
+citylld.loc[:, "slon"] = citylld.iloc[:, 2].apply(lambda x: radians(x))
+samplecityd.loc[:, "elat"] = samplecityd.iloc[:, 1].apply(lambda x: radians(x))
+samplecityd.loc[:, "elon"] = samplecityd.iloc[:, 2].apply(lambda x: radians(x))
 
 # In[]:
 for i in range(samplecityd.shape[0]):
-    slat = citylld.loc[:,"slat"] # 所有城市的 纬度
-    slon = citylld.loc[:,"slon"] # 所有城市的 经度
-    elat = samplecityd.loc[i,"elat"] # 第i个气象站 纬度
-    elon = samplecityd.loc[i,"elon"] # 第i个气象站 经度
+    slat = citylld.loc[:, "slat"]  # 所有城市的 纬度
+    slon = citylld.loc[:, "slon"]  # 所有城市的 经度
+    elat = samplecityd.loc[i, "elat"]  # 第i个气象站 纬度
+    elon = samplecityd.loc[i, "elon"]  # 第i个气象站 经度
     # 第i个气象站 到 所有城市 的距离
-    dist = 6371.01 * np.arccos(np.sin(slat)*np.sin(elat) + 
-                          np.cos(slat)*np.cos(elat)*np.cos(slon.values - elon))
-    # 与 第i个气象站 距离最近的 城市的索引 
+    dist = 6371.01 * np.arccos(np.sin(slat) * np.sin(elat) +
+                               np.cos(slat) * np.cos(elat) * np.cos(slon.values - elon))
+    # 与 第i个气象站 距离最近的 城市的索引
     city_index = np.argsort(dist)[0]
-    
+
     # 每次计算后，取距离最近的城市，然后将最近的 城市 和 城市对应的气候 都匹配到samplecityd中
-    samplecityd.loc[i,"closest_city"] = citylld.loc[city_index,"City"]
-    samplecityd.loc[i,"Climate"] = citylld.loc[city_index,"Climate"]
+    samplecityd.loc[i, "closest_city"] = citylld.loc[city_index, "City"]
+    samplecityd.loc[i, "Climate"] = citylld.loc[city_index, "Climate"]
 
 # In[]:
 # 查看 气象站 气候的分布 （samplecityd的City字段 是 气象站名称）
 samplecityd["Climate"].value_counts()
 
 # 确认无误后，取出样本城市所对应的气候，并保存
-locafinal = samplecityd.loc[:,['City', 'Climate']]
+locafinal = samplecityd.loc[:, ['City', 'Climate']]
 locafinal.columns = ['Location', 'Climate']
 
 # 为.map做准备
 locafinal = locafinal.set_index('Location')
-#locafinal.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\samplelocation.csv")
+# locafinal.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\7_SVM\samplelocation.csv")
 
 # In[]:
 # 1、把location替换成气候的是我们的map的映射
@@ -221,10 +220,10 @@ Xtrain['Climate'] = Xtrain['Location'].map(locafinal['Climate'])
 # 我们使用re这个模块来消除逗号
 # re.sub(希望替换的值，希望被替换成的值，要操作的字符串) #去掉逗号
 # x.strip()是去掉空格的函数
-Xtrain["Climate"] = Xtrain["Climate"].apply(lambda x:re.sub(",","",x.strip()))
+Xtrain["Climate"] = Xtrain["Climate"].apply(lambda x: re.sub(",", "", x.strip()))
 
 # 合并运行
-Xtest["Climate"] = Xtest["Location"].map(locafinal['Climate']).apply(lambda x:re.sub(",","",x.strip()))
+Xtest["Climate"] = Xtest["Location"].map(locafinal['Climate']).apply(lambda x: re.sub(",", "", x.strip()))
 
 # In[]:
 # 查看分布：
@@ -240,8 +239,8 @@ print(set(Xtest["Climate"]), len(set(Xtest["Climate"])))
 temp_Climate_list = ft.set_diff(set(Xtrain['Climate']), set(Xtest['Climate']))
 
 # In[]:
-Xtrain.groupby(['Location','Climate'])['Date'].count()
-Xtest.groupby(['Location','Climate'])['Date'].count()
+Xtrain.groupby(['Location', 'Climate'])['Date'].count()
+Xtest.groupby(['Location', 'Climate'])['Date'].count()
 
 # In[]:
 # 查看缺失值的缺失情况
@@ -259,13 +258,13 @@ Ytest_ = Ytest.copy()
 
 # In[]:
 # 分类（离散）特征
-Xtrain_.drop(['Date','Location'], inplace=True, axis=1)
-Xtest_.drop(['Date','Location'], inplace=True, axis=1)
+Xtrain_.drop(['Date', 'Location'], inplace=True, axis=1)
+Xtest_.drop(['Date', 'Location'], inplace=True, axis=1)
 
 cate = Xtrain_.columns[Xtrain_.dtypes == "object"].tolist()
 
 # 除了特征类型为"object"的特征们，还有虽然用数字表示，但是本质为分类型特征的云层遮蔽程度
-cloud = ["Cloud9am","Cloud3pm", 'RainToday', 'Month']
+cloud = ["Cloud9am", "Cloud3pm", 'RainToday', 'Month']
 cate = cate + cloud
 # WindGustDir、WindDir9am、WindDir3pm、Climate、Cloud9am、Cloud3pm
 
@@ -274,30 +273,31 @@ print(Xtest_[cate].isnull().mean())
 
 # In[]:
 # 对于分类型特征，我们使用众数来进行填补
-si = SimpleImputer(missing_values=np.nan,strategy="most_frequent")
+si = SimpleImputer(missing_values=np.nan, strategy="most_frequent")
 # 注意，我们使用训练集数据来训练我们的填补器，本质是在生成训练集中的众数
-si.fit(Xtrain_.loc[:,cate])
+si.fit(Xtrain_.loc[:, cate])
 # In[]:
 # 然后我们用训练集中的众数来同时填补训练集和测试集
-Xtrain_.loc[:,cate] = si.transform(Xtrain_.loc[:,cate])
-Xtest_.loc[:,cate] = si.transform(Xtest_.loc[:,cate])
+Xtrain_.loc[:, cate] = si.transform(Xtrain_.loc[:, cate])
+Xtest_.loc[:, cate] = si.transform(Xtest_.loc[:, cate])
 # In[]
 print(Xtrain_[cate].isnull().mean())
 print(Xtest_[cate].isnull().mean())
 
 # In[]:
 # 将所有的分类型变量编码为数字，一个类别是一个数字
-from sklearn.preprocessing import OrdinalEncoder # 只允许二维以上的数据进行输入
+from sklearn.preprocessing import OrdinalEncoder  # 只允许二维以上的数据进行输入
+
 oe = OrdinalEncoder()
 
 # In[]:
 # 先行测试： （LabelEncoder 是单特征转换）
-#encorder_t = LabelEncoder().fit(Xtrain_['Location'])
-#Xtrain_['Location'] = encorder_t.transform(Xtrain_['Location'])
-#Xtest_['Location'] = encorder_t.transform(Xtest_['Location'])
+# encorder_t = LabelEncoder().fit(Xtrain_['Location'])
+# Xtrain_['Location'] = encorder_t.transform(Xtrain_['Location'])
+# Xtest_['Location'] = encorder_t.transform(Xtest_['Location'])
 #
-#print(len(Xtest[Xtest['Location'] == 'Adelaide']))
-#print(len(Xtrain[Xtrain['Location'] == 'Adelaide']))
+# print(len(Xtest[Xtest['Location'] == 'Adelaide']))
+# print(len(Xtrain[Xtrain['Location'] == 'Adelaide']))
 '''
 Xtest中有Xtrain没有的气象站，所以转换失败。
 '''
@@ -312,9 +312,8 @@ oe = oe.fit(Xtrain_[cate])
 Xtrain_.loc[:,cate] = oe.transform(Xtrain_.loc[:,cate])
 Xtest_.loc[:,cate] = oe.transform(Xtest_.loc[:,cate])
 '''
-Xtrain_.loc[:,cate] = oe.fit_transform(Xtrain_.loc[:,cate])
-Xtest_.loc[:,cate] = oe.fit_transform(Xtest_.loc[:,cate])
-
+Xtrain_.loc[:, cate] = oe.fit_transform(Xtrain_.loc[:, cate])
+Xtest_.loc[:, cate] = oe.fit_transform(Xtest_.loc[:, cate])
 
 # In[]:
 # 连续特征 缺失值处理：
@@ -322,37 +321,34 @@ col = Xtrain_.columns.tolist()
 for i in cate:
     col.remove(i)
 
-#temp_null = Xtrain_[col].isnull().sum()
-#col = temp_null[temp_null>0].index.tolist()
+# temp_null = Xtrain_[col].isnull().sum()
+# col = temp_null[temp_null>0].index.tolist()
 
 # In[]:
 # 实例化模型，填补策略为"mean"表示均值
-impmean = SimpleImputer(missing_values=np.nan,strategy = "mean")
+impmean = SimpleImputer(missing_values=np.nan, strategy="mean")
 # 用训练集来fit模型
-impmean = impmean.fit(Xtrain_.loc[:,col])
+impmean = impmean.fit(Xtrain_.loc[:, col])
 # 分别在训练集和测试集上进行均值填补
-Xtrain_.loc[:,col] = impmean.transform(Xtrain_.loc[:,col])
-Xtest_.loc[:,col] = impmean.transform(Xtest_.loc[:,col])
+Xtrain_.loc[:, col] = impmean.transform(Xtrain_.loc[:, col])
+Xtest_.loc[:, col] = impmean.transform(Xtest_.loc[:, col])
 
 print(Xtrain_[col].isnull().sum())
 print(Xtest_[col].isnull().sum())
 
-
 # In[]:
 # 标准化
-from sklearn.preprocessing import StandardScaler #数据转换为均值为0，方差为1的数据
+from sklearn.preprocessing import StandardScaler  # 数据转换为均值为0，方差为1的数据
 
 # 标准化不改变数据的分布，不会把数据变成正态分布的
 ss = StandardScaler()
-ss = ss.fit(Xtrain_.loc[:,col])
-Xtrain_.loc[:,col] = ss.transform(Xtrain_.loc[:,col])
-Xtest_.loc[:,col] = ss.transform(Xtest_.loc[:,col])
-
-
+ss = ss.fit(Xtrain_.loc[:, col])
+Xtrain_.loc[:, col] = ss.transform(Xtrain_.loc[:, col])
+Xtest_.loc[:, col] = ss.transform(Xtest_.loc[:, col])
 
 # In[]:
 # 二、建模
-from time import time #随时监控我们的模型的运行时间
+from time import time  # 随时监控我们的模型的运行时间
 import datetime
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
@@ -360,34 +356,32 @@ from sklearn.metrics import roc_auc_score, precision_score, recall_score
 import RocLib as rlb
 
 # In[]:
-Ytrain_ = Ytrain_.iloc[:,0].ravel()
-Ytest_ = Ytest_.iloc[:,0].ravel()
+Ytrain_ = Ytrain_.iloc[:, 0].ravel()
+Ytest_ = Ytest_.iloc[:, 0].ravel()
 
 # In[]:
 # 建模选择自然是我们的支持向量机SVC，首先用核函数的学习曲线来选择核函数
 # 我们希望同时观察，精确性，recall以及AUC分数
-times = time() # 因为SVM是计算量很大的模型，所以我们需要时刻监控我们的模型运行时间
+times = time()  # 因为SVM是计算量很大的模型，所以我们需要时刻监控我们的模型运行时间
 
-#kernel_list = ["linear","poly","rbf","sigmoid"]
+# kernel_list = ["linear","poly","rbf","sigmoid"]
 kernel_list = ["linear"]
 for kernel in kernel_list:
-    clf = SVC(kernel = kernel
-              ,gamma="auto"
-              ,degree = 1
-#              ,cache_size = 5000
-             ).fit(Xtrain_, Ytrain_)
+    clf = SVC(kernel=kernel
+              , gamma="auto"
+              , degree=1
+              #              ,cache_size = 5000
+              ).fit(Xtrain_, Ytrain_)
     result = clf.predict(Xtest_)
-    score = clf.score(Xtest_,Ytest_)
+    score = clf.score(Xtest_, Ytest_)
     recall = recall_score(Ytest_, result)
     clf_decision_scores = clf.decision_function(Xtest_)
-    auc = roc_auc_score(Ytest_,clf_decision_scores)
-    print("%s 's testing accuracy %f, recall is %f', auc is %f" % (kernel,score,recall,auc))
-#    print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
-    fig, axe = plt.subplots(2,2,figsize=(30,20))
+    auc = roc_auc_score(Ytest_, clf_decision_scores)
+    print("%s 's testing accuracy %f, recall is %f', auc is %f" % (kernel, score, recall, auc))
+    #    print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
+    fig, axe = plt.subplots(2, 2, figsize=(30, 20))
     rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
     rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
-
-
 
 # In[]:
 '''
@@ -398,25 +392,25 @@ for kernel in kernel_list:
 '''
 注意： class_weight = balanced 其实找的是模型的平衡点（AUC面积最大化 相当于 KS最大值化）： 默认阈值 与 KS阈值 近似完全重合，达到模型默认阈值的平衡点。
 '''
-#kernel_list = ["linear","poly","rbf","sigmoid"]
+# kernel_list = ["linear","poly","rbf","sigmoid"]
 kernel_list = ["linear"]
 times = time()
 for kernel in kernel_list:
-    clf = SVC(kernel = kernel
-              ,gamma="auto"
-              ,degree = 1
-              ,cache_size = 5000
-              ,class_weight = "balanced" # 使用balanced
-             ).fit(Xtrain_, Ytrain_)
+    clf = SVC(kernel=kernel
+              , gamma="auto"
+              , degree=1
+              , cache_size=5000
+              , class_weight="balanced"  # 使用balanced
+              ).fit(Xtrain_, Ytrain_)
     result = clf.predict(Xtest_)
-    score = clf.score(Xtest_,Ytest_) # 0.803239
-    precision = precision_score(Ytest_, result) # 0.551793
-    recall = recall_score(Ytest_, result) # 0.728947
+    score = clf.score(Xtest_, Ytest_)  # 0.803239
+    precision = precision_score(Ytest_, result)  # 0.551793
+    recall = recall_score(Ytest_, result)  # 0.728947
     clf_decision_scores = clf.decision_function(Xtest_)
-    auc = roc_auc_score(Ytest_,clf_decision_scores) # 0.857590
-    print("testing accuracy is %f, precision is %f, recall is %f', auc is %f" %(score,precision,recall,auc))
-#    print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
-    fig, axe = plt.subplots(2,2,figsize=(30,20))
+    auc = roc_auc_score(Ytest_, clf_decision_scores)  # 0.857590
+    print("testing accuracy is %f, precision is %f, recall is %f', auc is %f" % (score, precision, recall, auc))
+    #    print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
+    fig, axe = plt.subplots(2, 2, figsize=(30, 20))
     rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
     rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
 # In[]:
@@ -429,58 +423,57 @@ class_weight设置为：{"标签的值1"：权重1，"标签的值2"：权重2}�
 3、只通过调整模型 样本权重超参数 就能提高recall召回率，可以不用选择 decision_function阈值 进行自定义预测。 
 '''
 times = time()
-clf = SVC(kernel = "linear"
-          ,gamma="auto"
-          ,cache_size = 5000
-          ,class_weight = {1:15} # 注意，这里写的其实是，类别1：15，隐藏了类别0：1这个比例
-         ).fit(Xtrain_, Ytrain_)
+clf = SVC(kernel="linear"
+          , gamma="auto"
+          , cache_size=5000
+          , class_weight={1: 15}  # 注意，这里写的其实是，类别1：15，隐藏了类别0：1这个比例
+          ).fit(Xtrain_, Ytrain_)
 result = clf.predict(Xtest_)
-score = clf.score(Xtest_,Ytest_)
+score = clf.score(Xtest_, Ytest_)
 recall = recall_score(Ytest_, result)
 clf_decision_scores = clf.decision_function(Xtest_)
-auc = roc_auc_score(Ytest_,clf_decision_scores)
-print("testing accuracy %f, recall is %f', auc is %f" %(score,recall,auc))
-#print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
+auc = roc_auc_score(Ytest_, clf_decision_scores)
+print("testing accuracy %f, recall is %f', auc is %f" % (score, recall, auc))
+# print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
 
-fig, axe = plt.subplots(2,2,figsize=(30,20))
+fig, axe = plt.subplots(2, 2, figsize=(30, 20))
 rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
 rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
-
-
 
 # In[]:
 # 2、追求  少数类别Y=1  尽量高的precision精准度：
 # 2.1、以 模型默认 超参数检测：
-clf = SVC(kernel = "linear"
-          ,gamma="auto"
-          ,cache_size = 5000
-         ).fit(Xtrain_, Ytrain_)
+clf = SVC(kernel="linear"
+          , gamma="auto"
+          , cache_size=5000
+          ).fit(Xtrain_, Ytrain_)
 
 result = clf.predict(Xtest_)
 clf_decision_scores = clf.decision_function(Xtest_)
 
-fig, axe = plt.subplots(2,2,figsize=(30,20))
+fig, axe = plt.subplots(2, 2, figsize=(30, 20))
 rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
 rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
 
 # In[]:
 # 查看模型 特异度： 1-FPR
 # 少数类别Y=1 的特异度  等于  多数类别Y=0 的召回率
-print(rlb.SPE(Ytest_, result)) #  1-FPR： print(rlb.TPR(Ytest_, result, 0))
-print(rlb.FPR(Ytest_, result)) #  1-SPE
+print(rlb.SPE(Ytest_, result))  # 1-FPR： print(rlb.TPR(Ytest_, result, 0))
+print(rlb.FPR(Ytest_, result))  # 1-SPE
 
 print(rlb.confusion_matrix_customize(Ytest_, result))
 from sklearn.metrics import confusion_matrix
-print(confusion_matrix(Ytest_, result, labels=[0,1]))
+
+print(confusion_matrix(Ytest_, result, labels=[0, 1]))
 
 # In[]:
 # 2.2、以 小范围 样本权重超参数 检测：
 # 第一次测试 class_weight 范围：（class_weight在很小值范围内）
-#irange = np.linspace(0.01,0.05,10)
+# irange = np.linspace(0.01,0.05,10)
 # precision 峰值 0.745614 ： under ratio 1:1.014444 testing accuracy is 0.839232, precision is 0.745614, recall is 0.447368', auc is 0.855629
 
 # 第二次测试 class_weight 范围： 根据第一步的precision峰值对应的class_weight值（上一个值与下一个值为边界）， 进一步缩小class_weight值范围
-irange = np.linspace(0.010000,0.018889,10)
+irange = np.linspace(0.010000, 0.018889, 10)
 # under ratio 1:1.013951 testing accuracy is 0.839232, precision is 0.745614, recall is 0.447368', auc is 0.855670
 '''
 没有什么质的改变，在很小的样本权重范围内 模型的学习曲线 少数类别Y=1 的precision精准度 与 原始模型相当，
@@ -495,13 +488,13 @@ auc_list = []
 
 for i in irange:
     times = time()
-    clf = SVC(kernel = "linear"
-              ,gamma="auto"
-              ,cache_size = 5000
-              ,class_weight = {1:1+i} # 注意，这里写的其实是，类别1：1+i，隐藏了类别0：1这个比例
-             ).fit(Xtrain_, Ytrain_)
+    clf = SVC(kernel="linear"
+              , gamma="auto"
+              , cache_size=5000
+              , class_weight={1: 1 + i}  # 注意，这里写的其实是，类别1：1+i，隐藏了类别0：1这个比例
+              ).fit(Xtrain_, Ytrain_)
     result = clf.predict(Xtest_)
-    score = clf.score(Xtest_,Ytest_)
+    score = clf.score(Xtest_, Ytest_)
     precision = precision_score(Ytest_, result)
     recall = recall_score(Ytest_, result)
     auc = roc_auc_score(Ytest_, clf.decision_function(Xtest_))
@@ -509,32 +502,33 @@ for i in irange:
     precision_list.append(precision)
     recall_list.append(recall)
     auc_list.append(auc)
-    print("under ratio 1:%f testing accuracy is %f, precision is %f, recall is %f', auc is %f" %(1+i,score,precision,recall,auc))
+    print("under ratio 1:%f testing accuracy is %f, precision is %f, recall is %f', auc is %f" % (
+    1 + i, score, precision, recall, auc))
 #    print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
 
-fig, axe = plt.subplots(1,1,figsize=(10,10))
-#axe.plot(irange, score_list)
+fig, axe = plt.subplots(1, 1, figsize=(10, 10))
+# axe.plot(irange, score_list)
 axe.plot(irange, precision_list)
 axe.plot(irange, recall_list)
-#axe.plot(irange, auc_list)
+# axe.plot(irange, auc_list)
 # In[]:
 # 2.2.1、细化权重阈值（只通过调整模型 样本权重超参数 已无法再提高precision精准度）
 times = time()
-clf = SVC(kernel = "linear"
-          ,gamma="auto"
-          ,cache_size = 5000
-          ,class_weight = {1:1.013951} 
-         ).fit(Xtrain_, Ytrain_)
+clf = SVC(kernel="linear"
+          , gamma="auto"
+          , cache_size=5000
+          , class_weight={1: 1.013951}
+          ).fit(Xtrain_, Ytrain_)
 result = clf.predict(Xtest_)
-score = clf.score(Xtest_,Ytest_)
+score = clf.score(Xtest_, Ytest_)
 precision = precision_score(Ytest_, result)
 recall = recall_score(Ytest_, result)
 clf_decision_scores = clf.decision_function(Xtest_)
-auc = roc_auc_score(Ytest_,clf_decision_scores)
-print("testing accuracy is %f, precision is %f, recall is %f', auc is %f" %(score,precision,recall,auc))
-#print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
+auc = roc_auc_score(Ytest_, clf_decision_scores)
+print("testing accuracy is %f, precision is %f, recall is %f', auc is %f" % (score, precision, recall, auc))
+# print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
 
-fig, axe = plt.subplots(2,2,figsize=(30,20))
+fig, axe = plt.subplots(2, 2, figsize=(30, 20))
 rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
 rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
 # In[]:
@@ -550,8 +544,7 @@ score = rlb.precision_scoreAll_customize(Ytest_, my_predict)
 precision = rlb.precision_score_customize(Ytest_, my_predict)
 recall = rlb.recall_score_customize(Ytest_, my_predict)
 f1 = rlb.f1_score_customize(Ytest_, my_predict)
-print("testing accuracy is %f, precision is %f, recall is %f', f1 is %f" %(score,precision,recall,f1))
-
+print("testing accuracy is %f, precision is %f, recall is %f', f1 is %f" % (score, precision, recall, f1))
 
 # In[]:
 # 换模型测试：
@@ -564,29 +557,28 @@ score = logclf.score(Xtest_, Ytest_)
 precision = precision_score(Ytest_, result)
 recall = recall_score(Ytest_, result)
 clf_decision_scores = logclf.decision_function(Xtest_)
-print("testing accuracy is %f, precision is %f, recall is %f" %(score,precision,recall))
-fig, axe = plt.subplots(2,2,figsize=(30,20))
+print("testing accuracy is %f, precision is %f, recall is %f" % (score, precision, recall))
+fig, axe = plt.subplots(2, 2, figsize=(30, 20))
 rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
 rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
 
 # In[]
-C_range = np.linspace(5,10,10)
+C_range = np.linspace(5, 10, 10)
 
 for C in C_range:
-    logclf = LR(solver="liblinear",C=C).fit(Xtrain_, Ytrain_)
+    logclf = LR(solver="liblinear", C=C).fit(Xtrain_, Ytrain_)
     result = logclf.predict(Xtest_)
     score = logclf.score(Xtest_, Ytest_)
     precision = precision_score(Ytest_, result)
     recall = recall_score(Ytest_, result)
-    print("C is %f testing accuracy is %f, precision is %f, recall is %f" %(C,score,precision,recall))
+    print("C is %f testing accuracy is %f, precision is %f, recall is %f" % (C, score, precision, recall))
 
 # 加正则项C后，精准度微降低，召回率微升高（和 SVM 情况类似），也不是很理想，上 集成模型 吧。
 
 
-
 # In[]:
 # 3、追求 平衡： （AUC面积最大化 相当于 KS值越大越好）
-    
+
 '''
 # 要运行10分钟！！！
 C_range = np.linspace(0.01,20,20)
@@ -609,7 +601,7 @@ for C in C_range:
     print("under C %f, testing accuracy is %f,recall is %f', auc is %f" %
     (C,score,recall,auc))
     print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
-    
+
 print(max(aucall),C_range[aucall.index(max(aucall))])
 plt.figure()
 plt.plot(C_range,recallall,c="red",label="recall")
@@ -631,30 +623,30 @@ AUC面积也只能够在0.86上下进行变化了，调节C值不能够让模型
 本模型设置了C超参数，使近似重合的 默认阈值 与 KS阈值 之间有一段距离，那么平衡点应以 KS阈值 为准。
 '''
 times = time()
-clf = SVC(kernel = "linear",C=3.1663157894736838,cache_size = 5000
-          ,class_weight = "balanced"
-         ).fit(Xtrain_, Ytrain_)
+clf = SVC(kernel="linear", C=3.1663157894736838, cache_size=5000
+          , class_weight="balanced"
+          ).fit(Xtrain_, Ytrain_)
 
 result = clf.predict(Xtest_)
-score = clf.score(Xtest_,Ytest_) # 0.801440
-precision = precision_score(Ytest_, result) # 0.548323
-recall = recall_score(Ytest_, result) # 0.731579
+score = clf.score(Xtest_, Ytest_)  # 0.801440
+precision = precision_score(Ytest_, result)  # 0.548323
+recall = recall_score(Ytest_, result)  # 0.731579
 clf_decision_scores = clf.decision_function(Xtest_)
-auc = roc_auc_score(Ytest_,clf_decision_scores) # 0.857490
-print("testing accuracy is %f, precision is %f, recall is %f', auc is %f" %(score,precision,recall,auc))
-#print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
+auc = roc_auc_score(Ytest_, clf_decision_scores)  # 0.857490
+print("testing accuracy is %f, precision is %f, recall is %f', auc is %f" % (score, precision, recall, auc))
+# print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
 
-fig, axe = plt.subplots(2,2,figsize=(30,20))
+fig, axe = plt.subplots(2, 2, figsize=(30, 20))
 rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
 rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
 # In[]:
 # 以 KS最大值 对应的 decision_function阈值 进行自定义预测
 my_predict = np.array(clf_decision_scores >= -0.4176, dtype='int')
-score = rlb.precision_scoreAll_customize(Ytest_, my_predict) # 0.752849
-precision = rlb.precision_score_customize(Ytest_, my_predict) # 0.475758
-recall = rlb.recall_score_customize(Ytest_, my_predict) # 0.826316
-f1 = rlb.f1_score_customize(Ytest_, my_predict) # 0.603846
-print("testing accuracy is %f, precision is %f, recall is %f', f1 is %f" %(score,precision,recall,f1))
+score = rlb.precision_scoreAll_customize(Ytest_, my_predict)  # 0.752849
+precision = rlb.precision_score_customize(Ytest_, my_predict)  # 0.475758
+recall = rlb.recall_score_customize(Ytest_, my_predict)  # 0.826316
+f1 = rlb.f1_score_customize(Ytest_, my_predict)  # 0.603846
+print("testing accuracy is %f, precision is %f, recall is %f', f1 is %f" % (score, precision, recall, f1))
 '''
 加入 超参数C  和  class_weight = balanced 权重超参数 的本模型， 默认阈值0 时模型显得更 平衡些（和 只设置balanced 的模型相似）。
 本模型正因为 加入了 C超参数，相比 只设置 balanced 的模型（默认阈值 与 KS阈值 近似完全重合，达到模型默认阈值的平衡点）, 
