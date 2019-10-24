@@ -33,7 +33,7 @@ datall = pd.read_csv("sndHsPr.csv")  # 读入清洗过后的数据
 print("%d", datall.shape[0])  # 样本量
 
 # %%
-dat0 = datall
+dat0 = datall.copy()
 dat0.describe(include="all").T  # 查看数据基本描述
 
 # In[18]:
