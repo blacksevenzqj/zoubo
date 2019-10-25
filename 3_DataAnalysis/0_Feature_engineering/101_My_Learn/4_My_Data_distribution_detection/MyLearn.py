@@ -107,7 +107,7 @@ plt.show()
 
 
 # In[]:
-var_x_ln = skew.index[skew > 0.9]  # skew的索引 --- data的列名
+var_x_ln = skew.index[skew > 1]  # skew的索引 --- data的列名
 print(var_x_ln, len(var_x_ln))
 # In[]:
 fig, axe = plt.subplots(len(var_x_ln), 1, figsize=(20, 28 * 6))
