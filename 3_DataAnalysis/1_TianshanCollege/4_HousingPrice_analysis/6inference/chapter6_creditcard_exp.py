@@ -48,6 +48,7 @@ mean = house_price_gr["rate"].mean()
 std = house_price_gr["rate"].std()
 house_price_gr.sort_values(by='rate', inplace = True)
 
+# 注意： Data.列名 是传统调用方式，但 Data.index 是特殊的，是DataFrame的索引，不是列名。
 s_r = house_price_gr.reset_index(drop= False)
 s_r['p'] = (s_r.index - 0.5) / len(s_r) # 计算百分位数 p(i)
 print(s_r['p'])
