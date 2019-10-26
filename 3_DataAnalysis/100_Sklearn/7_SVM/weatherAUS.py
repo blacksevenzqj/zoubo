@@ -431,14 +431,19 @@ clf = SVC(kernel="linear"
 result = clf.predict(Xtest_)
 score = clf.score(Xtest_, Ytest_)
 recall = recall_score(Ytest_, result)
-clf_decision_scores = clf.decision_function(Xtest_)
-auc = roc_auc_score(Ytest_, clf_decision_scores)
+clf_decision_scores_test = clf.decision_function(Xtest_)
+auc = roc_auc_score(Ytest_, clf_decision_scores_test)
 print("testing accuracy %f, recall is %f', auc is %f" % (score, recall, auc))
 # print(datetime.datetime.fromtimestamp(time()-times).strftime("%M:%S:%f"))
 
 fig, axe = plt.subplots(2, 2, figsize=(30, 20))
-rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores, axe[0], 1)
-rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores, axe[1])
+rlb.ComprehensiveIndicatorFigure(Ytest_, clf_decision_scores_test, axe[0], 1)
+rlb.ComprehensiveIndicatorSkLibFigure(Ytest_, clf_decision_scores_test, axe[1])
+
+# Train 与 Test ROC曲线比较
+fig, axe = plt.subplots(1, 1, figsize=(13, 10))
+clf_decision_scores_train = clf.decision_function(Xtrain_)
+rlb.comparedRoc(Ytrain_, clf_decision_scores_train, Ytest_, clf_decision_scores_test, axe)
 
 # In[]:
 # 2、追求  少数类别Y=1  尽量高的precision精准度：
