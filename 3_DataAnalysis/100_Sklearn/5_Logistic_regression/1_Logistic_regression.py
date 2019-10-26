@@ -71,6 +71,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.feature_selection import SelectFromModel
 
 # In[]:
+# 使用 L1正则化 选择特征：
 data = load_breast_cancer()
 data.data.shape
  
