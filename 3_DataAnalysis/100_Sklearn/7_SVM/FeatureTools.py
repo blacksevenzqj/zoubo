@@ -414,11 +414,32 @@ from sklearn.metrics import r2_score  # R square
 # 拟合优度
 # R^2
 '''
-SSres 表示 回归值与真实值之间的 RSS残差平方和 --- 模型解的离差平方和，也可以理解为 均方误差MSE： RSS / m样本量
-SStot 表示 真实值 的 内部差异 --- 总离差平方和，也可以理解为 方差： SStot / m样本量
-R^2 = ss_res/ss_tot，两种理解结果是一样的。
-因此R-squared既考量了回归值与真实值的差异，也兼顾了问题本身真实值的变动。【模型对样本数据的拟合度】
-R-squared 取值范围 (-∞,1]，值越大表示模型越拟合训练数据，最优解是1；当模型 预测为随机值的时候，有可能为负；若预测值恒为样本期望，R2为0。
+从 真实值的内部差异（方差）为出发点思考 R^2 公式：
+1、mse 代表 回归值与真实值之间的（均方误差MSE）  
+mse = np.sum(np.square(y_predict - y_true))  /  len(y_ture)
+
+2、variance 表示 真实值 的 内部差异（方差）
+variance = np.sum(np.square(y_true - np.mean(y_true)))  /  len(y_ture)
+
+3、R^2
+R^2  =  1 - (mse/variance)  =  1 - (RSS残差平方和 / TSS总离差平方和)
+注意： mse/variance 相除之后，各自分母的 len(y_ture) 被消去，得到上述公式：分子上得到RSS残差平方和，分母上这时不能说是方差（len(y_ture)被消除了），而是TSS总离差平方和。
+
+4、所以，消去分母 len(y_ture) 后，公式变换得到 最终 R^2 公式：
+rss = np.sum(np.square(y_predict - y_true))
+tss = np.sum(np.square(y_true - np.mean(y_true)))
+R^2 = 1 - (rss/tss)
+
+因此R-squared既考量了回归值与真实值的差异，也兼顾了真实值的离散程度。【模型对样本数据的拟合度】R-squared 取值范围 (-∞,1]，
+值越大表示模型越拟合训练数据，最优解是1；当模型 预测为随机值的时候，R^2有可能为负；若预测值恒为样本期望，R^2为0。
+
+其中y是我们的真实标签，y^^ 是我们的预测结果， y^- 是我们的均值， 分母 ∑(y - y^-)^2  如果除以样本量m就是我们的方差。
+方差的本质是任意一个y值和样本均值的差异，差异越大，这些值所带的信息越多。在R^2中，分子（RSS离差平方和）是模型没有捕获到的信息总量，
+分母是真实标签所带的信息量（可以理解为方差：m被消除了），所以其衡量的是：
+1 - 模型没有捕获到的信息量 占 真实标签中所带的信息量的比例  =  模型捕获到的信息量 占 真实标签中所带的信息量的比例，
+所以，R^2 越接近1越好。
+
+上述公式 R^2 = 1 - RSS/TSS 是正确公式；而 R^2 = ESS/TSS 是不完整、有缺陷的公式（不能使用）
 '''
 
 
@@ -426,9 +447,9 @@ def r2_score_customize(y_true, y_predict, customize_type=1):
     if customize_type == 1:
         return r2_score(y_true, y_predict)
     else:
-        ss_res = np.sum(np.square(y_predict - np.mean(y_true)))
-        ss_tot = np.sum(np.square(y_true - np.mean(y_true)))
-        return ss_res / ss_tot
+        rss = np.sum(np.square(y_predict - y_true))
+        tss = np.sum(np.square(y_true - np.mean(y_true)))
+        return 1 - (rss / tss)
 
 
 # 如果解释不同解释变量的模型之间的模型优劣（样本一样）
@@ -438,12 +459,14 @@ i=1 当有截距项时，反之等于0
 n=用于拟合该模型的观察值数量
 p=模型中参数的个数
 Adj.R^2  =  1  -  (n-i)(1-R^2) / (n-p) 
+各处查询后用下面的公式：
+Adj.R^2  =  1  -  (n-i)(1-R^2) / (n-p-1) 
 '''
 
 
 def adj_r2_customize(y_true, y_predict, coef_num, customize_type=1):
     r2_score = r2_score_customize(y_true, y_predict, customize_type)
-    adj_r2 = 1 - ((len(y_true) - 1) * (1 - r2_score)) / (len(y_true) - coef_num)
+    adj_r2 = 1 - ((len(y_true) - 1) * (1 - r2_score)) / (len(y_true) - coef_num - 1)
     return adj_r2
 
 
