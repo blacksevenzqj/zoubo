@@ -414,8 +414,9 @@ from sklearn.metrics import r2_score  # R square
 # 拟合优度
 # R^2
 '''
-SSres 代表 回归值与真实值之间的 平方差异（回归差异）--- 模型解的离差平方和
-SStot 表示 真实值 的 方差（内部差异）--- 总离差平方和
+SSres 表示 回归值与真实值之间的 RSS残差平方和 --- 模型解的离差平方和，也可以理解为 均方误差MSE： RSS / m样本量
+SStot 表示 真实值 的 内部差异 --- 总离差平方和，也可以理解为 方差： SStot / m样本量
+R^2 = ss_res/ss_tot，两种理解结果是一样的。
 因此R-squared既考量了回归值与真实值的差异，也兼顾了问题本身真实值的变动。【模型对样本数据的拟合度】
 R-squared 取值范围 (-∞,1]，值越大表示模型越拟合训练数据，最优解是1；当模型 预测为随机值的时候，有可能为负；若预测值恒为样本期望，R2为0。
 '''
@@ -425,8 +426,8 @@ def r2_score_customize(y_true, y_predict, customize_type=1):
     if customize_type == 1:
         return r2_score(y_true, y_predict)
     else:
-        ss_res = 1 / len(y_true) * np.sum(np.square(y_predict - np.mean(y_true)))
-        ss_tot = 1 / len(y_true) * np.sum(np.square(y_true - np.mean(y_true)))
+        ss_res = np.sum(np.square(y_predict - np.mean(y_true)))
+        ss_tot = np.sum(np.square(y_true - np.mean(y_true)))
         return ss_res / ss_tot
 
 
@@ -447,7 +448,7 @@ def adj_r2_customize(y_true, y_predict, coef_num, customize_type=1):
 
 
 # 多元线性回归选择自变量指标（AIC/BIC、R^2/Adj.R^2）
-# AIC： （有问题，暂时不能解决）
+# AIC： （有问题，公式都不能确定。。。）
 '''
 AIC指标： 多元线性回归选择自变量指标（AIC/BIC、R^2/Adj.R^2）
 k = 解释变量个数
