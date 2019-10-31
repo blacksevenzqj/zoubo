@@ -37,7 +37,7 @@ fig, axe = plt.subplots(1,1,figsize=(15,10))
 sns.distplot(a, bins=100, color='green', ax=axe)
 
 # 2.2、浮点数: 产生均匀分布的随机数
-b = np.random.uniform(0,100000,(100000,1)) # 0到10的范围， 4行3列矩阵： 如果只是一个数字，则生成列表
+b = np.random.uniform(0,100000,(100000,1)) # 0到100000的范围， 100000行1列矩阵： 如果只是一个数字，则生成列表
 fig, axe = plt.subplots(1,1,figsize=(15,10))
 sns.distplot(b, bins=100, color='green', ax=axe)
 

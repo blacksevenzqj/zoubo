@@ -718,6 +718,100 @@ def variance_expansion_coefficient(df, cols):
     return temp_dict, temp_dict_ln
 
 
+# 训练集 与 测试集 拟合：
+def fitting_comparison(y_true, y_predict):
+    plt.plot(range(len(y_true)), sorted(y_true), c="black", label="Data")
+    plt.plot(range(len(y_predict)), sorted(y_predict), c="red", label="Predict")
+    plt.legend()
+    plt.show()
+
+
+# 线性回归模型 泛化能力：
+def linear_model_comparison(X, y, cv_customize=5, score_type=1, start=1, end=1001, step=100, linear_show=True):
+    from sklearn.linear_model import LinearRegression as LR, Ridge, Lasso
+    from sklearn.model_selection import cross_val_score
+
+    if score_type == 1 or score_type == 2:
+        scoring_customize = "r2"
+    elif score_type == 3:
+        scoring_customize = "explained_variance"
+    else:
+        scoring_customize = "neg_mean_squared_error"
+
+    alpharange = np.arange(start, end, step)
+    linear_scores, ridge_scores = [], []
+    for alpha in alpharange:
+        linear = LR()
+        ridge = Ridge(alpha=alpha)
+
+        linear_score = cross_val_score(linear, X, y, cv=cv_customize, scoring=scoring_customize)
+        ridge_score = cross_val_score(ridge, X, y, cv=cv_customize, scoring=scoring_customize)
+
+        if score_type == 1:
+            # 因 R^2=(-∞,1]， R^2拟合优度： 模型捕获到的信息量 占 真实标签中所带的信息量的比例
+            # 1 - R^2均值 = 偏差， 所以用 R^2均值 代表偏差（R^2均值越小，偏差越大； R^2均值越大，偏差越小）
+            # 偏差：交叉验证 的 R^2均值：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 均值： 不同模型R^2拟合优度的准确性
+            ridge_score = ridge_score.mean()  # R^2均值 代表 偏差
+            linear_score = linear_score.mean()
+            title = "R2_Mean"
+        elif score_type == 2:
+            # 方差：交叉验证 的 R^2方差：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 方差： 不同模型R^2拟合优度的离散程度
+            ridge_score = ridge_score.var()  # R^2 方差
+            linear_score = linear_score.var()
+            title = "R2_Var"
+        elif score_type == 3:
+            linear_score = linear_score.mean()
+            ridge_score = ridge_score.mean()  # 可解释性方差 均值
+            title = "Explained_Variance_Mean"
+        else:
+            linear_score = linear_score.mean()  # 负均方误差 均值
+            ridge_score = ridge_score.mean()
+            title = "neg_mean_squared_error_Mean"
+
+        ridge_scores.append(ridge_score)
+        linear_scores.append(linear_score)
+
+    plt.plot(alpharange, ridge_scores, color="red", label="Ridge")
+    if linear_show:
+        plt.plot(alpharange, linear_scores, color="orange", label="LR")
+    plt.title(title)
+    plt.legend()
+    plt.show()
+
+    return alpharange, ridge_scores
+
+
+def linear_model_comparison_all(X, y, cv_customize=5, start=1, end=1001, step=100, linear_show=True):
+    alpharange_r2, ridge_scores_r2 = linear_model_comparison(X, y, cv_customize=cv_customize, score_type=1, start=start,
+                                                             end=end, step=step, linear_show=linear_show)
+    maxAlpha, maxR2 = alpharange_r2[ridge_scores_r2.index(max(ridge_scores_r2))], max(ridge_scores_r2)
+    startAlpha, startR2 = alpharange_r2[0], ridge_scores_r2[0]
+    diff_r2 = maxR2 - startR2
+    print("R^2起始阈值%f:R^2起始值%f，R^2最大值阈值%f:R^2最大值%f，R^2差值%f" % (startAlpha, startR2, maxAlpha, maxR2, diff_r2))
+
+    alpharange_r2var, ridge_scores_r2var = linear_model_comparison(X, y, cv_customize=cv_customize, score_type=2,
+                                                                   start=start, end=end, step=step,
+                                                                   linear_show=linear_show)
+    # 当R^2最大值时，求 R^2方差Var的最大值，用R^2的变化差值 与 R^2方差的变化差值 再进行比较
+    startr2VaR = ridge_scores_r2var[0]
+    alpharanger2VarR_Index = alpharange_r2var.tolist().index(maxAlpha)
+    r2varR = ridge_scores_r2var[alpharanger2VarR_Index]
+    diff_r2varR = r2varR - startr2VaR
+    print("R^2方差起始阈值%f:R^2方差起始值%f，R^2方差对应阈值%f:R^2方差对应最大值%f，R^2方差差值%f" % (
+    alpharange_r2var[0], startr2VaR, maxAlpha, r2varR, diff_r2varR))
+    print(diff_r2varR / diff_r2)
+
+
+#    alpharange_var, ridge_scores_var = linear_model_comparison(X, y, cv_customize=cv_customize, score_type=3, start=start, end=end, step=step)
+#    # 当R^2最大值时，求 方差Var的最大值，用R^2的变化差值 与 方差的变化差值 再进行比较
+#    startVaR = ridge_scores_var[0]
+#    alpharangeVarR_Index = alpharange_var.tolist().index(maxAlpha)
+#    varR = ridge_scores_var[alpharangeVarR_Index]
+#    diff_varR = varR-startVaR
+#    print("方差起始阈值%f:方差起始值%f，方差对应阈值%f:方差对应最大值%f，方差差值%f" % (alpharange_var[0], startVaR, maxAlpha, varR, diff_varR))
+#    print(diff_varR / diff_r2)
+
+
 # 基于MSE绘制学习曲线（样本量）
 def plot_learning_curve(algo, X_train, X_test, y_train, y_test):
     train_score = []
