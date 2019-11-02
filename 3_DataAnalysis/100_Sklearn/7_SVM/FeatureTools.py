@@ -733,10 +733,6 @@ def linear_model_comparison(X, y, cv_customize=5, score_type=1, start=1, end=100
 
     if score_type == 1 or score_type == 2:
         scoring_customize = "r2"
-    elif score_type == 3:
-        scoring_customize = "explained_variance"
-    else:
-        scoring_customize = "neg_mean_squared_error"
 
     alpharange = np.arange(start, end, step)
     linear_scores, ridge_scores = [], []
@@ -759,14 +755,6 @@ def linear_model_comparison(X, y, cv_customize=5, score_type=1, start=1, end=100
             ridge_score = ridge_score.var()  # R^2 方差
             linear_score = linear_score.var()
             title = "R2_Var"
-        elif score_type == 3:
-            linear_score = linear_score.mean()
-            ridge_score = ridge_score.mean()  # 可解释性方差 均值
-            title = "Explained_Variance_Mean"
-        else:
-            linear_score = linear_score.mean()  # 负均方误差 均值
-            ridge_score = ridge_score.mean()
-            title = "neg_mean_squared_error_Mean"
 
         ridge_scores.append(ridge_score)
         linear_scores.append(linear_score)
@@ -801,15 +789,13 @@ def linear_model_comparison_all(X, y, cv_customize=5, start=1, end=1001, step=10
     alpharange_r2var[0], startr2VaR, maxAlpha, r2varR, diff_r2varR))
     print(diff_r2varR / diff_r2)
 
-
-#    alpharange_var, ridge_scores_var = linear_model_comparison(X, y, cv_customize=cv_customize, score_type=3, start=start, end=end, step=step)
-#    # 当R^2最大值时，求 方差Var的最大值，用R^2的变化差值 与 方差的变化差值 再进行比较
-#    startVaR = ridge_scores_var[0]
-#    alpharangeVarR_Index = alpharange_var.tolist().index(maxAlpha)
-#    varR = ridge_scores_var[alpharangeVarR_Index]
-#    diff_varR = varR-startVaR
-#    print("方差起始阈值%f:方差起始值%f，方差对应阈值%f:方差对应最大值%f，方差差值%f" % (alpharange_var[0], startVaR, maxAlpha, varR, diff_varR))
-#    print(diff_varR / diff_r2)
+    # R2_Var值非常小，从0.0038→0.0045平稳缓慢增加，所以看不出变宽的痕迹。
+    alpharange = np.arange(start, end, step)
+    plt.figure(figsize=(6, 5))
+    plt.plot(alpharange, ridge_scores_r2, c="k", label="R2_Mean")
+    plt.plot(alpharange, ridge_scores_r2 + np.array(ridge_scores_r2var) * 0.1, c="red", linestyle="--", label="R2_Var")
+    plt.plot(alpharange, ridge_scores_r2 - np.array(ridge_scores_r2var) * 0.1, c="red", linestyle="--")
+    plt.legend()
 
 
 # 基于MSE绘制学习曲线（样本量）
