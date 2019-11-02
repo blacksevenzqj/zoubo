@@ -73,8 +73,8 @@ def confusion_matrix(y_true, y_predict):
         [FN(y_true, y_predict), TP(y_true, y_predict)],
     ])
 
-# matrix = confusion_matrix(y_test, y_log_predict)
-# print(matrix)
+matrix = confusion_matrix(y_test, y_log_predict)
+print(matrix)
 
 # 准确率
 def precision_scoreAll(y_true, y_predict):
@@ -153,8 +153,8 @@ print("=========================================================================
 '''
 # 混淆矩阵
 from sklearn.metrics import confusion_matrix
-confusionMatrix = confusion_matrix(y_test, y_log_predict)
-# print(confusionMatrix)
+confusionMatrix = confusion_matrix(y_test, y_log_predict, labels=[0,1])
+print(confusionMatrix)
 
 # 准确率
 from sklearn.metrics import accuracy_score
@@ -179,7 +179,7 @@ f1Score = f1_score(y_test, y_log_predict)
 # 多分类综合指标：只有这个指标能计算多分类，以上的都是计算二分类的（以每个类别为基准，分别计算 每个类别各自的 精准率、召回率、F1 等指标）
 from sklearn.metrics import classification_report
 classificationReport = classification_report(y_test, y_log_predict)
-# print(classificationReport)
+print(classificationReport)
 
 
 print("=============================================================================================")
