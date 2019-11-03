@@ -83,6 +83,7 @@ ShuffleSplit是KFold交叉验证的比较好的替代，它允许更好的控制
 1、没有按照 n_splits定义的折数 n-1折训练集，1折测试集 进行数据集 均分。
 2.1、而是以train_size、train_size 决定最终 训练集 和 测试集的大小（train_size + train_size不能大于1，但可以小于1）
 2.2、当不显示设置train_size、train_size，只设置n_splits时，貌似是留一切分法。
+3、数据集只打乱一次，rs.split(X, y)不再进行打乱。
 '''
 X = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]])
 y = np.array([2, 2, 3, 3, 4, 4])
