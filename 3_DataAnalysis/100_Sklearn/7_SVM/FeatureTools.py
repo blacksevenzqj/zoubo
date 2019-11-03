@@ -774,7 +774,7 @@ def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, l
     diff_R2varR = R2varR - start_R2VaR
     print("R^2方差起始阈值%f:R^2方差起始值%f，R^2方差对应阈值%f:R^2方差对应最大值%f，R^2方差差值%f" % (
     alpharange[0], start_R2VaR, maxR2_Alpha, R2varR, diff_R2varR))
-    print("R^2方差差值 / R^2差值 = %f" % (diff_R2varR / diff_R2))
+    print("R^2方差差值/R^2差值 = %f" % (diff_R2varR / diff_R2))
 
     # 1、打印R2最高所对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
     print(alpharange[ridge_r2_scores.index(max(ridge_r2_scores))], max(ridge_r2_scores),
