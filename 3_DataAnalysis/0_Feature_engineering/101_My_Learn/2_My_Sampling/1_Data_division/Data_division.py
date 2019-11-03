@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Sun Nov  3 13:05:44 2019
+
+@author: dell
+"""
+
+# -*- coding: utf-8 -*-
 
 import numpy as np
 import pandas as pd
@@ -10,10 +17,11 @@ from sklearn.model_selection import ShuffleSplit, GroupShuffleSplit, StratifiedS
 
 # In[1]:
 # 1、K折交叉验证：
-# 1.1、KFold
+# 1.1、KFold：
+# 严格按照 n-1折训练集，1折测试集 进行数据集 均分
 X = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]])
 y = np.array([1, 1, 3, 4, 3, 5])
-kf = KFold(n_splits=3)  # 分3折，2折训练=(2/3)*6=4样本； 1折测试=(1/3)*6=2样本。 严格按照 n-1折训练集，1折测试划分
+kf = KFold(n_splits=3) # 分3折，2折训练=(2/3)*6=4样本； 1折测试=(1/3)*6=2样本。
 print(kf.get_n_splits(X)) # int
 print(kf)
 for train_index, test_index in kf.split(X):
@@ -66,7 +74,16 @@ for train_index, test_index in skf.split(X, y):
 
 # In[2]:
 # 2、随机划分法：
-# 2.1、ShuffleSplit 把数据集打乱顺序，然后划分测试集和训练集，训练集额和测试集的比例随机选定(训练集和测试集的比例的和可以小于1)
+# 2.1、ShuffleSplit
+'''
+ShuffleSplit迭代器 产生指定数量的 独立的train/test数据集划分。首先对样本全体随机打乱，然后再划分train/test对。
+可以使用随机数种子random_state来控制随机数序列发生器使得运算结果可重现。
+ShuffleSplit是KFold交叉验证的比较好的替代，它允许更好的控制迭代次数和train/test样本比例。
+
+1、没有按照 n_splits定义的折数 n-1折训练集，1折测试集 进行数据集 均分。
+2.1、而是以train_size、train_size 决定最终 训练集 和 测试集的大小（train_size + train_size不能大于1，但可以小于1）
+2.2、当不显示设置train_size、train_size，只设置n_splits时，貌似是留一切分法。
+'''
 X = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]])
 y = np.array([2, 2, 3, 3, 4, 4])
 rs = ShuffleSplit(n_splits=2, test_size=.25, random_state=0)  # 分2折，定义test_size=.25，那么train_size=0.75
@@ -80,7 +97,7 @@ for train_index, test_index in rs.split(X, y):
 
 print("===============================================================")
 
-rs = ShuffleSplit(n_splits=3, train_size=.5, test_size=.25, random_state=0) # 训练集和测试集的比例的和可以小于1
+rs = ShuffleSplit(n_splits=3, train_size=0.2, test_size=.8, random_state=0) # 训练集和测试集的比例的和可以小于1
 print(rs.get_n_splits(X))
 print(rs)
 for train_index, test_index in rs.split(X, y):
@@ -159,8 +176,13 @@ for train_indices, test_indices in rs.split(x_train_names_all, y_train_labels_al
     n_fold += 1
 
 # %%
-# 2.3、StratifiedShuffleSplit 把数据集打乱顺序，然后划分测试集和训练集，
-# 训练集额和测试集的比例随机选定，训练集和测试集的比例的和可以小于1,但是还要保证训练集中各类别所占的比例是一样的
+# 2.3、StratifiedShuffleSplit
+'''
+StratifiedShuffleSplit是ShuffleSplit的一个变体，返回分层划分，也就是在创建划分的时候要保证每个划分中：
+样本中类别比例 与 整体数据集中的原始比例 保持一致。
+
+其他性质 和 ShuffleSplit 相同。
+'''
 X = np.array([[1,2],[3,4],[5,6],[7,8],[9,10],[11,12]])
 y = np.array([1,2,1,2,1,2])
 # 分3折，先保证训练集中各类别所占的比例是一样的（优先），再按再按train_size、test_size划分（可以不满足）
