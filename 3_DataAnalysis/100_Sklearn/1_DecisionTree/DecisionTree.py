@@ -281,7 +281,7 @@ plt.show()
 
 # In[]:
 # 基于MSE绘制学习曲线（样本量）
-def plot_learning_curve(algo, X_train, X_test, y_train, y_test):
+def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
     train_score = []
     test_score = []
     for i in range(1, len(X_train)+1):
@@ -300,11 +300,11 @@ def plot_learning_curve(algo, X_train, X_test, y_train, y_test):
     plt.legend()
     plt.show()
     
-plot_learning_curve(DecisionTreeRegressor(), Xtrain, Xtest, Ytrain, Ytest)
+plot_learning_curve_mse_customize(DecisionTreeRegressor(), Xtrain, Xtest, Ytrain, Ytest)
 
 # In[]:
 # 基于R^2值绘制学习曲线（样本量）
-def plot_learning_curve_r2(algo, X_train, X_test, y_train, y_test):
+def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
     train_score = []
     test_score = []
     for i in range(1, len(X_train)+1):
@@ -324,7 +324,7 @@ def plot_learning_curve_r2(algo, X_train, X_test, y_train, y_test):
     plt.axis([0, len(X_train)+1, -0.1, 1.1])
     plt.show()
     
-plot_learning_curve_r2(DecisionTreeRegressor(max_depth=3), Xtrain, Xtest, Ytrain, Ytest)
+plot_learning_curve_r2_customize(DecisionTreeRegressor(max_depth=3), Xtrain, Xtest, Ytrain, Ytest)
 
 # In[];
 # 拟合 正弦函数
