@@ -7,8 +7,7 @@ Created on Sat Oct 19 16:48:40 2019
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import KFold, ShuffleSplit, StratifiedKFold, StratifiedShuffleSplit, cross_val_score as CVS
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -903,12 +902,67 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
             , color="g", label="Test score")
     ax.legend(loc="best")
     return ax
+
+
 # In[]:
 # -----------------------------1、基于样本量-------------------------------
 
 # In[]:
 # -----------------------------2、基于超参数-------------------------------
+def getModel(i, model_name, hparam_name, prev_hparam_value, random_state):
+    from xgboost import XGBRegressor as XGBR
 
+    if model_name == "XGBR":
+        if hparam_name == "n_estimators":
+            reg = XGBR(n_estimators=i, random_state=random_state)
+        elif hparam_name == "subsample" and prev_hparam_value is not None:
+            reg = XGBR(n_estimators=prev_hparam_value, subsample=i, random_state=random_state)
+        else:
+            raise RuntimeError('Hparam Error')
+    return reg
+
+
+def learning_curve_r2_customize(axisx, Xtrain, Ytrain, cv, model_name="XGBR", hparam_name="n_estimators",
+                                prev_hparam_value=None, random_state=420):
+    rs = []
+    var = []
+    ge = []
+    for i in axisx:
+        reg = getModel(i, model_name, hparam_name, prev_hparam_value, random_state)
+        cvresult = CVS(reg, Xtrain, Ytrain, cv=cv)
+        # 记录1-偏差
+        rs.append(cvresult.mean())
+        # 记录方差
+        var.append(cvresult.var())
+        # 计算泛化误差的可控部分
+        ge.append((1 - cvresult.mean()) ** 2 + cvresult.var())
+    # 1、打印R2最高所对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
+    print(axisx[rs.index(max(rs))], max(rs), var[rs.index(max(rs))])
+    # 1、打印R2方差最低时对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
+    print(axisx[var.index(min(var))], rs[var.index(min(var))], min(var))
+    # 1、打印泛化误差可控部分的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
+    print(axisx[ge.index(min(ge))], rs[ge.index(min(ge))], var[ge.index(min(ge))], min(ge))
+
+    rs = np.array(rs)
+    var = np.array(var)
+    plt.figure(figsize=(20, 5))
+    plt.plot(axisx, rs, c="black", label=model_name)
+    # 添加 方差
+    plt.plot(axisx, rs + var, c="red", linestyle='-.')
+    plt.plot(axisx, rs - var, c="red", linestyle='-.')
+    plt.legend()
+    plt.show()
+
+    # 绘制 化误差的可控部分
+    #    plt.figure(figsize=(20,5))
+    #    plt.plot(axisx,ge,c="gray",linestyle='-.')
+    #    plt.show()
+    '''
+    270 0.8628488903325771 0.0010233348954168013
+    170 0.8590591457326957 0.0009745514733593459
+    270 0.8628488903325771 0.0010233348954168013 0.019833761778422276
+    最后选择 n_estimators=270 的超参数
+    '''
 
 # In[]:
 # -----------------------------2、基于超参数-------------------------------
