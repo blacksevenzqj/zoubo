@@ -727,79 +727,107 @@ def fitting_comparison(y_true, y_predict):
 
 
 # 线性回归模型 泛化能力：
-def linear_model_comparison(X, y, cv_customize=5, score_type=1, start=1, end=1001, step=100, linear_show=True):
+def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, linear_show=True):
     from sklearn.linear_model import LinearRegression as LR, Ridge, Lasso
     from sklearn.model_selection import cross_val_score
 
-    if score_type == 1 or score_type == 2:
-        scoring_customize = "r2"
-
     alpharange = np.arange(start, end, step)
-    linear_scores, ridge_scores = [], []
+    linear_r2_scores, ridge_r2_scores = [], []
+    linear_r2var_scores, ridge_r2var_scores = [], []
+    linear_ge, ridge_ge = [], []
     for alpha in alpharange:
         linear = LR()
         ridge = Ridge(alpha=alpha)
 
-        linear_score = cross_val_score(linear, X, y, cv=cv_customize, scoring=scoring_customize)
-        ridge_score = cross_val_score(ridge, X, y, cv=cv_customize, scoring=scoring_customize)
+        linear_score = cross_val_score(linear, X, y, cv=cv_customize, scoring="r2")
+        ridge_score = cross_val_score(ridge, X, y, cv=cv_customize, scoring="r2")
 
-        if score_type == 1:
-            # 因 R^2=(-∞,1]， R^2拟合优度： 模型捕获到的信息量 占 真实标签中所带的信息量的比例
-            # 1 - R^2均值 = 偏差， 所以用 R^2均值 代表偏差（R^2均值越小，偏差越大； R^2均值越大，偏差越小）
-            # 偏差：交叉验证 的 R^2均值：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 均值： 不同模型R^2拟合优度的准确性
-            ridge_score = ridge_score.mean()  # R^2均值 代表 偏差
-            linear_score = linear_score.mean()
-            title = "R2_Mean"
-        elif score_type == 2:
-            # 方差：交叉验证 的 R^2方差：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 方差： 不同模型R^2拟合优度的离散程度
-            ridge_score = ridge_score.var()  # R^2 方差
-            linear_score = linear_score.var()
-            title = "R2_Var"
+        # 因 R^2=(-∞,1]， R^2拟合优度： 模型捕获到的信息量 占 真实标签中所带的信息量的比例
+        # 1 - R^2均值 = 偏差， 所以用 R^2均值 代表偏差（R^2均值越小，偏差越大； R^2均值越大，偏差越小）
+        # 偏差：交叉验证 的 R^2均值：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 均值： 不同模型R^2拟合优度的准确性
+        ridge_r2_score = ridge_score.mean()  # R^2均值 代表 偏差
+        linear_r2_score = linear_score.mean()
+        title_mean = "R2_Mean"
+        ridge_r2_scores.append(ridge_r2_score)
+        linear_r2_scores.append(linear_r2_score)
 
-        ridge_scores.append(ridge_score)
-        linear_scores.append(linear_score)
+        # 方差：交叉验证 的 R^2方差：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 方差： 不同模型R^2拟合优度的离散程度
+        ridge_r2var_score = ridge_score.var()  # R^2 方差
+        linear_r2var_score = linear_score.var()
+        title_var = "R2_Var"
+        ridge_r2var_scores.append(ridge_r2var_score)
+        linear_r2var_scores.append(linear_r2var_score)
 
-    plt.plot(alpharange, ridge_scores, color="red", label="Ridge")
+        # 计算泛化误差的可控部分
+        ridge_ge.append((1 - ridge_r2_score) ** 2 + ridge_r2var_score)
+        linear_ge.append((1 - linear_r2_score) ** 2 + linear_r2var_score)
+
+    maxR2_Alpha, maxR2 = alpharange[ridge_r2_scores.index(max(ridge_r2_scores))], max(ridge_r2_scores)
+    start_Alpha, start_R2 = alpharange[0], ridge_r2_scores[0]
+    diff_R2 = maxR2 - start_R2
+    print("R^2起始阈值%f:R^2起始值%f，R^2最大值阈值%f:R^2最大值%f，R^2差值%f" % (start_Alpha, start_R2, maxR2_Alpha, maxR2, diff_R2))
+
+    # 当R^2最大值时，求 R^2方差Var的最大值，用R^2的变化差值 与 R^2方差的变化差值 再进行比较
+    start_R2VaR = ridge_r2var_scores[0]
+    R2VarR_Index = alpharange.tolist().index(maxR2_Alpha)
+    R2varR = ridge_r2var_scores[R2VarR_Index]
+    diff_R2varR = R2varR - start_R2VaR
+    print("R^2方差起始阈值%f:R^2方差起始值%f，R^2方差对应阈值%f:R^2方差对应最大值%f，R^2方差差值%f" % (
+    alpharange[0], start_R2VaR, maxR2_Alpha, R2varR, diff_R2varR))
+    print("R^2方差差值 / R^2差值 = %f" % (diff_R2varR / diff_R2))
+
+    # 1、打印R2最高所对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
+    print(alpharange[ridge_r2_scores.index(max(ridge_r2_scores))], max(ridge_r2_scores),
+          ridge_r2var_scores[ridge_r2_scores.index(max(ridge_r2_scores))])
+    # 1、打印R2方差最低时对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
+    print(alpharange[ridge_r2var_scores.index(min(ridge_r2var_scores))],
+          ridge_r2_scores[ridge_r2var_scores.index(min(ridge_r2var_scores))], min(ridge_r2var_scores))
+    # 1、打印泛化误差可控部分的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
+    print(alpharange[ridge_ge.index(min(ridge_ge))], ridge_r2_scores[ridge_ge.index(min(ridge_ge))],
+          ridge_r2var_scores[ridge_ge.index(min(ridge_ge))], min(ridge_ge))
+
+    plt.figure(figsize=(10, 8))
+    plt.plot(alpharange, ridge_r2_scores, color="red", label="Ridge")
     if linear_show:
-        plt.plot(alpharange, linear_scores, color="orange", label="LR")
-    plt.title(title)
+        plt.plot(alpharange, linear_r2_scores, color="orange", label="LR")
+    plt.title(title_mean)
     plt.legend()
     plt.show()
 
-    return alpharange, ridge_scores
-
-
-def linear_model_comparison_all(X, y, cv_customize=5, start=1, end=1001, step=100, linear_show=True):
-    alpharange_r2, ridge_scores_r2 = linear_model_comparison(X, y, cv_customize=cv_customize, score_type=1, start=start,
-                                                             end=end, step=step, linear_show=linear_show)
-    maxAlpha, maxR2 = alpharange_r2[ridge_scores_r2.index(max(ridge_scores_r2))], max(ridge_scores_r2)
-    startAlpha, startR2 = alpharange_r2[0], ridge_scores_r2[0]
-    diff_r2 = maxR2 - startR2
-    print("R^2起始阈值%f:R^2起始值%f，R^2最大值阈值%f:R^2最大值%f，R^2差值%f" % (startAlpha, startR2, maxAlpha, maxR2, diff_r2))
-
-    alpharange_r2var, ridge_scores_r2var = linear_model_comparison(X, y, cv_customize=cv_customize, score_type=2,
-                                                                   start=start, end=end, step=step,
-                                                                   linear_show=linear_show)
-    # 当R^2最大值时，求 R^2方差Var的最大值，用R^2的变化差值 与 R^2方差的变化差值 再进行比较
-    startr2VaR = ridge_scores_r2var[0]
-    alpharanger2VarR_Index = alpharange_r2var.tolist().index(maxAlpha)
-    r2varR = ridge_scores_r2var[alpharanger2VarR_Index]
-    diff_r2varR = r2varR - startr2VaR
-    print("R^2方差起始阈值%f:R^2方差起始值%f，R^2方差对应阈值%f:R^2方差对应最大值%f，R^2方差差值%f" % (
-    alpharange_r2var[0], startr2VaR, maxAlpha, r2varR, diff_r2varR))
-    print(diff_r2varR / diff_r2)
+    plt.figure(figsize=(10, 8))
+    plt.plot(alpharange, ridge_r2var_scores, color="red", label="Ridge")
+    if linear_show:
+        plt.plot(alpharange, linear_r2var_scores, color="orange", label="LR")
+    plt.title(title_var)
+    plt.legend()
+    plt.show()
 
     # R2_Var值非常小，从0.0038→0.0045平稳缓慢增加，所以看不出变宽的痕迹。
-    alpharange = np.arange(start, end, step)
-    plt.figure(figsize=(6, 5))
-    plt.plot(alpharange, ridge_scores_r2, c="k", label="R2_Mean")
-    plt.plot(alpharange, ridge_scores_r2 + np.array(ridge_scores_r2var) * 0.1, c="red", linestyle="--", label="R2_Var")
-    plt.plot(alpharange, ridge_scores_r2 - np.array(ridge_scores_r2var) * 0.1, c="red", linestyle="--")
+    plt.figure(figsize=(10, 8))
+    plt.plot(alpharange, ridge_r2_scores, c="k", label="R2_Mean")
+    plt.plot(alpharange, ridge_r2_scores + np.array(ridge_r2var_scores), c="red", linestyle="--", label="R2_Var")
+    plt.plot(alpharange, ridge_r2_scores - np.array(ridge_r2var_scores), c="red", linestyle="--")
     plt.legend()
+    plt.title("R2_Mean vs R2_Var")
+    plt.show()
+
+    # 绘制 化误差的可控部分
+    plt.figure(figsize=(10, 8))
+    plt.plot(alpharange, ridge_ge, c="gray", linestyle='-.')
+    plt.title("Generalization error")
+    plt.show()
 
 
+# In[]:
+# ================================线性回归特征分析==============================
+
+
+# In[]:
+# ====================================学习曲线==================================
+# In[]:
+# -----------------------------1、基于样本量-------------------------------
 # 基于MSE绘制学习曲线（样本量）
-def plot_learning_curve(algo, X_train, X_test, y_train, y_test):
+def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
     train_score = []
     test_score = []
     for i in range(1, len(X_train) + 1):
@@ -820,7 +848,7 @@ def plot_learning_curve(algo, X_train, X_test, y_train, y_test):
 
 
 # 基于R^2值绘制学习曲线（样本量）
-def plot_learning_curve_r2(algo, X_train, X_test, y_train, y_test):
+def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
     train_score = []
     test_score = []
     for i in range(1, len(X_train) + 1):
@@ -840,19 +868,49 @@ def plot_learning_curve_r2(algo, X_train, X_test, y_train, y_test):
     plt.axis([0, len(X_train) + 1, -0.1, 1.1])
     plt.show()
 
+
+# 基于learning_curve函数：
+def plot_learning_curve(estimator, title, X, y, scoring=None,
+                        ax=None,  # 选择子图
+                        ylim=None,  # 设置纵坐标的取值范围
+                        cv=None,  # 交叉验证
+                        n_jobs=None  # 设定索要使用的线程
+                        ):
+    from sklearn.model_selection import learning_curve
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # learning_curve如果不显示设置scoring，则会按照模型默认的指标返回
+    train_sizes, train_scores, test_scores = learning_curve(estimator, X, y
+                                                            , scoring=scoring
+                                                            #                                                            ,shuffle=True
+                                                            , cv=cv
+                                                            , random_state=420
+                                                            , n_jobs=n_jobs)
+    if ax == None:
+        ax = plt.gca()
+    else:
+        ax = plt.figure()
+    ax.set_title(title)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+    ax.set_xlabel("Training examples")
+    ax.set_ylabel("Score")
+    ax.grid()  # 绘制网格，不是必须
+    ax.plot(train_sizes, np.mean(train_scores, axis=1), 'o-'
+            , color="r", label="Training score")
+    ax.plot(train_sizes, np.mean(test_scores, axis=1), 'o-'
+            , color="g", label="Test score")
+    ax.legend(loc="best")
+    return ax
 # In[]:
-# ================================线性回归特征分析==============================
+# -----------------------------1、基于样本量-------------------------------
 
 # In[]:
+# -----------------------------2、基于超参数-------------------------------
 
 
-
-
-
-
-
-
-
-
-
-
+# In[]:
+# -----------------------------2、基于超参数-------------------------------
+# In[]:
+# ====================================学习曲线==================================

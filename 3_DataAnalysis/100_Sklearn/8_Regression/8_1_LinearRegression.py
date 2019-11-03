@@ -230,7 +230,7 @@ cross_val_score(LR(), a, b, cv=5, scoring='r2')
 '''
 
 #交叉验证下，与线性回归相比，岭回归的 R^2结果 如何变化？
-ft.linear_model_comparison(X, y, cv_customize=5, score_type=1, start=1, end=1001, step=100)
+ft.linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100)
 '''
 可以看出，加利佛尼亚数据集上，岭回归的结果轻微上升，随后骤降。可以说，加利佛尼亚房屋价值数据集带有很轻
 微的一部分共线性，这种共线性被正则化参数α消除后，模型的效果提升了一点点，但是对于整个模型而言是杯水车
@@ -239,11 +239,8 @@ ft.linear_model_comparison(X, y, cv_customize=5, score_type=1, start=1, end=1001
 从这个结果可以看出，加利佛尼亚数据集的核心问题不在于多重共线性，岭回归不能够提升模型表现。
 '''
 # In[]:
-# 方差 如何变化：
-ft.linear_model_comparison(X, y, cv_customize=5, score_type=2, start=1, end=1001, step=100)
-# In[]:
 # 针对R^2上升，方差也上升的这一段区间进行细化： 细化 R^2 学习曲线； 细化 方差 学习曲线； 并做对比：
-ft.linear_model_comparison_all(X, y, cv_customize=5, start=1, end=1001, step=100)
+ft.linear_model_comparison(X, y, cv_customize=5, start=10, end=300, step=10)
 '''
 可以发现，模型R^2方差上升快速，R^2方差的上升部分变化 是 R^2的上升部分变化的0.3974倍，
 因此只要噪声的状况维持恒定，模型的泛化误差可能还是一定程度上降低了的。
@@ -260,13 +257,11 @@ y = load_boston().target
 
 Xtrain,Xtest,Ytrain,Ytest = train_test_split(X,y,test_size=0.3,random_state=420)
 # In[]:
-ft.linear_model_comparison(X, y, cv_customize=5, score_type=2, start=1, end=1001, step=100)
+ft.linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100)
 # In[]:
-ft.linear_model_comparison(X, y, cv_customize=5, score_type=1, start=1, end=1001, step=100)
-# In[]:
-ft.linear_model_comparison(X, y, cv_customize=5, score_type=1, start=100, end=300, step=10, linear_show=False)
+ft.linear_model_comparison(X, y, cv_customize=5, start=100, end=300, step=10, linear_show=False)
 '''
-可以发现，比起加利佛尼亚房屋价值数据集，波士顿房价数据集的方差降低明显，偏差也降低明显，可见使用岭回归
+可以发现，比起加利佛尼亚房屋价值数据集，波士顿房价数据集的方差降低明显，偏差也降低（R^2上升）明显，可见使用岭回归
 还是起到了一定的作用，模型的泛化能力是有可能会上升的。
 遗憾的是，没有人会希望自己获取的数据中存在多重共线性，因此发布到scikit-learn或者kaggle上的数据基本都经过一定的多重共线性的处理的，
 要找出绝对具有多重共线性的数据非常困难，也就无法给大家展示岭回归在实际数据中大显身手的模样。
@@ -298,9 +293,9 @@ Ridge_.score(Xtest, Ytest) # 这个接口只会计算 R^2
 
 # In[]:
 # 调用 RidgeCV模型训练 的所有 交叉验证的结果
-# 留一交叉验证： 
-# 矩阵为14448行： 与 折数相同 与 样本量相同 
-# 10列： 与 正则化超参数alphas数量相同 
+# 留一交叉验证：
+# 矩阵为14448行： 与 折数相同 与 样本量相同
+# 10列： 与 正则化超参数alphas数量相同
 Ridge_.cv_values_.shape # (14448, 10) 求的是 R^2 折数的均值， 所以要 按行求均值
 
 # In[]:
@@ -328,7 +323,7 @@ print(Ridge_.alpha_) # 根据 负均方误差 值选择出来的 α = 101
 
 
 # In[]:
-# 三、使用Lasso来进行建模： 
+# 三、使用Lasso来进行建模：
 X = pd.DataFrame(housevalue.data)
 y = housevalue.target
 Xtrain, Xtest, Ytrain, Ytest = train_test_split(X,y,test_size=0.3,random_state=420)
@@ -404,8 +399,8 @@ print(lasso_.alpha_)
 print(lasso_.alphas_.shape)
 
 # 调用LassoCV模型训练 的所有 交叉验证的结果： 返回每个alpha下的五折交叉验证结果
-# 普通交叉验证： 
-# 矩阵为200行： 与 正则化超参数alphas_数量相同 
+# 普通交叉验证：
+# 矩阵为200行： 与 正则化超参数alphas_数量相同
 # 5列： 折数
 print(lasso_.mse_path_) # 求的是 均方误差 折数的均值， 所以要 按列求均值
 
@@ -419,7 +414,7 @@ print(lasso_.mse_path_.mean(axis=1).shape) # 按列求均值，(200,)
 
 # 最佳正则化系数下获得的模型的系数结果
 print(lasso_.coef_)
-print(lasso_.score(Xtest,Ytest)) # R^2 0.60389154238192 
+print(lasso_.score(Xtest,Ytest)) # R^2 0.60389154238192
 
 # 与线性回归相比如何？
 reg = LR().fit(Xtrain,Ytrain)
