@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 from sklearn import datasets
 
+# https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingClassifier.html#sklearn.ensemble.BaggingClassifier
+
 X, y = datasets.make_moons(n_samples=500, noise=0.3, random_state=42)
 
 plt.scatter(X[y==0,0], X[y==0,1]) # X[y==0,0]取随机数：X[y==0]得到一行，再取第0个元素
