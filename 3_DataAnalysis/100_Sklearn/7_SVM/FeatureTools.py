@@ -886,6 +886,15 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
                                                             , cv=cv
                                                             , random_state=420
                                                             , n_jobs=n_jobs)
+
+    # 普通交叉验证：
+    # 矩阵为5行：与 样本量阈值 相同
+    # 5列：折数
+    print("样本量阈值%s" % train_sizes)
+    test_scores_mean = np.mean(test_scores, axis=1)  # 按列（折数）取均值
+    print("交叉验证训练集阈值%d,最大分数%f" % (
+    train_sizes[test_scores_mean.tolist().index(np.max(test_scores_mean))], np.max(test_scores_mean)))
+
     if ax == None:
         ax = plt.gca()
     else:
@@ -898,7 +907,7 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
     ax.grid()  # 绘制网格，不是必须
     ax.plot(train_sizes, np.mean(train_scores, axis=1), 'o-'
             , color="r", label="Training score")
-    ax.plot(train_sizes, np.mean(test_scores, axis=1), 'o-'
+    ax.plot(train_sizes, test_scores_mean, 'o-'
             , color="g", label="Test score")
     ax.legend(loc="best")
     return ax
