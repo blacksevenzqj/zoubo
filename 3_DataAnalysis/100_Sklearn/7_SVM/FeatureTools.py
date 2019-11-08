@@ -10,6 +10,8 @@ import pandas as pd
 from sklearn.model_selection import KFold, ShuffleSplit, StratifiedKFold, StratifiedShuffleSplit, cross_val_score as CVS
 import matplotlib.pyplot as plt
 import seaborn as sns
+import datetime
+from time import time
 
 
 # In[]:
@@ -406,7 +408,7 @@ def corrFunction_withY(data_corr, label):  # label： 因变量Y名称
 # In[]:
 # ================================线性回归特征分析==============================
 # In[]:
-from sklearn.metrics import mean_squared_error  # 均方误差
+from sklearn.metrics import mean_squared_error as MSE  # 均方误差
 from sklearn.metrics import mean_absolute_error  # 平方绝对误差
 from sklearn.metrics import r2_score  # R square
 
@@ -833,10 +835,10 @@ def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
         algo.fit(X_train[:i], y_train[:i])
 
         y_train_predict = algo.predict(X_train[:i])
-        train_score.append(mean_squared_error(y_train[:i], y_train_predict))
+        train_score.append(MSE(y_train[:i], y_train_predict))
 
         y_test_predict = algo.predict(X_test)
-        test_score.append(mean_squared_error(y_test, y_test_predict))
+        test_score.append(MSE(y_test, y_test_predict))
 
     plt.plot([i for i in range(1, len(X_train) + 1)],
              np.sqrt(train_score), label="train")
@@ -918,6 +920,7 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
 
 # In[]:
 # -----------------------------2、基于超参数-------------------------------
+# SKLearn库的XGBoost：
 def getModel(i, model_name, hparam_name, prev_hparam_value, random_state):
     from xgboost import XGBRegressor as XGBR
 
@@ -925,7 +928,13 @@ def getModel(i, model_name, hparam_name, prev_hparam_value, random_state):
         if hparam_name == "n_estimators":
             reg = XGBR(n_estimators=i, random_state=random_state)
         elif hparam_name == "subsample" and prev_hparam_value is not None:
-            reg = XGBR(n_estimators=prev_hparam_value, subsample=i, random_state=random_state)
+            reg = XGBR(n_estimators=prev_hparam_value[0], subsample=i, random_state=random_state)
+        elif hparam_name == "learning_rate" and prev_hparam_value is not None:
+            reg = XGBR(n_estimators=prev_hparam_value[0], subsample=prev_hparam_value[1], learning_rate=i,
+                       random_state=random_state)
+        elif hparam_name == "gamma" and prev_hparam_value is not None:
+            reg = XGBR(n_estimators=prev_hparam_value[0], subsample=prev_hparam_value[1],
+                       learning_rate=prev_hparam_value[2], gamma=i, random_state=random_state)
         else:
             raise RuntimeError('Hparam Error')
     return reg
@@ -963,15 +972,134 @@ def learning_curve_r2_customize(axisx, Xtrain, Ytrain, cv, model_name="XGBR", hp
     plt.show()
 
     # 绘制 化误差的可控部分
-    #    plt.figure(figsize=(20,5))
-    #    plt.plot(axisx,ge,c="gray",linestyle='-.')
-    #    plt.show()
-    '''
-    270 0.8628488903325771 0.0010233348954168013
-    170 0.8590591457326957 0.0009745514733593459
-    270 0.8628488903325771 0.0010233348954168013 0.019833761778422276
-    最后选择 n_estimators=270 的超参数
-    '''
+    plt.figure(figsize=(20, 5))
+    plt.plot(axisx, ge, c="gray", linestyle='-.')
+    plt.show()
+
+
+# ---------------------------------------------------------------------------
+
+# 自定义交叉验证（XGBoost原生库）
+def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_name, num_round):
+    import xgboost as xgb
+
+    rs_all_train = []
+    var_all_train = []
+    ge_all_train = []
+    mse_all_train = []
+    rs_all_test = []
+    var_all_test = []
+    ge_all_test = []
+    mse_all_test = []
+
+    print(ss.get_n_splits(X))
+    print(ss)
+
+    for i in axisx:
+        rs_train = []
+        mse_train = []
+        rs_test = []
+        mse_test = []
+        param_fixed[param_cycle_name] = i
+        print(param_fixed)
+
+        for train_index, test_index in ss.split(X, y):
+            #        print("Train Index:", train_index, ",Test Index:", test_index)
+            X_train, X_test = X[train_index], X[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+
+            dtrain = xgb.DMatrix(X_train, y_train)
+            bst = xgb.train(param_fixed, dtrain, num_round)
+            y_predict_train = bst.predict(dtrain)
+            rs_train.append(r2_score(y_train, y_predict_train))
+            mse_train.append(MSE(y_train, y_predict_train))
+
+            dtest = xgb.DMatrix(X_test, y_test)
+            y_predict_test = bst.predict(dtest)
+            rs_test.append(r2_score(y_test, y_predict_test))
+            mse_test.append(MSE(y_test, y_predict_test))
+
+        rs_mean_train = np.mean(rs_train)
+        rs_var_train = np.var(rs_train)
+        rs_all_train.append(rs_mean_train)
+        var_all_train.append(rs_var_train)
+        ge_all_train.append((1 - rs_mean_train) ** 2 + rs_var_train)
+        mse_all_train.append(np.mean(mse_train))
+
+        rs_mean_test = np.mean(rs_test)
+        rs_var_test = np.var(rs_test)
+        rs_all_test.append(rs_mean_test)
+        var_all_test.append(rs_var_test)
+        ge_all_test.append((1 - rs_mean_test) ** 2 + rs_var_test)
+        mse_all_test.append(np.mean(mse_test))
+
+    print(axisx[rs_all_test.index(max(rs_all_test))], max(rs_all_test),
+          var_all_test[rs_all_test.index(max(rs_all_test))])
+    print(axisx[var_all_test.index(min(var_all_test))], rs_all_test[var_all_test.index(min(var_all_test))],
+          min(var_all_test))
+    print(axisx[ge_all_test.index(min(ge_all_test))], rs_all_test[ge_all_test.index(min(ge_all_test))],
+          var_all_test[ge_all_test.index(min(ge_all_test))], min(ge_all_test))
+
+    # R2均值、R2方差
+    plt.figure(figsize=(20, 5))
+    rs_all_train = np.array(rs_all_train)
+    var_all_train = np.array(var_all_train)
+    plt.plot(axisx, rs_all_train, c="blue", label="XGB_train")
+    plt.plot(axisx, rs_all_train + var_all_train, c="green", linestyle='-.')
+    plt.plot(axisx, rs_all_train - var_all_train, c="green", linestyle='-.')
+
+    rs_all_test = np.array(rs_all_test)
+    var_all_test = np.array(var_all_test)
+    plt.plot(axisx, rs_all_test, c="black", label="XGB_test")
+    plt.plot(axisx, rs_all_test + var_all_test, c="red", linestyle='-.')
+    plt.plot(axisx, rs_all_test - var_all_test, c="red", linestyle='-.')
+    plt.title("R2")
+    plt.legend()
+    plt.show()
+
+    # 绘制 化误差的可控部分
+    plt.figure(figsize=(20, 5))
+    plt.plot(axisx, ge_all_train, c="blue", label="XGB_train", linestyle='-.')
+    plt.plot(axisx, ge_all_test, c="red", label="XGB_test", linestyle='-.')
+    plt.title("Ge")
+    plt.legend()
+    plt.show()
+
+    # MSE
+    plt.figure(figsize=(20, 5))
+    mse_all_train = np.array(mse_all_train)
+    mse_all_test = np.array(mse_all_test)
+    plt.plot(axisx, mse_all_train, c="blue", label="XGB_train")
+    plt.plot(axisx, mse_all_test, c="red", label="XGB_test")
+    plt.title("MSE")
+    plt.legend()
+    plt.show()
+
+
+# xgboost原生交叉验证类： xgboost.cv
+def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
+    import xgboost as xgb
+
+    dfull = xgb.DMatrix(X, y)  # 为了便捷，使用全数据
+
+    # X轴一定是num_round：树的数量。 Y轴：回归默认均方误差；分类默认error
+    time0 = time()
+    cvresult1 = xgb.cv(param1, dfull, num_round, metrics=(metric), nfold=n_fold)
+    # print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+
+    time0 = time()
+    cvresult2 = xgb.cv(param2, dfull, num_round, metrics=(metric), nfold=n_fold)
+    # print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+
+    plt.figure(figsize=(20, 5))
+    plt.grid()
+    end_temp = num_round + 1
+    plt.plot(range(1, end_temp), cvresult1.iloc[:, 2], c="red", label="train,gamma=0")
+    plt.plot(range(1, end_temp), cvresult1.iloc[:, 0], c="orange", label="test,gamma=0")
+    plt.plot(range(1, end_temp), cvresult2.iloc[:, 2], c="green", label="train,gamma=20")
+    plt.plot(range(1, end_temp), cvresult2.iloc[:, 0], c="blue", label="test,gamma=20")
+    plt.legend()
+    plt.show()
 
 # In[]:
 # -----------------------------2、基于超参数-------------------------------
