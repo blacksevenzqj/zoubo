@@ -892,8 +892,11 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
     # 普通交叉验证：
     # 矩阵为5行：与 样本量阈值 相同
     # 5列：折数
-    print("样本量阈值%s" % train_sizes)
+    train_scores_mean = np.mean(train_scores, axis=1)  # 按列（折数）取均值
+    train_scores_std = np.std(train_scores, axis=1)
     test_scores_mean = np.mean(test_scores, axis=1)  # 按列（折数）取均值
+    test_scores_std = np.std(test_scores, axis=1)
+    print("样本量阈值%s" % train_sizes)
     print("交叉验证训练集阈值%d,最大分数%f" % (
     train_sizes[test_scores_mean.tolist().index(np.max(test_scores_mean))], np.max(test_scores_mean)))
 
@@ -904,13 +907,18 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
     ax.set_title(title)
     if ylim is not None:
         ax.set_ylim(*ylim)
+
     ax.set_xlabel("Training examples")
     ax.set_ylabel("Score")
     ax.grid()  # 绘制网格，不是必须
-    ax.plot(train_sizes, np.mean(train_scores, axis=1), 'o-'
-            , color="r", label="Training score")
-    ax.plot(train_sizes, test_scores_mean, 'o-'
-            , color="g", label="Test score")
+
+    ax.fill_between(train_sizes, train_scores_mean - train_scores_std, train_scores_mean + train_scores_std, alpha=0.1,
+                    color="r")
+    ax.fill_between(train_sizes, test_scores_mean - test_scores_std, test_scores_mean + test_scores_std, alpha=0.1,
+                    color="g")
+
+    ax.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+    ax.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Test score")
     ax.legend(loc="best")
     return ax
 
@@ -1084,11 +1092,11 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
 
     # X轴一定是num_round：树的数量。 Y轴：回归默认均方误差；分类默认error
     time0 = time()
-    cvresult1 = xgb.cv(param1, dfull, num_round, metrics=(metric), nfold=n_fold)
+    cvresult1 = xgb.cv(param1, dfull, num_boost_round=num_round, metrics=(metric), nfold=n_fold)
     # print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
 
     time0 = time()
-    cvresult2 = xgb.cv(param2, dfull, num_round, metrics=(metric), nfold=n_fold)
+    cvresult2 = xgb.cv(param2, dfull, num_boost_round=num_round, metrics=(metric), nfold=n_fold)
     # print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
 
     plt.figure(figsize=(20, 5))
