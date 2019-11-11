@@ -45,6 +45,9 @@ Xtrain, Xtest, Ytrain, Ytest = train_test_split(X,y,test_size=0.3,random_state=4
 # 因为y 是array格式的，索引自动重排了。
 ft.recovery_index([Xtrain, Xtest])
 
+Ytrain = pd.DataFrame(Ytrain, columns=["Y"])
+Ytest = pd.DataFrame(Ytest, columns=["Y"])
+
 # In[]:
 # 数据分布
 # 直方图
@@ -53,7 +56,7 @@ for fe in Xtrain.columns:
     ft.con_data_distribution(Xtrain, fe, axes)
 # In[]:
 f, axes = plt.subplots(1,2, figsize=(23, 8))
-ft.con_data_distribution(pd.DataFrame(Ytrain), 0, axes)
+ft.con_data_distribution(Ytrain, "Y", axes)
 
 # In[]:
 # 正太、偏度检测
@@ -64,7 +67,7 @@ ft.normal_comprehensive(Xtrain)
 # 散点图
 for i in Xtrain.columns:
     f, axes = plt.subplots(1,1, figsize=(10, 6))
-    ft.con_data_scatter(Xtrain, i, Ytrain, "House rating", axes)
+    ft.con_data_scatter(Xtrain, i, Ytrain, "Y", axes)
 
 # In[]:
 # 特征的 皮尔森相关度
@@ -81,7 +84,8 @@ yhat = reg.predict(Xtrain) #预测我们的yhat
 print(reg.score(Xtrain, Ytrain))
 
 predict = pd.DataFrame(yhat, columns=['Pred'])
-resid = pd.DataFrame((Ytrain - yhat), columns=['resid'])
+resid = pd.DataFrame((Ytrain["Y"] - predict["Pred"]), columns=['resid'])
+
 resid_1 = pd.concat([predict,resid], axis=1)
 resid_1.plot('Pred', 'resid',kind='scatter')
 
@@ -91,7 +95,7 @@ print(ft.adj_r2_customize(Ytrain, yhat, Xtrain.shape[1], 2))
 # In[]:
 from statsmodels.formula.api import ols
 
-temp_Y = pd.DataFrame(Ytrain, columns=['Y'])
+temp_Y = Ytrain
 temp_X = pd.concat([Xtrain, temp_Y], axis=1)
 
 cols = list(temp_X.columns)
@@ -161,6 +165,7 @@ Xtest_ = pd.DataFrame(Xtest_, columns=Xtest.columns)
 # In[]:
 reg = LR().fit(Xtrain_, Ytrain)
 yhat = reg.predict(Xtest_) #预测我们的yhat
+yhat = pd.DataFrame(yhat, columns=['Pred'])
 
 print(yhat.min(), yhat.max(), yhat.mean())
 print(reg.coef_)
@@ -207,7 +212,7 @@ print(cross_val_score(reg,Xtest_,Ytest,cv=10,scoring="r2").mean())
 
 # In[]:
 # 线性回归 数据拟合
-ft.fitting_comparison(Ytest, yhat)
+ft.fitting_comparison(Ytest["Y"], yhat["Pred"])
 
 # In[]:
 # 负的 r2： （数学验证r2可以取到负值）

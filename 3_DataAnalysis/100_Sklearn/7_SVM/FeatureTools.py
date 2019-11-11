@@ -16,7 +16,7 @@ from time import time
 
 # In[]:
 # 缺失值
-def missing_values_table(df):
+def missing_values_table(df, percent=None):
     # Total missing values
     mis_val = df.isnull().sum()
 
@@ -40,6 +40,12 @@ def missing_values_table(df):
                                                               "There are " + str(mis_val_table_ren_columns.shape[0]) +
           " columns that have missing values.")
 
+    if percent is not None:
+        temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
+        df_nm = df.copy()
+        df_nm.drop(temp_drop_col, axis=1, inplace=True)
+        return mis_val_table_ren_columns, df_nm
+
     # Return the dataframe with missing information
     return mis_val_table_ren_columns
 
@@ -50,7 +56,7 @@ def get_notMissing_values(data_temp, feature):
 
 
 # 重复值处理
-def duplicate_value(data):
+def duplicate_value(data, isDrop=False):
     # 重复项按特征统计
     print(data[data.duplicated()].count())
     # 去除重复项 后 长度
@@ -59,15 +65,14 @@ def duplicate_value(data):
     # 去除重复项 后 长度
     print("去除重复项后长度：%d" % len(data.drop_duplicates()))
     # 重复项 长度
-    print("重复项长度：%d" % len(data) - len(nodup))
+    print("重复项长度：%d" % (len(data) - len(nodup)))
 
-    # 在原数据集上 删除重复项
-    data.drop_duplicates(inplace=True)
-    print(data.info())
-
-    # 重设索引
-    data = data.reset_index(drop=True)
-    # data.index = range(data.shape[0])
+    if isDrop:
+        # 在原数据集上 删除重复项
+        data.drop_duplicates(inplace=True)
+        # 重设索引
+        data = data.reset_index(drop=True)
+        # data.index = range(data.shape[0])
 
     print(data.info())
 
@@ -164,8 +169,9 @@ def class_data_scatter(x_data, one_f, two_f, y, axes):
     axes.set_ylabel(two_f)  # y轴标签
 
 
-# 连续/分类模型 连续特征 直方图分布： （不能有缺失值）
+# 连续/分类模型 连续特征/因变量 直方图分布： （不能有缺失值）
 def con_data_distribution(data, feature, axes):
+    print(type(data))
     data = get_notMissing_values(data, feature)
     sns.distplot(data[feature], bins=100, color='green', ax=axes[0])
     axes[0].set_title('feature: ' + str(feature))
@@ -178,7 +184,7 @@ def con_data_distribution(data, feature, axes):
 
 # 连续模型 连续特征 与 Y 散点分布：
 def con_data_scatter(x_data, i, y, j, axes):
-    axes.scatter(x_data[i], y, c='#0000FF', s=10, cmap="rainbow")  # 蓝色
+    axes.scatter(x_data[i], y[j], c='#0000FF', s=10, cmap="rainbow")  # 蓝色
     axes.set_xlabel(i)  # x轴标签
     axes.set_ylabel(j)  # y轴标签
 
@@ -221,12 +227,13 @@ def normal_distribution_test(data):
 
 
 def skew_distribution_test(data):
-    var = data.columns
-    skew_var = {}
-    for i in var:
-        skew_var[i] = abs(data[i].skew())
+    #    var = data.columns
+    #    skew_var = {}
+    #    for i in var:
+    #        skew_var[i] = abs(data[i].skew())
+    #    skew = pd.Series(skew_var).sort_values(ascending=False)
 
-    skew = pd.Series(skew_var).sort_values(ascending=False)
+    skew = np.abs(data.skew()).sort_values(ascending=False)
 
     fig, axe = plt.subplots(1, 1, figsize=(15, 10))
     axe.bar(skew.index, skew, width=.4)  # 自动按X轴---skew.index索引0-30的顺序排列
@@ -290,7 +297,7 @@ def normal_QQ_test(data, feature):
     x1, y1 = 0.25, st['25%']
     x2, y2 = 0.75, st['75%']
 
-    fig = plt.figure(figsize=(10, 9))
+    fig = plt.figure(figsize=(18, 9))
     ax1 = fig.add_subplot(3, 1, 1)  # 创建子图1
     # 绘制数据分布图
     ax1.scatter(temp_data.index, temp_data[feature])
@@ -321,7 +328,8 @@ def recovery_index(data_list):
         i.index = range(i.shape[0])
 
 
-# 取对数
+# In[]:
+# 取对数（可处理负数）
 def logarithm(X_rep, var_x_ln, f_type=1):
     if f_type == 1:
         for i in var_x_ln:
@@ -335,6 +343,63 @@ def logarithm(X_rep, var_x_ln, f_type=1):
                 X_rep[i] = np.log(X_rep[i] + abs(min(X_rep[i])) + 0.01)  # 负数取对数的技巧
             else:
                 X_rep[i] = np.log(X_rep[i])
+
+
+def logarithm_nagative(rep, var_ln, f_type=1):
+    for i in var_ln:
+        if min(rep[i]) <= 0:
+            if f_type == 1:
+                rep["Less0_Absmin_" + i + "_ln"] = abs(min(rep[i]))
+            else:
+                rep["Less0_Absmin_" + i] = abs(min(rep[i]))
+    logarithm(rep, var_ln, f_type)
+
+
+def re_logarithm_nagative(rep, var_ln, f_type=1):
+    for i in var_ln:
+        if f_type == 1:
+            temp_col_name = "Less0_Absmin_" + i + "_ln"
+            temp_i = i + "_ln"
+        else:
+            temp_col_name = "Less0_Absmin_" + i
+            temp_i = i
+        try:
+            rep[temp_col_name]
+            rep[temp_i] = np.exp(rep[temp_i]) - 0.01 - rep[temp_col_name]
+        except:
+            rep[temp_i] = np.exp(rep[temp_i])
+
+
+# 取对数（不处理负数： 负数取对数后为np.nan）
+def logarithm_log1p(rep, var_ln, f_type=1):
+    if f_type == 1:
+        for i in var_ln:
+            rep[i + "_ln"] = np.log1p(rep[i])
+    else:
+        for i in var_ln:
+            rep[i] = np.log1p(rep[i])
+
+
+def re_logarithm_expm1(rep, var_ln, f_type=1):
+    for i in var_ln:
+        if f_type == 1:
+            temp_i = i + "_ln"
+        else:
+            temp_i = i
+        rep[temp_i] = np.expm1(rep[temp_i])
+
+
+# 测试np.log 和 log1p 的区别：
+def test_log_log1p(x=10 ** -16):
+    print(x)
+    print(np.log(x))
+    print(np.exp(np.log(x)))
+
+    print(np.log(x + 1))
+    print(np.exp(np.log(x + 1)))
+
+    print(np.log1p(x))
+    print(np.expm1(np.log1p(x)))
 
 
 # In[]:
@@ -485,7 +550,7 @@ AIC = 2k + n(log(RSS/n))
 #    return aic
 
 
-# 残差分析：
+# 残差分析： 误差项 即 扰动项 即 残差
 '''
 残差分析： 
 残差中是否有离群值？
@@ -500,8 +565,8 @@ AIC = 2k + n(log(RSS/n))
 def heteroscedastic(X, Y, col_list):
     from statsmodels.formula.api import ols
 
-    temp_X = X[col_list].copy()
-    temp_Y = pd.DataFrame(Y, columns=['Y'])
+    temp_X = X[col_list]
+    temp_Y = Y
     temp_data = pd.concat([temp_X, temp_Y], axis=1)
 
     formula = "Y" + '~' + '+'.join(col_list)
@@ -545,7 +610,7 @@ def heteroscedastic(X, Y, col_list):
 def heteroscedastic_singe(X, Y, col):
     from statsmodels.formula.api import ols
 
-    temp_X = X[col].copy()
+    temp_X = X[col]
     temp_Y = pd.DataFrame(Y, columns=['Y'])
     temp_data = pd.concat([temp_X, temp_Y], axis=1)
 
@@ -590,8 +655,8 @@ def heteroscedastic_singe(X, Y, col):
 def disturbance_term_normal(X, Y, col_list):
     from statsmodels.formula.api import ols
 
-    temp_X = X[col_list].copy()
-    temp_Y = pd.DataFrame(Y, columns=['Y'])
+    temp_X = X[col_list]
+    temp_Y = Y
     temp_data = pd.concat([temp_X, temp_Y], axis=1)
 
     formula = "Y" + '~' + '+'.join(col_list)
@@ -618,7 +683,7 @@ def disturbance_term_normal(X, Y, col_list):
 def studentized_residual(Xtrain, Ytrain):
     from statsmodels.formula.api import ols
 
-    temp_Y = pd.DataFrame(Ytrain, columns=['Y'])
+    temp_Y = Ytrain
     temp_data = pd.concat([Xtrain, temp_Y], axis=1)
     cols = list(temp_data.columns)
     cols.remove("Y")
@@ -647,7 +712,7 @@ def strong_influence_point(Xtrain, Ytrain):
     from statsmodels.formula.api import ols
     from statsmodels.stats.outliers_influence import OLSInfluence
 
-    temp_Y = pd.DataFrame(Ytrain, columns=['Y'])
+    temp_Y = Ytrain
     temp_data = pd.concat([Xtrain, temp_Y], axis=1)
     cols = list(temp_data.columns)
     cols.remove("Y")
