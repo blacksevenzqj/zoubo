@@ -77,6 +77,39 @@ def duplicate_value(data, isDrop=False):
     print(data.info())
 
 
+# 异常值检测： 四分位数法
+def outlier_detection(X, feature, y, y_name):
+    ntrain = y[y_name].notnull().sum()
+    X = X[0:ntrain]
+
+    iqr = X[feature].quantile(0.75) - X[feature].quantile(0.25)
+
+    # 利用 众数 减去 中位数 的差值  除以  四分位距来 查找是否有可能存在异常值
+    temp_outlier = abs((X[feature].mode().iloc[0,] - X[feature].median()) / iqr)
+    print(temp_outlier)
+
+    # 如果值很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析
+    f, axes = plt.subplots(1, 2, figsize=(23, 8))
+    con_data_distribution(X, feature, axes)
+    # 从直方图中可以看出： 如果数据有最大峰值，属于正常数据，不用清洗。
+
+    upper_point = X[feature].quantile(0.75) + 1.5 * iqr
+    down_point = X[feature].quantile(0.25) - 1.5 * iqr
+
+    upper_more_index = X[X[feature] > upper_point].index
+    down_more_index = X[X[feature] < down_point].index
+
+    #    print(X.iloc[upper_more_index].shape)
+    #    print(y.iloc[upper_more_index].shape)
+
+    f, axes = plt.subplots(1, 1, figsize=(23, 8))
+    sns.regplot(X[feature], y[y_name], ax=axes)
+
+    f, axes = plt.subplots(1, 2, figsize=(23, 8))
+    sns.regplot(X.iloc[upper_more_index][feature], y.iloc[upper_more_index][y_name], ax=axes[0])
+    sns.regplot(X.iloc[down_more_index][feature], y.iloc[down_more_index][y_name], ax=axes[1])
+
+
 # In[]:
 # 分类模型 数据类别 样本不均衡
 def sample_category(ytrain, ytest):
@@ -248,13 +281,13 @@ def skew_distribution_test(data):
     return skew
 
 
-def normal_comprehensive(data):
+def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
     temp_data = data.copy()
 
     normal_distribution_test(temp_data)
     skew = skew_distribution_test(temp_data)
 
-    var_x_ln = skew.index[skew > 1]  # skew的索引 --- data的列名
+    var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
     print(var_x_ln, len(var_x_ln))
 
     for i, var in enumerate(var_x_ln):
@@ -265,7 +298,7 @@ def normal_comprehensive(data):
     logarithm(temp_data, var_x_ln, 2)
     normal_distribution_test(temp_data)
     skew = skew_distribution_test(temp_data)
-    var_x_ln = skew.index[skew > 1]  # skew的索引 --- data的列名
+    var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
     for i, var in enumerate(var_x_ln):
         f, axes = plt.subplots(1, 2, figsize=(23, 8))
         con_data_distribution(temp_data, var, axes)
@@ -468,6 +501,11 @@ def corrFunction_withY(data_corr, label):  # label： 因变量Y名称
     ax1.set_xticklabels(xticks, rotation=0, fontsize=14)
     ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
     plt.show()
+
+
+# 特征选择：（特征 与 因变量Y）
+def feature_corrwith_y(X, y_series, top_num):
+    return np.abs(X.corrwith(y_series)).sort_values(ascending=False)[:top_num]
 
 
 # In[]:
