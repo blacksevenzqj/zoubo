@@ -46,7 +46,7 @@ for i in [Xtrain, Xtest, Ytrain, Ytest]:
 
 # In[]:
 # 类别比重
-ft.sample_category(Ytrain, Ytest)
+ft.sample_category(Ytest, Ytrain)
 
 # In[]:
 # 一、特征工程：
