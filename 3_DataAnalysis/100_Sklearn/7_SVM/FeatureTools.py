@@ -111,8 +111,8 @@ def outlier_detection(X, feature, y, y_name):
 
 
 # In[]:
-# 分类模型 数据类别 样本不均衡
-def sample_category(ytrain, ytest):
+# 分类模型 数据类别 样本不均衡（训练集 与 测试集）
+def sample_category(ytest, ytrain):
     train_unique_label, train_counts_label = np.unique(ytrain, return_counts=True)
     test_unique_label, test_counts_label = np.unique(ytest, return_counts=True)
     print('-' * 60)
@@ -121,13 +121,13 @@ def sample_category(ytrain, ytest):
     print("测试集类别%s，数量%s，占比%s" % (test_unique_label, test_counts_label, (test_counts_label / len(ytest))))
 
 
-# 分类模型 数据类别 样本不均衡
+# 分类模型 数据类别 样本不均衡（单一数据集测试）
 def Sample_imbalance(data, y_name):
     print(data.shape)
     print(data.info())
 
-    print('Y = 0', round(len(data[data.y_name == 0]) / len(data) * 100, 2), "% of the dataset")
-    print('Y = 1', round(len(data[data.y_name == 1]) / len(data) * 100, 2), "% of the dataset")
+    print('Y = 0', round(len(data[data[y_name] == 0]) / len(data) * 100, 2), "% of the dataset")
+    print('Y = 1', round(len(data[data[y_name] == 1]) / len(data) * 100, 2), "% of the dataset")
 
     # 查看目标列Y的情况
     print(data.groupby(y_name).size())
