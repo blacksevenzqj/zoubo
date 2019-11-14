@@ -304,17 +304,20 @@ missing_values.head(20)
 # 1.4.1、填充家庭人数 NumberOfDependents（不太重要的，就用均值填充）
 data['NumberOfDependents'].fillna(data['NumberOfDependents'].mean(), inplace=True)
 
-
 # from sklearn.preprocessing import Imputer
 # imp = Imputer(missing_values='NaN', strategy='mean', axis=0)
 # data['NumberOfDependents'] = imp.fit_transform(data[['NumberOfDependents']].values)
 
 # In[]:
 # 1.4.2、填充月收入（随机森林）
+'''
+这里是将 训练集 与 测试集 合并之后一起进行填充； 那么，真实的测试集是没有标签的，怎么填充？？？
+'''
+
+
 def fill_missing_rf(X, y, to_fill):
     """
     使用随机森林填补一个特征的缺失值的函数
-
     参数：
     X：要填补的特征矩阵
     y：完整的，没有缺失值的标签
