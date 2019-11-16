@@ -10,13 +10,88 @@ import pandas as pd
 from sklearn.model_selection import KFold, ShuffleSplit, StratifiedKFold, StratifiedShuffleSplit, cross_val_score as CVS
 import matplotlib.pyplot as plt
 import seaborn as sns
+import scipy
 import datetime
 from time import time
 
 
 # In[]:
-# 缺失值
-def missing_values_table(df, percent=None):
+# 路径设置
+def set_file_path(path):
+    import os
+    os.chdir(path)
+
+
+# 读入数据源
+def readFile_inputData(train_name=None, test_name=None, index_col=None):
+    if train_name is not None:
+        train = pd.read_csv(train_name, index_col=index_col)
+    if test_name is not None:
+        test = pd.read_csv(test_name, index_col=index_col)
+        return train, test
+    else:
+        return train
+
+
+# 保存数据
+def writeFile_outData(data, path):
+    data.to_csv(path)
+
+
+# 合并数据源（列向）
+def consolidated_data_col(train_X, train_y):
+    return pd.concat([train_X, train_y], axis=1)
+
+
+# 分离数据源（列向）
+def separate_data_col(df, y_name):
+    train_X = df.drop(y_name, axis=1)
+    train_y = pd.DataFrame(df[y_name])
+    return train_X, train_y
+
+
+# 合并数据源（行向）： 训练集 与 测试集 合并
+def consolidated_data_row(train, test, y_name):
+    ntrain = train.shape[0]
+    ntest = test.shape[0]
+    train_X, train_y = separate_data_col(train, y_name)
+    all_data = pd.concat([train_X, test], axis=0).reset_index(drop=True)
+    print("all_data size is : {}".format(all_data.shape))
+    return all_data, train_y, ntrain, ntest
+
+
+# 分离数据源（行向）： 训练集 与 测试集 分离
+def separation_data_row(all_data, ntrain):
+    train = all_data[:ntrain]
+    test = all_data[ntrain:]
+    return train, test
+
+
+# In[]:
+# 恢复索引（删除数据后：如果X集恢复了索引，那么Y集也必须恢复索引）
+def recovery_index(data_list):
+    for i in data_list:
+        i.index = range(i.shape[0])
+
+
+# In[]:
+# 缺失值（1:删特征; 2:删数据）
+'''
+笔记：“5.2、数据清洗”
+5.2.2、缺失值处理：（对于 缺失值在80%甚至更高的情况 如下处理方式只能作为参考）
+首选基于业务的填补方法，其次根据单变量分析进行填补，多重插补进行所有变量统一填补的方法只有在粗略清洗时才会使用。
+1、缺失值少于20%
+• 连续变量使用均值（正太分布）或 中位数（右偏）填补。
+• 分类变量不需要填补，单算一类即可，或者用众数填补
+2、缺失值在20%-80%
+• 填补方法同上
+• 另外每个有缺失值的变量生成一个指示哑变量，参与后续的建模（填补后的变量 和 缺失值指示变量 同时进模型，让模型来选择取舍）
+3、缺失值在大于80%
+• 每个有缺失值的变量生成一个指示哑变量，参与后续的建模，原始变量不使用。
+'''
+
+
+def missing_values_table(df, percent=None, del_type=1):
     # Total missing values
     mis_val = df.isnull().sum()
 
@@ -41,10 +116,19 @@ def missing_values_table(df, percent=None):
           " columns that have missing values.")
 
     if percent is not None:
-        temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
-        df_nm = df.copy()
-        df_nm.drop(temp_drop_col, axis=1, inplace=True)
-        return mis_val_table_ren_columns, df_nm
+        if del_type == 1:
+            temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
+            df_nm = df.copy()
+            df_nm.drop(temp_drop_col, axis=1, inplace=True)
+            return mis_val_table_ren_columns, df_nm
+        elif del_type == 2:
+            temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
+            df_nm = df.copy()
+            for i in temp_drop_col:
+                df_nm.drop(df_nm.loc[df_nm[i].isnull()].index, axis=0, inplace=True)
+            return mis_val_table_ren_columns, df_nm
+        else:
+            return mis_val_table_ren_columns
 
     # Return the dataframe with missing information
     return mis_val_table_ren_columns
@@ -77,7 +161,81 @@ def duplicate_value(data, isDrop=False):
     print(data.info())
 
 
-# 异常值检测： 四分位数法
+# In[]:
+# 缺失值填充
+def missValue_all_fillna(df):
+    num_cols = df.select_dtypes(include=[np.number]).columns
+    cat_cols = df.select_dtypes(include=[np.object]).columns
+    # Median is my favoraite fillna mode, which can eliminate the skew impact.
+    # 中位数是我最喜欢的fillna模式，它可以消除偏斜影响。
+    df[num_cols] = df[num_cols].fillna(df[num_cols].median())
+    # 分类（字符）用 字符"NA"填充
+    df[cat_cols] = df[cat_cols].fillna("NA")
+
+
+def missValue_fillna(df, feature_name, fill_val=None, val_type=1):
+    if fill_val is not None:
+        df[feature_name] = df[feature_name].fillna(fill_val)
+    else:
+        if val_type == 1:
+            df[feature_name] = df[feature_name].fillna(df[feature_name].median())  # .median() 多特征为Series、单特征为值
+        elif val_type == 2:
+            df[feature_name] = df[feature_name].fillna(df[feature_name].mean())
+        elif val_type == 3:
+            df[feature_name] = df[feature_name].fillna(
+                df[feature_name].mode().loc[0])  # .mode() 多特征为DataFrame、单特征为Series
+        else:
+            print("No Type You Choose")
+
+
+# 缺失值填充： 分组填充（连续特征）
+def missValue_group_fillna(df, nan_col, group_col, val_type=1):
+    nan_index = df[nan_col][df[nan_col].isnull()].index
+
+    #    # 方法一：
+    #    gb_neigh_LF = df[nan_col].groupby(df[group_col])
+    #    #gb_neigh_LF = df.groupby(df[group_col])[nan_col]
+    #    for key,group in gb_neigh_LF:
+    #        # 查找我们同时丢失值的位置和键存在的位置
+    #        # 用键组对象的中位数填充这些空白
+    #        lot_f_nulls_nei = df[nan_col].isnull() & (df[group_col] == key)
+    #        if val_type == 1:
+    #            temp_value = group.median()
+    #        else:
+    #            temp_value = group.mean()
+    #        df.loc[lot_f_nulls_nei,nan_col] = temp_value
+
+    # 方法二：
+    if val_type == 1:
+        temp_type = np.median  # 中位数（中位数 可以消除 偏斜 影响）
+    elif val_type == 2:
+        temp_type = np.mean  # 均值
+    elif val_type == 3:
+        temp_type = np.mode  # 众数
+
+    df[nan_col] = df[nan_col].fillna(
+        df.groupby(group_col)[nan_col].transform(temp_type))  # 或 .transform(lambda x: x.fillna(x.median()))
+
+    nan_data = df.loc[nan_index, nan_col]
+
+    return nan_data
+
+
+# In[]:
+# 离群值检测： 标准化（均值=0、标准差=1）后排序检测
+def standardScaler_outlier(df, name):
+    from sklearn.preprocessing import StandardScaler
+
+    ss_val = StandardScaler().fit_transform(df[name][:, np.newaxis]);
+    low_range = ss_val[ss_val[:, 0].argsort()][:10]
+    high_range = ss_val[ss_val[:, 0].argsort()][-10:]
+    print('outer range (low) of the distribution:')
+    print(low_range)
+    print('\nouter range (high) of the distribution:')
+    print(high_range)
+
+
+# 离群值检测： 使用 箱型图、散点趋势图 观测离群值
 def outlier_detection(X, feature, y, y_name):
     ntrain = y[y_name].notnull().sum()
     X = X[0:ntrain]
@@ -106,8 +264,22 @@ def outlier_detection(X, feature, y, y_name):
     sns.regplot(X[feature], y[y_name], ax=axes)
 
     f, axes = plt.subplots(1, 2, figsize=(23, 8))
-    sns.regplot(X.iloc[upper_more_index][feature], y.iloc[upper_more_index][y_name], ax=axes[0])
-    sns.regplot(X.iloc[down_more_index][feature], y.iloc[down_more_index][y_name], ax=axes[1])
+    sns.regplot(X.loc[upper_more_index][feature], y.loc[upper_more_index][y_name], ax=axes[0])
+    sns.regplot(X.loc[down_more_index][feature], y.loc[down_more_index][y_name], ax=axes[1])
+
+
+# 删除离群值
+def delete_outliers(X_Seriers, X_name, X_value, y_Seriers, y_name, y_value):
+    # 多条件查询方式1：
+    #    del_index = X_Seriers.loc[(X_Seriers[X_name]>X_value) & (y_Seriers[y_name]<y_value)].index
+    # 多条件查询方式2：
+    del_index = X_Seriers.loc[
+        (X_Seriers[X_name].map(lambda x: x > X_value)) & (y_Seriers[y_name].map(lambda x: x < y_value))].index
+    if id(X_Seriers) == id(y_Seriers):
+        X_Seriers.drop(del_index, axis=0, inplace=True)
+    else:
+        X_Seriers.drop(del_index, axis=0, inplace=True)  # 如果X集恢复了索引，那么Y集也必须恢复索引
+        y_Seriers.drop(del_index, axis=0, inplace=True)
 
 
 # In[]:
@@ -144,12 +316,45 @@ def Sample_imbalance(data, y_name):
     plt.show()
 
 
+# 集合 交、差、补
 def set_diff(set_one, set_two):
     temp_list = []
     temp_list.append(list(set(set_one) & set(set_two)))  # 交
     temp_list.append(list(set(set_one) - (set(set_two))))  # 差
     temp_list.append(list(set(set_one) ^ set(set_two)))  # 补
     return temp_list
+
+
+# 所有的 分类类别 都使用str，而不使用 categorical类型（有的库抱异常）
+# 设置分类变量类型：
+def set_classif_col(df, feature_name, val_type=1):
+    if val_type == 1:
+        temp_type = int
+    elif val_type == 2:
+        temp_type = float
+    elif val_type == 3:
+        temp_type = str
+    else:
+        raise Exception('Val Type is Error')
+    df[feature_name] = df[feature_name].astype(temp_type)
+
+
+# 设置分类变量类型为：category（很不用）
+def set_col_category(df, feature_name, categories_=None):
+    if categories_ is None:
+        df[feature_name] = df[feature_name].astype('category', ordered=True)  # 自动排序： 按首字母顺序
+    else:
+        df[feature_name] = df[feature_name].astype('category', ordered=True, categories=categories_)  # 手动排序
+
+
+# 分类特征 普通编码：
+def classif_labelEncoder(data, cols):
+    from sklearn.preprocessing import LabelEncoder
+
+    for c in cols:
+        lbl = LabelEncoder()
+        lbl.fit(list(data[c].values))
+        data[c] = lbl.transform(list(data[c].values))
 
 
 # In[]:
@@ -202,11 +407,61 @@ def class_data_scatter(x_data, one_f, two_f, y, axes):
     axes.set_ylabel(two_f)  # y轴标签
 
 
-# 连续/分类模型 连续特征/因变量 直方图分布： （不能有缺失值）
+# 连续/分类模型 连续 特征/因变量 直方图分布： （不能有缺失值）
+'''
+笔记：“5.2、数据清洗”
+5.2.3.1、单变量离群值的发现：
+5.2.3.1.1、极端值（考虑删除）
+• 设置标准，如： 5倍标准差之外的数据
+• 极值有时意味着错误，应重新理解数据，例如：特殊用户的超大额消费
+
+5.2.3.1.2、离群值
+5.2.3.1.2.1、平均值法：平均值±n倍标准差之外的数据
+学生化残差  =  (残差 - 残差均值) / 残差的标准差
+样本量为几百个时：|SR| > 2 为强影响点
+样本量为上千个时：|SR| > 3 为强影响点
+建议的临界值：
+• |SR| > 2，用于观察值较少的数据集（离群值 > 平均值+2倍标准差）
+• |SR| > 3，用于观察值较多的数据集（离群值 > 平均值+3倍标准差）
+5.2.3.1.2.2、四分位数法：
+• IQR = Q3 – Q1
+• 下区间：Q1 – 1.5 x IQR，上区间：Q3 + 1.5 x IQR   更适用于对称分布的数据
+
+5.2.3.1.3、离群值的处理：
+5.2.3.1.3.1、盖帽法：
+5.2.3.1.3.2、分箱法：
+'''
+
+
 def con_data_distribution(data, feature, axes):
-    print(type(data))
     data = get_notMissing_values(data, feature)
-    sns.distplot(data[feature], bins=100, color='green', ax=axes[0])
+
+    sns.set()  # 切换到seaborn的默认运行配置
+    sns.distplot(data[feature], bins=100, fit=scipy.stats.norm, color='green', ax=axes[0])  # rug=True分布观测条显示
+    # Get the fitted parameters used by the function
+    (mu, sigma) = scipy.stats.norm.fit(data[feature])  # mu均值、sigma标准差： 也就是图中黑色线所示标准正太分布
+    print('\n mu = {:.2f} and sigma = {:.2f}\n'.format(mu, sigma))
+
+    # mu - sigma  →  mu + sigma = 68%
+    axes[0].plot((mu - sigma, mu - sigma), (0, 1), c='r', lw=1.5, ls='--', alpha=0.3)  # 68%
+    axes[0].plot((mu + sigma, mu + sigma), (0, 1), c='r', lw=1.5, ls='--', alpha=0.3)
+
+    # mu - 2sigma  →  mu + 2sigma = 95%
+    axes[0].plot((mu - 2 * sigma, mu - 2 * sigma), (0, 1), c='black', lw=1.5, ls='--', alpha=0.3)  # 95%
+    axes[0].plot((mu + 2 * sigma, mu + 2 * sigma), (0, 1), c='black', lw=1.5, ls='--', alpha=0.3)
+
+    # mu - 3sigma  →  mu + 3sigma = 99%
+    axes[0].plot((mu - 3 * sigma, mu - 3 * sigma), (0, 1), c='b', lw=1.5, ls='--', alpha=0.3)  # 99%
+    axes[0].plot((mu + 3 * sigma, mu + 3 * sigma), (0, 1), c='b', lw=1.5, ls='--', alpha=0.3)
+
+    # mu - 5sigma  →  mu + 5sigma = 5倍标准差之外的数据
+    if len(data.loc[data[feature] < mu - 5 * sigma, feature].index) > 0:
+        axes[0].plot((mu - 5 * sigma, mu - 5 * sigma), (0, 1), c='y', lw=1.5, ls='--', alpha=0.3)  # 5倍标准差之外的数据
+    if len(data.loc[data[feature] > mu + 5 * sigma, feature].index) > 0:
+        axes[0].plot((mu + 5 * sigma, mu + 5 * sigma), (0, 1), c='y', lw=1.5, ls='--', alpha=0.3)
+    # Now plot the distribution
+    axes[0].legend(['Normal dist. ( $\mu=$ {:.2f} and $\sigma=$ {:.2f} )'.format(mu, sigma)],
+                   loc='best')
     axes[0].set_title('feature: ' + str(feature))
     axes[0].set_xlabel('')
 
@@ -216,10 +471,29 @@ def con_data_distribution(data, feature, axes):
 
 
 # 连续模型 连续特征 与 Y 散点分布：
-def con_data_scatter(x_data, i, y, j, axes):
-    axes.scatter(x_data[i], y[j], c='#0000FF', s=10, cmap="rainbow")  # 蓝色
-    axes.set_xlabel(i)  # x轴标签
-    axes.set_ylabel(j)  # y轴标签
+'''
+方差齐次性： 测试两个特征的均方差的最佳方法是图形方式。 
+通过圆锥（在图形的一侧较小的色散，在相反侧的较大色散）或菱形（在分布中心的大量点）来表示偏离均等色散的形状。
+'''
+
+
+def con_data_scatter(x_data, i, y, j):
+    f, axes = plt.subplots(2, 1, figsize=(15, 15))
+
+    axes[0].scatter(x_data[i], y[j], c='#0000FF', s=10, cmap="rainbow")  # 蓝色
+    axes[0].set_xlabel(i)  # x轴标签
+    axes[0].set_ylabel(j)  # y轴标签
+
+    sns.regplot(x_data[i], y[j], ax=axes[1])
+
+
+# 连续模型 分类特征 与 连续因变量Y 四分位图：
+# 分类模型 连续特征 与 分类因变量Y 四分位图：
+# 可以作为 斯皮尔曼相关系数 辅助可视化分析： 分类特征 对 连续因变量Y 有用； 连续特征 对 分类因变量Y 有用。
+def box_diagram(data, x_axis_name, y_axis_name, axes, ymin=None, ymax=None):
+    if ymin is not None and ymax is not None:
+        axes.axis(ymin=ymin, ymax=ymax)
+    sns.boxplot(x=x_axis_name, y=y_axis_name, data=data, ax=axes)
 
 
 # In[]:
@@ -234,12 +508,10 @@ w和p同向： w值越小； p-值越小、接近于0； 拒绝原假设。
 
 
 def normal_distribution_test(data):
-    from scipy import stats
-
     var = data.columns
     shapiro_var = {}
     for i in var:
-        shapiro_var[i] = stats.shapiro(data[i])  # 返回 w值 和 p值
+        shapiro_var[i] = scipy.stats.shapiro(data[i])  # 返回 w值 和 p值
 
     shapiro = pd.DataFrame(shapiro_var).T.sort_values(by=1, ascending=False)
 
@@ -256,6 +528,14 @@ def normal_distribution_test(data):
 
 '''
 偏度>1 为偏斜数据，需要取log
+Skewness:偏度是描述数据分布形态的统计量，其描述的是某总体取值分布的对称性，简单来说就是数据的不对称程度。
+偏度是三阶中心距计算出来的。
+（1）Skewness = 0 ，分布形态与正态分布偏度相同。
+（2）Skewness > 0 ，正偏差数值较大，为正偏或右偏。长尾巴拖在右边，数据右端有较多的极端值。
+（3）Skewness < 0 ，负偏差数值较大，为负偏或左偏。长尾巴拖在左边，数据左端有较多的极端值。
+（4）数值的绝对值越大，表明数据分布越不对称，偏斜程度大。
+计算公式：
+Skewness=E[((x-E(x))/(\sqrt{D(x)}))^3]
 '''
 
 
@@ -267,50 +547,90 @@ def skew_distribution_test(data):
     #    skew = pd.Series(skew_var).sort_values(ascending=False)
 
     skew = np.abs(data.skew()).sort_values(ascending=False)
+    # 下面这种计算方式 在无缺失值情况下 和 上述2种计算方式 有小数点后两位的 差异。 有缺失值情况 待进一步验证。
+    #    skew = data.apply(lambda x: np.abs(skew(x.dropna()))).sort_values(ascending=False)
 
-    fig, axe = plt.subplots(1, 1, figsize=(15, 10))
-    axe.bar(skew.index, skew, width=.4)  # 自动按X轴---skew.index索引0-30的顺序排列
-    axe.set_title("Normal distribution for skew")
+    kurt = np.abs(data.kurt()).sort_values(ascending=False)
 
+    fig, axe = plt.subplots(2, 1, figsize=(18, 20))
+
+    # bar的X轴顺序问题： https://blog.csdn.net/qq_35318838/article/details/80198307
+    axe[0].bar(np.arange(len(skew.index)), skew, width=.4)
+    axe[0].set_xticks(np.arange(len(skew.index)))
+    axe[0].set_xticklabels(skew.index)
+    axe[0].set_title("Normal distribution for skew")
     # 在柱状图上添加数字标签
-    for a, b in zip(skew.index, skew):
+    for a, b in zip(np.arange(len(skew.index)), skew):
         # a是X轴的柱状体的索引， b是Y轴柱状体高度， '%.4f' % b 是显示值
-        plt.text(a, b + 0.01, '%.4f' % b, ha='center', va='bottom', fontsize=12)
+        axe[0].text(a, b + 0.01, '%.4f' % b, ha='center', va='bottom', fontsize=12)
+
+    axe[1].bar(np.arange(len(kurt.index)), kurt, width=.4)
+    axe[1].set_xticks(np.arange(len(kurt.index)))
+    axe[1].set_xticklabels(kurt.index)
+    axe[1].set_title("Normal distribution for kurt")
+    # 在柱状图上添加数字标签
+    for a, b in zip(np.arange(len(kurt.index)), kurt):
+        # a是X轴的柱状体的索引， b是Y轴柱状体高度， '%.4f' % b 是显示值
+        axe[1].text(a, b + 0.01, '%.4f' % b, ha='center', va='bottom', fontsize=12)
+
     plt.show()
 
-    return skew
+    return skew, kurt
+
+
+'''
+峰度
+Kurtosis:峰度是描述某变量所有取值分布形态陡缓程度的统计量，简单来说就是数据分布顶的尖锐程度。
+峰度是四阶标准矩计算出来的。
+（1）Kurtosis=0 与正态分布的陡缓程度相同。
+（2）Kurtosis>0 比正态分布的高峰更加陡峭——尖顶峰
+（3）Kurtosis<0 比正态分布的高峰来得平台——平顶峰
+计算公式：
+Kurtosis=E[((x-E(x))/ (\sqrt(D(x))))^4]-3
+'''
 
 
 def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
-    temp_data = data.copy()
+    if type(data) == pd.core.series.Series:
+        temp_data = pd.DataFrame(data.copy())
+    else:
+        temp_data = data.copy()
 
     normal_distribution_test(temp_data)
-    skew = skew_distribution_test(temp_data)
+    skew, kurt = skew_distribution_test(temp_data)
 
     var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
     print(var_x_ln, len(var_x_ln))
-
     for i, var in enumerate(var_x_ln):
         f, axes = plt.subplots(1, 2, figsize=(23, 8))
         con_data_distribution(temp_data, var, axes)
 
     # 将偏度大于1的连续变量 取对数
-    logarithm(temp_data, var_x_ln, 2)
-    normal_distribution_test(temp_data)
-    skew = skew_distribution_test(temp_data)
-    var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
-    for i, var in enumerate(var_x_ln):
-        f, axes = plt.subplots(1, 2, figsize=(23, 8))
-        con_data_distribution(temp_data, var, axes)
+    if len(var_x_ln) > 0:
+        logarithm_nagative(temp_data, var_x_ln, 2)
+
+        normal_distribution_test(temp_data)
+        skew, kurt = skew_distribution_test(temp_data)
+
+        var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
+        print(var_x_ln, len(var_x_ln))
+        for i, var in enumerate(var_x_ln):
+            f, axes = plt.subplots(1, 2, figsize=(23, 8))
+            con_data_distribution(temp_data, var, axes)
 
 
 # Q-Q图检测
 def normal_QQ_test(data, feature):
-    import statsmodels.api as sm
-
     temp_data = data.copy()
-    # 包实现
+
+    # statsmodels包实现
+    import statsmodels.api as sm
     fig = sm.qqplot(temp_data[feature], fit=True, line='45')
+    fig.show()
+
+    # scipy包实现
+    fig = plt.figure()
+    scipy.stats.probplot(temp_data[feature], plot=plt)
     fig.show()
 
     # ========================================================================
@@ -346,6 +666,7 @@ def normal_QQ_test(data, feature):
     ax3.plot(s_r['p'], s_r[feature], 'k.', alpha=0.1)
     ax3.plot([x1, x2], [y1, y2], '-r')  # 绘制QQ图，直线为 四分之一位数、四分之三位数的连线，基本符合正态分布
     plt.grid()
+    fig.show()
 
 
 # In[]:
@@ -355,18 +676,12 @@ def normal_QQ_test(data, feature):
 
 
 # In[]:
-# 恢复索引
-def recovery_index(data_list):
-    for i in data_list:
-        i.index = range(i.shape[0])
-
-
-# In[]:
 # 取对数（可处理负数）
 def logarithm(X_rep, var_x_ln, f_type=1):
     if f_type == 1:
         for i in var_x_ln:
             if min(X_rep[i]) <= 0:
+                # 只要最小值<=0： 整体数据 向右 平移 最小值的绝对值 + 0.01。 最后再取log。
                 X_rep[i + "_ln"] = np.log(X_rep[i] + abs(min(X_rep[i])) + 0.01)  # 负数取对数的技巧
             else:
                 X_rep[i + "_ln"] = np.log(X_rep[i])
@@ -376,16 +691,22 @@ def logarithm(X_rep, var_x_ln, f_type=1):
                 X_rep[i] = np.log(X_rep[i] + abs(min(X_rep[i])) + 0.01)  # 负数取对数的技巧
             else:
                 X_rep[i] = np.log(X_rep[i])
+    return X_rep
 
 
-def logarithm_nagative(rep, var_ln, f_type=1):
+def logarithm_nagative(data, var_ln, f_type=1):
+    rep = data.copy()
     for i in var_ln:
         if min(rep[i]) <= 0:
             if f_type == 1:
+                rep["Less0_lable_" + i + "_ln"] = 0
+                rep.loc[rep[i] <= 0, "Less0_lable_" + i + "_ln"] = 1
                 rep["Less0_Absmin_" + i + "_ln"] = abs(min(rep[i]))
             else:
+                rep["Less0_lable_" + i] = 0
+                rep.loc[rep[i] <= 0, "Less0_lable_" + i] = 1
                 rep["Less0_Absmin_" + i] = abs(min(rep[i]))
-    logarithm(rep, var_ln, f_type)
+    return logarithm(rep, var_ln, f_type)
 
 
 def re_logarithm_nagative(rep, var_ln, f_type=1):
@@ -397,7 +718,7 @@ def re_logarithm_nagative(rep, var_ln, f_type=1):
             temp_col_name = "Less0_Absmin_" + i
             temp_i = i
         try:
-            rep[temp_col_name]
+            rep[temp_col_name]  # 如果 没有字段 抛异常，执行except的代码： 说明 取对数前 数据都是>=0的
             rep[temp_i] = np.exp(rep[temp_i]) - 0.01 - rep[temp_col_name]
         except:
             rep[temp_i] = np.exp(rep[temp_i])
@@ -435,10 +756,60 @@ def test_log_log1p(x=10 ** -16):
     print(np.expm1(np.log1p(x)))
 
 
+# （高度）偏斜特征的 Box-Cox 变换
+'''
+http://onlinestatbook.com/2/transformations/box-cox.html
+当 lanmuda = 0 时， boxcox1p 与 np.log1p 结果相同
+当 lanmuda != 0 时， boxcox1p 如何变化的 还需研究
+'''
+
+
+def scipy_boxcox1p(df, skewed_features, lanmuda=0.15):
+    from scipy.special import boxcox1p
+    df[skewed_features] = boxcox1p(df[skewed_features], lanmuda)
+
+
 # In[]:
-# 相似度计算
-# 特征选择：特征共线性（还可以做 方差膨胀系数）
-def corrFunction(data_corr):
+# 相似度计算1
+# 皮尔森相似度
+'''
+1、皮尔森相似度（带 因变量Y） 先选出对Y 有贡献的： corrFunction_withY
+2、再看 特征共线性： corrFunction
+3、最后再对 选出的特征 与 Y 做pairplot图： feature_scatterplotWith_y
+'''
+
+
+# 1、特征选择：（带 因变量Y）
+def corrFunction_withY(data_corr, label, image_width=20, image_hight=18):  # label： 因变量Y名称
+    corr = data_corr.corr()  # 计算各变量的相关性系数
+    # 皮尔森相似度 绝对值 排序
+    df_all_corr_abs = corr.abs().unstack().sort_values(kind="quicksort", ascending=False).reset_index()
+    df_all_corr_abs.rename(columns={"level_0": "Feature_1", "level_1": "Feature_2", 0: 'Correlation_Coefficient'},
+                           inplace=True)
+    print(df_all_corr_abs[(df_all_corr_abs["Feature_1"] != label) & (df_all_corr_abs['Feature_2'] == label)])
+    print()
+    # 皮尔森相似度 排序
+    df_all_corr = corr.unstack().sort_values(kind="quicksort", ascending=False).reset_index()
+    df_all_corr.rename(columns={"level_0": "Feature_1", "level_1": "Feature_2", 0: 'Correlation_Coefficient'},
+                       inplace=True)
+    print(df_all_corr[(df_all_corr["Feature_1"] != label) & (df_all_corr['Feature_2'] == label)])
+
+    temp_x = []
+    for i, fe in enumerate(list(corr.index)):  # 也可以是：data_corr.columns
+        temp_x.append("x" + str(i))
+    xticks = temp_x  # x轴标签
+    yticks = list(corr.index)  # y轴标签
+    fig = plt.figure(figsize=(image_width, image_hight))
+    ax1 = fig.add_subplot(1, 1, 1)
+    sns.heatmap(corr, annot=True, cmap='rainbow', ax=ax1,
+                annot_kws={'size': 12, 'weight': 'bold', 'color': 'black'})  # 绘制相关性系数热力图
+    ax1.set_xticklabels(xticks, rotation=0, fontsize=14)
+    ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
+    plt.show()
+
+
+# 2、特征选择：特征共线性（还可以做 方差膨胀系数）
+def corrFunction(data_corr, image_width=20, image_hight=18):
     '''
     1、特征间共线性：两个或多个特征包含了相似的信息，期间存在强烈的相关关系
     2、常用判断标准：两个或两个以上的特征间的相关性系数高于0.8
@@ -455,6 +826,7 @@ def corrFunction(data_corr):
                            inplace=True)
     temp_corr_abs = df_all_corr_abs[(df_all_corr_abs["Feature_1"] != df_all_corr_abs["Feature_2"])][::2]
     #    temp_corr_abs.to_csv(r"C:\Users\dell\Desktop\123123\temp_corr_abs.csv")
+    print(temp_corr_abs)
     print()
     # 皮尔森相似度 排序
     df_all_corr = correlation_table.unstack().sort_values(kind="quicksort", ascending=False).reset_index()
@@ -462,6 +834,7 @@ def corrFunction(data_corr):
                        inplace=True)
     temp_corr = df_all_corr[(df_all_corr["Feature_1"] != df_all_corr["Feature_2"])][::2]
     #    temp_corr.to_csv(r"C:\Users\dell\Desktop\123123\temp_corr.csv")
+    print(temp_corr)
 
     # 热力图
     temp_x = []
@@ -469,7 +842,7 @@ def corrFunction(data_corr):
         temp_x.append("x" + str(i))
     xticks = temp_x  # x轴标签
     yticks = list(correlation_table.index)  # y轴标签
-    fig = plt.figure(figsize=(10, 8))
+    fig = plt.figure(figsize=(image_width, image_hight))
     ax1 = fig.add_subplot(1, 1, 1)
     sns.heatmap(correlation_table, annot=True, cmap='rainbow', ax=ax1,
                 annot_kws={'size': 12, 'weight': 'bold', 'color': 'black'})  #
@@ -477,35 +850,26 @@ def corrFunction(data_corr):
     ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
 
 
-# 特征选择：（带 因变量Y）
-def corrFunction_withY(data_corr, label):  # label： 因变量Y名称
-    corr = data_corr.corr()  # 计算各变量的相关性系数
-    # 皮尔森相似度 绝对值 排序
-    df_all_corr_abs = corr.abs().unstack().sort_values(kind="quicksort", ascending=False).reset_index()
-    df_all_corr_abs.rename(columns={"level_0": "Feature_1", "level_1": "Feature_2", 0: 'Correlation_Coefficient'},
-                           inplace=True)
-    print(df_all_corr_abs[(df_all_corr_abs["Feature_1"] != label) & (df_all_corr_abs['Feature_2'] == label)])
-    print()
-    # 皮尔森相似度 排序
-    df_all_corr = corr.unstack().sort_values(kind="quicksort", ascending=False).reset_index()
-    df_all_corr.rename(columns={"level_0": "Feature_1", "level_1": "Feature_2", 0: 'Correlation_Coefficient'},
-                       inplace=True)
-    print(df_all_corr[(df_all_corr["Feature_1"] != label) & (df_all_corr['Feature_2'] == label)])
-
-    xticks = data_corr.columns  # x轴标签
-    yticks = list(corr.index)  # y轴标签
-    fig = plt.figure(figsize=(10, 8))
-    ax1 = fig.add_subplot(1, 1, 1)
-    sns.heatmap(corr, annot=True, cmap='rainbow', ax=ax1,
-                annot_kws={'size': 12, 'weight': 'bold', 'color': 'black'})  # 绘制相关性系数热力图
-    ax1.set_xticklabels(xticks, rotation=0, fontsize=14)
-    ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
-    plt.show()
+# 3、最后再对 选出的特征 与 Y 做pairplot图
+def feature_scatterplotWith_y(data, cols):
+    sns.set()
+    sns.pairplot(data[cols], size=2.5)  # scatterplot
+    plt.show();
 
 
-# 特征选择：（特征 与 因变量Y）
-def feature_corrwith_y(X, y_series, top_num):
+# 特征选择：（特征 与 因变量Y） 皮尔森
+def feature_corrWith_y(X, y_series, top_num=20):
+    if type(X) is pd.core.series.Series:
+        X = pd.DataFrame(X)
     return np.abs(X.corrwith(y_series)).sort_values(ascending=False)[:top_num]
+
+
+# 相似度计算2
+# 斯皮尔曼相似度：
+# 特征选择：（特征 与 因变量Y） 斯皮尔曼
+def feature_spearmanrWith_y(X_series, y_series):
+    r, p = scipy.stats.spearmanr(X_series, y_series)
+    return r, p
 
 
 # In[]:
@@ -1212,7 +1576,66 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
     plt.legend()
     plt.show()
 
+
 # In[]:
 # -----------------------------2、基于超参数-------------------------------
 # In[]:
 # ====================================学习曲线==================================
+
+
+# In[]:
+# ====================================交叉验证==================================
+# 线性回归：
+def rmsle_cv(model, train_X, train_y, cv=None, cv_type=1):
+    if cv is None:
+        if cv_type == 1:
+            cv = KFold(n_splits=5, shuffle=True, random_state=42)  # 交叉验证模式
+        elif cv_type == 2:
+            cv = ShuffleSplit(n_splits=5, test_size=.2, random_state=0)
+        else:
+            raise Exception('CV Type is Error')
+
+    rmse = np.sqrt(-CVS(model, train_X, train_y, scoring="neg_mean_squared_error", cv=cv))
+    return (rmse)
+
+
+# In[]:
+# ====================================交叉验证==================================
+
+
+# In[]:
+# =============================Stacking models：堆叠模型=========================
+from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
+
+'''
+堆叠模型：Stacking models
+最简单的堆叠方法：平均基本模型:Simplest Stacking approach : Averaging base models
+我们从平均模型的简单方法开始。 我们建立了一个新类，以通过模型扩展scikit-learn，并进行封装和代码重用（继承inheritance）。
+https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)
+'''
+
+
+# Averaged base models class 平均基本模型
+class AveragingModels(BaseEstimator, RegressorMixin, TransformerMixin):
+    def __init__(self, models):
+        self.models = models
+
+    # we define clones of the original models to fit the data in
+    def fit(self, X, y):
+        self.models_ = [clone(x) for x in self.models]
+
+        # Train cloned base models
+        for model in self.models_:
+            model.fit(X, y)
+
+        return self
+
+    # Now we do the predictions for cloned models and average them
+    def predict(self, X):
+        predictions = np.column_stack([
+            model.predict(X) for model in self.models_
+        ])
+        return np.mean(predictions, axis=1)
+
+    # In[]:
+# =============================Stacking models：堆叠模型=========================
