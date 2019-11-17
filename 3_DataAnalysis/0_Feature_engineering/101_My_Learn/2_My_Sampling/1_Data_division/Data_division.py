@@ -21,17 +21,22 @@ from sklearn.model_selection import ShuffleSplit, GroupShuffleSplit, StratifiedS
 # 严格按照 n-1折训练集，1折测试集 进行数据集 均分
 X = np.array([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]])
 y = np.array([1, 1, 3, 4, 3, 5])
-kf = KFold(n_splits=3)  # 分3折，2折训练=(2/3)*6=4样本； 1折测试=(1/3)*6=2样本。
+
+# shuffle=True：外层循环每次执行kf.split(X)都会进行随机打乱（默认False）
+# 如果设置了random_state，则shuffle=True的设置失效，相当于shuffle=False
+kf = KFold(n_splits=3, shuffle=True, random_state=156)  # 分3折，2折训练=(2/3)*6=4样本； 1折测试=(1/3)*6=2样本。
 print(kf.get_n_splits(X))  # int
 print(kf)
-for train_index, test_index in kf.split(X):
-    print("Train Index:", train_index, ",Test Index:", test_index)
-    X_train, X_test = X[train_index], X[test_index]
-    y_train, y_test = y[train_index], y[test_index]
-    print(X_train)
-    print(y_train)
-    print(X_test)
-    print(y_test)
+for i in range(5):
+    for train_index, test_index in kf.split(X): # kf.split(X)内层循环只执行一次随机打乱
+        print("Train Index:", train_index, ",Test Index:", test_index)
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        print(X_train)
+        print(y_train)
+        print(X_test)
+        print(y_test)
+    print(30*"-")
 
 # %%
 # 1.2、GroupKFold
