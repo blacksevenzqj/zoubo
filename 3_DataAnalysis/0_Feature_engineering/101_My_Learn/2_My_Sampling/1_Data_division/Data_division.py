@@ -28,7 +28,7 @@ kf = KFold(n_splits=3, shuffle=True, random_state=156)  # 分3折，2折训练=(
 print(kf.get_n_splits(X))  # int
 print(kf)
 for i in range(5):
-    for train_index, test_index in kf.split(X): # kf.split(X)内层循环只执行一次随机打乱
+    for train_index, test_index in kf.split(X, y): # kf.split(X)内层循环只执行一次随机打乱
         print("Train Index:", train_index, ",Test Index:", test_index)
         X_train, X_test = X[train_index], X[test_index]
         y_train, y_test = y[train_index], y[test_index]
