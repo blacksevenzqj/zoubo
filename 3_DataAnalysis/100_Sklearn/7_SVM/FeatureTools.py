@@ -51,20 +51,36 @@ def separate_data_col(df, y_name):
 
 
 # 合并数据源（行向）： 训练集 与 测试集 合并
+# 注意： 在合并train和test数据之前，先将训练集train的 异常、离群值 相应行数据删除（测试集test不能删除行数据）
 def consolidated_data_row(train, test, y_name):
     ntrain = train.shape[0]
     ntest = test.shape[0]
-    train_X, train_y = separate_data_col(train, y_name)
-    all_data = pd.concat([train_X, test], axis=0).reset_index(drop=True)
+    all_data = pd.concat([train, test], axis=0).reset_index(drop=True)
+    all_data_X, train_y = separate_data_col(all_data, y_name)
+    train_y = train_y[:ntrain]
     print("all_data size is : {}".format(all_data.shape))
-    return all_data, train_y, ntrain, ntest
+    return all_data, all_data_X, train_y, ntrain, ntest
 
 
 # 分离数据源（行向）： 训练集 与 测试集 分离
-def separation_data_row(all_data, ntrain):
-    train = all_data[:ntrain]
-    test = all_data[ntrain:]
-    return train, test
+'''
+坑：
+all_data[:ntrain] 是按照 :ntrain 的数量 取值： 0 → ntrain-1
+all_data.loc[:ntrain,y_name] 是按照 :ntrain 的 行索引名 取值： 0 → ntrain
+'''
+
+
+def separation_data_row(all_data, ntrain, y_name=None):
+    if y_name is None:
+        train_X = all_data[:ntrain]
+        test_X = all_data[ntrain:]
+        return train_X, test_X
+    else:
+        train_y = pd.DataFrame(all_data.loc[:ntrain - 1, y_name])
+        all_data = all_data.drop(y_name, axis=1)
+        train_X = all_data[:ntrain]
+        test_X = all_data[ntrain:]
+        return train_X, test_X, train_y
 
 
 # In[]:
@@ -126,6 +142,8 @@ def missing_values_table(df, percent=None, del_type=1):
             df_nm = df.copy()
             for i in temp_drop_col:
                 df_nm.drop(df_nm.loc[df_nm[i].isnull()].index, axis=0, inplace=True)
+            # 恢复索引（删除行数据 需要恢复索引）
+            recovery_index([df_nm])
             return mis_val_table_ren_columns, df_nm
         else:
             return mis_val_table_ren_columns
@@ -277,9 +295,13 @@ def delete_outliers(X_Seriers, X_name, X_value, y_Seriers, y_name, y_value):
         (X_Seriers[X_name].map(lambda x: x > X_value)) & (y_Seriers[y_name].map(lambda x: x < y_value))].index
     if id(X_Seriers) == id(y_Seriers):
         X_Seriers.drop(del_index, axis=0, inplace=True)
+        # 恢复索引
+        recovery_index([X_Seriers])
     else:
         X_Seriers.drop(del_index, axis=0, inplace=True)  # 如果X集恢复了索引，那么Y集也必须恢复索引
         y_Seriers.drop(del_index, axis=0, inplace=True)
+        # 恢复索引
+        recovery_index([X_Seriers, y_Seriers])
 
 
 # In[]:
@@ -1607,11 +1629,15 @@ def rmsle_cv(model, train_X, train_y, cv=None, cv_type=1):
 # =============================Stacking models：堆叠模型=========================
 from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
 
+# 1、平均基本模型（类似bagging）
 '''
-堆叠模型：Stacking models
-最简单的堆叠方法：平均基本模型:Simplest Stacking approach : Averaging base models
+最简单的堆叠方法：平均基本模型:Simplest Stacking approach : Averaging base models（类似bagging）
 我们从平均模型的简单方法开始。 我们建立了一个新类，以通过模型扩展scikit-learn，并进行封装和代码重用（继承inheritance）。
 https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)
+
+理解：
+本堆叠模型进交叉验证时，每一折交叉验证所有模型都计算一次，并求所有模型对这一折交叉验证数据的预测结果指标均值。
+如 5折交叉验证时，每一折都是 所有模型的预测结果指标均值； 最后再求 5折交叉验证的均值。
 '''
 
 
@@ -1637,5 +1663,56 @@ class AveragingModels(BaseEstimator, RegressorMixin, TransformerMixin):
         ])
         return np.mean(predictions, axis=1)
 
-    # In[]:
+    # 2、堆叠平均模型类（类似boosting）
+
+
+class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
+    def __init__(self, base_models, meta_model, n_folds=5):
+        self.base_models = base_models
+        self.meta_model = meta_model
+        self.n_folds = n_folds
+
+    # We again fit the data on clones of the original models
+    def fit(self, X, y):
+        self.base_models_ = [list() for x in self.base_models]
+        self.meta_model_ = clone(self.meta_model)
+        kfold = KFold(n_splits=self.n_folds, shuffle=True, random_state=156)
+
+        '''
+        重点：
+        如果调用者使用的是 交叉验证： 如下代码就是 交叉验证 中的 交叉验证。
+        如，外层5折交叉验证： 这里传入的X,y就是4折的总训练集： 总训练集*4/5。
+        1、for i, model in enumerate(self.base_models) 是循环 堆叠模型第一层中每一个基模型。
+        2、for train_index, holdout_index in kfold.split(X, y) 堆叠模型第一层中每一个基模型进行 内层手动交叉验证；
+        内层手动交叉验证 也是5折，那么 内层手动交叉验证 的训练集数量是： 总训练集*4/5*4/5， 测试集数量是： 总训练集*4/5*1/5。
+        3、所以 self.base_models_ 的shape为： 3行（堆叠模型第一层3个基模型）， 5列（内层5折手动交叉验证） 也就是 每个基模型 有5个 内层手动交叉验证 的训练模型。   
+        4、堆叠模型第一层中每一个基模型的 内层5折手动交叉验证 结果存入 out_of_fold_predictions 矩阵中，shape为： X.shape[0]行， 3列（堆叠模型第一层3个基模型）
+        5、self.meta_model_.fit(out_of_fold_predictions, y) 
+        将 堆叠模型第一层的结果out_of_fold_predictions 和 y 传入 堆叠模型第二层模型进行训练。
+        '''
+        # Train cloned base models then create out-of-fold predictions
+        # that are needed to train the cloned meta-model
+        out_of_fold_predictions = np.zeros((X.shape[0], len(self.base_models)))
+        for i, model in enumerate(self.base_models):
+            for train_index, holdout_index in kfold.split(X, y):
+                instance = clone(model)
+                self.base_models_[i].append(instance)
+                instance.fit(X.loc[train_index], y.loc[train_index])
+                y_pred = instance.predict(X.loc[holdout_index])
+                out_of_fold_predictions[holdout_index, i] = y_pred.ravel()
+
+        # Now train the cloned  meta-model using the out-of-fold predictions as new feature
+        self.meta_model_.fit(out_of_fold_predictions, y)
+        return self
+
+    # 看 “StackingAveragedModels代码拆分解析” 中 self.base_models_ 的结构。
+    # Do the predictions of all base models on the test data and use the averaged predictions as
+    # meta-features for the final prediction which is done by the meta-model
+    def predict(self, X):
+        meta_features = np.column_stack([
+            np.column_stack([model.predict(X) for model in base_models]).mean(axis=1)
+            for base_models in self.base_models_])
+        return self.meta_model_.predict(meta_features)
+
+# In[]:
 # =============================Stacking models：堆叠模型=========================
