@@ -23,11 +23,11 @@ def set_file_path(path):
 
 
 # 读入数据源
-def readFile_inputData(train_name=None, test_name=None, index_col=None):
+def readFile_inputData(train_name=None, test_name=None, index_col=None, str_dict=None):
     if train_name is not None:
-        train = pd.read_csv(train_name, index_col=index_col)
+        train = pd.read_csv(train_name, index_col=index_col, dtype=str_dict)
     if test_name is not None:
-        test = pd.read_csv(test_name, index_col=index_col)
+        test = pd.read_csv(test_name, index_col=index_col, dtype=str_dict)
         return train, test
     else:
         return train
@@ -88,6 +88,45 @@ def separation_data_row(all_data, ntrain, y_name=None):
 def recovery_index(data_list):
     for i in data_list:
         i.index = range(i.shape[0])
+
+
+#        i = i.reset_index(drop=True)
+
+
+def astype_customize(x, t):
+    try:
+        return t(x)
+    except:
+        return np.nan
+
+
+# 设置特征类型： （所有的 分类类别 都使用str，而不使用 categorical类型（有的库抱异常））
+def set_classif_col(df, feature_name, val_type=1):
+    if val_type == 1:
+        temp_type = int
+    elif val_type == 2:
+        temp_type = float
+    elif val_type == 3:
+        temp_type = str
+    else:
+        raise Exception('Val Type is Error')
+
+    # np.nan可以用于astype()函数； 字符串"nan" 在Seriers的数据类型为str时 和 np.nan 在赋值时等价
+    try:
+        df[feature_name] = df[feature_name].astype(temp_type)
+    except:
+        df[feature_name] = df[feature_name].apply(lambda x: astype_customize(x, temp_type))
+
+
+# 统计类别数量： （区分特征） 主要为DataFrame
+def category_quantity_statistics(df, features, axis=0, dropna=True):
+    return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不要在计数中包含NaN。
+
+
+# 统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
+def category_quantity_statistics_all(df, features, return_counts=True):
+    unique_label, counts_label = np.unique(df[features], return_counts=return_counts)
+    return unique_label, counts_label
 
 
 # In[]:
@@ -157,24 +196,21 @@ def get_notMissing_values(data_temp, feature):
     return data_temp[data_temp[feature] == data_temp[feature]]  # 返回全部Data
 
 
-# 重复值处理
-def duplicate_value(data, isDrop=False):
-    # 重复项按特征统计
-    print(data[data.duplicated()].count())
+# 重复值处理（按行统计）
+def duplicate_value(data, subset=None, keep='first', inplace=False):
     # 去除重复项 后 长度
-    nodup = data[-data.duplicated()]
-    print("去除重复项后长度：%d" % len(nodup))
+    nodup = data[-data.duplicated(subset=None, keep='first')]
+    print("去除重复项后长度：%d(按行统计)" % len(nodup))
     # 去除重复项 后 长度
-    print("去除重复项后长度：%d" % len(data.drop_duplicates()))
+    print("去除重复项后长度：%d(按行统计)" % len(data.drop_duplicates(subset=None, keep='first')))
     # 重复项 长度
-    print("重复项长度：%d" % (len(data) - len(nodup)))
+    print("重复项长度：%d(按行统计)" % (len(data) - len(nodup)))
 
-    if isDrop:
-        # 在原数据集上 删除重复项
-        data.drop_duplicates(inplace=True)
+    if inplace:
+        # 按行统计，以subset指定的特征列为统计目标
+        data.drop_duplicates(subset=subset, keep=keep, inplace=inplace)  # 在原数据集上 删除重复项
         # 重设索引
-        data = data.reset_index(drop=True)
-        # data.index = range(data.shape[0])
+        recovery_index([data])
 
     print(data.info())
 
@@ -307,8 +343,8 @@ def delete_outliers(X_Seriers, X_name, X_value, y_Seriers, y_name, y_value):
 # In[]:
 # 分类模型 数据类别 样本不均衡（训练集 与 测试集）
 def sample_category(ytest, ytrain):
-    train_unique_label, train_counts_label = np.unique(ytrain, return_counts=True)
-    test_unique_label, test_counts_label = np.unique(ytest, return_counts=True)
+    train_unique_label, train_counts_label = category_quantity_statistics_all(ytrain, return_counts=True)
+    test_unique_label, test_counts_label = category_quantity_statistics_all(ytest, return_counts=True)
     print('-' * 60)
     print('Label Distributions: \n')
     print("训练集类别%s，数量%s，占比%s" % (train_unique_label, train_counts_label, (train_counts_label / len(ytrain))))
@@ -345,20 +381,6 @@ def set_diff(set_one, set_two):
     temp_list.append(list(set(set_one) - (set(set_two))))  # 差
     temp_list.append(list(set(set_one) ^ set(set_two)))  # 补
     return temp_list
-
-
-# 所有的 分类类别 都使用str，而不使用 categorical类型（有的库抱异常）
-# 设置分类变量类型：
-def set_classif_col(df, feature_name, val_type=1):
-    if val_type == 1:
-        temp_type = int
-    elif val_type == 2:
-        temp_type = float
-    elif val_type == 3:
-        temp_type = str
-    else:
-        raise Exception('Val Type is Error')
-    df[feature_name] = df[feature_name].astype(temp_type)
 
 
 # 设置分类变量类型为：category（很不用）
@@ -1477,6 +1499,7 @@ def learning_curve_r2_customize(axisx, Xtrain, Ytrain, cv, model_name="XGBR", hp
 # ---------------------------------------------------------------------------
 
 # 自定义交叉验证（XGBoost原生库）
+# 入参 X、y 都是矩阵格式
 def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_name, num_round):
     import xgboost as xgb
 
@@ -1621,6 +1644,45 @@ def rmsle_cv(model, train_X, train_y, cv=None, cv_type=1):
     return (rmse)
 
 
+# 入参 X、y 都是矩阵格式
+def stacking_cv_customize(stacking_model, X, y, ss):
+    rs_train = []
+    mse_train = []
+    rs_test = []
+    mse_test = []
+
+    for train_index, test_index in ss.split(X, y):
+        #        print("Train Index:", train_index, ",Test Index:", test_index)
+        X_train, X_test = X[train_index], X[test_index]  # 矩阵的行索引： 取矩阵的一整行
+        y_train, y_test = y[train_index], y[test_index]
+
+        stacking_model.fit(X_train, y_train)
+        y_predict_train = stacking_model.predict(X_train)
+        rs_train.append(r2_score(y_train, y_predict_train))
+        mse_train.append(MSE(y_train, y_predict_train))
+
+        y_predict_test = stacking_model.predict(X_test)
+        rs_test.append(r2_score(y_test, y_predict_test))
+        mse_test.append(MSE(y_test, y_predict_test))
+
+    rs_mean_train = np.mean(rs_train)
+    rs_var_train = np.var(rs_train)
+    ge_rs_train = (1 - rs_mean_train) ** 2 + rs_var_train  # 原来只有这个ge
+    mse_mean_train = np.mean(mse_train)
+    mse_var_train = np.var(mse_train)
+    ge_mse_train = (1 - mse_mean_train) ** 2 + mse_var_train
+
+    rs_mean_test = np.mean(rs_test)
+    rs_var_test = np.var(rs_test)
+    ge_rs_test = (1 - rs_mean_test) ** 2 + rs_var_test  # 原来只有这个ge
+    mse_mean_test = np.mean(mse_test)
+    mse_var_test = np.var(mse_test)
+    ge_mse_test = (1 - mse_mean_test) ** 2 + mse_var_test
+
+    print(rs_mean_train, rs_var_train, ge_rs_train, mse_mean_train, mse_var_train, ge_mse_train)
+    print(rs_mean_test, rs_var_test, ge_rs_test, mse_mean_test, mse_var_test, ge_mse_test)
+
+
 # In[]:
 # ====================================交叉验证==================================
 
@@ -1666,6 +1728,7 @@ class AveragingModels(BaseEstimator, RegressorMixin, TransformerMixin):
     # 2、堆叠平均模型类（类似boosting）
 
 
+# 入参 X、y 都是矩阵格式
 class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
     def __init__(self, base_models, meta_model, n_folds=5):
         self.base_models = base_models
@@ -1676,7 +1739,7 @@ class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
     def fit(self, X, y):
         self.base_models_ = [list() for x in self.base_models]
         self.meta_model_ = clone(self.meta_model)
-        kfold = KFold(n_splits=self.n_folds, shuffle=True, random_state=156)
+        kfold = KFold(n_splits=self.n_folds, shuffle=True)  # random_state=156
 
         '''
         重点：
@@ -1697,8 +1760,8 @@ class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
             for train_index, holdout_index in kfold.split(X, y):
                 instance = clone(model)
                 self.base_models_[i].append(instance)
-                instance.fit(X.loc[train_index], y.loc[train_index])
-                y_pred = instance.predict(X.loc[holdout_index])
+                instance.fit(X[train_index], y[train_index])  # 矩阵的行索引： 取矩阵的一整行
+                y_pred = instance.predict(X[holdout_index])
                 out_of_fold_predictions[holdout_index, i] = y_pred.ravel()
 
         # Now train the cloned  meta-model using the out-of-fold predictions as new feature
