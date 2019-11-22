@@ -21,7 +21,7 @@ def merge_test():
     print(dataDf2)
 
     # 内连接： 两DataFrame都必须有字段
-    dataIn = dataDf1.merge(dataDf2, left_on='lkey', right_on='rkey')  # 是按 字段 连接，不是按值。
+    dataIn = dataDf1.merge(dataDf2, left_on='lkey', right_on='rkey')
 
     # 右连接： 以右边DataFrame字段为准
     dataR = dataDf1.merge(dataDf2, left_on='lkey', right_on='rkey', how='right')
