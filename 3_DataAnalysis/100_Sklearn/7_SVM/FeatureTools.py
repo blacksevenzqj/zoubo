@@ -997,8 +997,10 @@ def corrFunction(data, is_show=True, image_width=20, image_hight=18):
     return temp_corr_abs, temp_corr
 
 
-# data带 因变量Y  与  data不带 因变量Y  的综合 （入参data中带Y）
+# 3、data带 因变量Y  与  data不带 因变量Y  的综合 （入参data中带Y）
 def corrFunction_all(data, y_name, f_importance_num=20, f_collinear_num=0.7):
+    import Tools_customize as tc
+
     # 1、特征选择：（带 因变量Y）
     df_all_corr_abs, df_all_corr = corrFunction_withY(data, y_name, False)
     Feature_1_cols = df_all_corr_abs[0:f_importance_num]["Feature_1"]
@@ -1074,11 +1076,12 @@ def corrFunction_all(data, y_name, f_importance_num=20, f_collinear_num=0.7):
     '''
     使用分组排序：外层排序特征Feature_1_sort没用。 因为apply函数是按每个分组标签划分之后，再按该组内的特征进行排序，控制不了分组标签排序。
     且 每个分组标签 对应的 外层排序特征Feature_1_sort 都相同，没有意义。 但奇怪的是单独使用Feature_1_sort排序时，会带动其他数值类型特征进行排序...
-    result_final = result.groupby(["Feature_1"], group_keys=False).apply(lambda x:x.sort_values(by=["Correlation_Coefficient"], ascending=[False]))
+    result_final = tc.groupby_apply_sort(result, ["Feature_1"], ["Correlation_Coefficient"], [False], group_keys=False)
     这样实现 分组排序groupby.apply 就没有意义。
     result_final = result_final.sort_values(by=["Feature_1_sort", "Correlation_Coefficient"], ascending=[False, False])
     '''
-    # 6.3、保留 特征共线性 >= f_collinear_num 的数据（默认0.7）
+
+    # 7、保留 特征共线性 >= f_collinear_num 的数据（默认0.7）
     result_final = result_final[result_final["Correlation_Coefficient"] >= f_collinear_num]
 
     return f_all_no_f1_merged, result_final  # 两者维度相同； 数据结构不同
