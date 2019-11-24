@@ -16,6 +16,8 @@ from time import time
 
 
 # In[]:
+# ================================基础操作==============================
+# In[]:
 # 路径设置
 def set_file_path(path):
     import os
@@ -39,8 +41,8 @@ def writeFile_outData(data, path):
 
 
 # 合并数据源（列向）
-def consolidated_data_col(train_X, train_y):
-    return pd.concat([train_X, train_y], axis=1)
+def consolidated_data_col(train_X, train_y, axis=1):
+    return pd.concat([train_X, train_y], axis=axis)
 
 
 # 分离数据源（列向）
@@ -81,6 +83,33 @@ def separation_data_row(all_data, ntrain, y_name=None):
         train_X = all_data[:ntrain]
         test_X = all_data[ntrain:]
         return train_X, test_X, train_y
+
+
+# 排序
+def data_sort(data, sort_cols, ascendings):
+    if type(sort_cols) != list:
+        raise Exception('sort_cols Type is Error, must list')
+    elif type(ascendings) != list:
+        raise Exception('ascendings Type is Error, must list')
+
+    return data.sort_values(by=sort_cols, ascending=ascendings)
+
+
+# 数据切分
+def data_segmentation_skf(X, y, test_size=0.3):
+    n_splits_temp = int(1 / test_size)
+    # StratifiedKFold用法类似Kfold，但是他是分层采样，确保训练集，测试集中各类别样本的比例与原始数据集中相同。
+    # StratifiedKFold 其实是 5折 交叉验证 的 分层采样： 这里用于 将原始数据集 分为 训练集 和 测试集（共5次循环，其实一次就够了）
+    sss = StratifiedKFold(n_splits=n_splits_temp, random_state=None, shuffle=False)
+
+    for train_index, test_index in sss.split(X, y):  # 每一次循环赋值 都 分层采样，确保训练集，测试集中各类别样本的比例与原始数据集中相同
+        print("Train:", train_index, "Train_len:", len(train_index), "Test:", test_index, "Test_len:", len(test_index))
+        print(len(train_index) / len(y), len(test_index) / len(y))
+        original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
+        original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
+        break
+
+    return original_Xtrain, original_Xtest, original_ytrain, original_ytest
 
 
 # In[]:
@@ -198,6 +227,11 @@ def get_notMissing_values(data_temp, feature):
 
 # 重复值处理（按行统计）
 def duplicate_value(data, subset=None, keep='first', inplace=False):
+    if type(subset) is not list:
+        raise Exception('subset Type is Error')
+    elif len(subset) < 2:
+        raise Exception('subset size must lager than 2')
+
     # 去除重复项 后 长度
     nodup = data[-data.duplicated(subset=None, keep='first')]
     print("去除重复项后长度：%d(按行统计)" % len(nodup))
@@ -213,6 +247,11 @@ def duplicate_value(data, subset=None, keep='first', inplace=False):
         recovery_index([data])
 
     print(data.info())
+
+
+# 重复索引处理（按行统计）
+def duplicate_index(data, keep='first'):
+    return data[~data.index.duplicated(keep=keep)]
 
 
 # In[]:
@@ -378,8 +417,9 @@ def Sample_imbalance(data, y_name):
 def set_diff(set_one, set_two):
     temp_list = []
     temp_list.append(list(set(set_one) & set(set_two)))  # 交
-    temp_list.append(list(set(set_one) - (set(set_two))))  # 差
-    temp_list.append(list(set(set_one) ^ set(set_two)))  # 补
+    temp_list.append(list(set(set_one) - (set(set_two))))  # 差 （项在set_one中，但不在set_two中）
+    temp_list.append(list(set(set_one) ^ set(set_two)))  # 补-对称差集（项在set_one或set_two中，但不会同时出现在二者中）
+    temp_list.append(list(set(set_one) | set(set_two)))  # 并
     return temp_list
 
 
@@ -391,6 +431,7 @@ def set_col_category(df, feature_name, categories_=None):
         df[feature_name] = df[feature_name].astype('category', ordered=True, categories=categories_)  # 手动排序
 
 
+# 分类变量编码：
 # 分类特征 普通编码：
 def classif_labelEncoder(data, cols):
     from sklearn.preprocessing import LabelEncoder
@@ -401,22 +442,62 @@ def classif_labelEncoder(data, cols):
         data[c] = lbl.transform(list(data[c].values))
 
 
+# 分类变量 类别占比 小于阈值 统一 归为 一个类别
+def category_col_compress(seriers_col, threshold=0.005, other_name="dum_others"):
+    # copy the code from stackoverflow
+    dummy_col = seriers_col.copy()
+
+    # what is the ratio of a dummy in whole column
+    count = pd.value_counts(dummy_col) / len(dummy_col)
+
+    # cond whether the ratios is higher than the threshold
+    mask = dummy_col.isin(count[count > threshold].index)
+
+    # replace the ones which ratio is lower than the threshold by a special name
+    dummy_col[~mask] = other_name
+
+    return dummy_col
+
+
+# 分类变量 独热编码 一般情况下不用 独热编码
+def category_getdummies(pre_combined, cat_cols=None, cat_threshold=0):
+    if cat_cols is None:
+        cat_cols = pre_combined.select_dtypes(include=[np.object]).columns.tolist()
+
+    for col in cat_cols:
+        pre_combined[col] = category_col_compress(pre_combined[col],
+                                                  threshold=cat_threshold)  # threshold set to zero as it get high core for all estimatior  except ridge based
+
+    dummies_val = pd.get_dummies(pre_combined[cat_cols], prefix=cat_cols)  # 自动加下划线
+    pre_combined = pre_combined.join(dummies_val)
+
+    return pre_combined
+
+
+# 分类变量手动编码
+def category_manual_coding(data, maps):
+    if type(maps) is not dict:
+        raise Exception('maps Type is Error')
+
+    if type(data) is pd.core.frame.DataFrame:
+        '''
+        maps = {"MSSubClass" : {20 : "SC20", 30 : "SC30", 40 : "SC40", 45 : "SC45"},
+                "MoSold" : {1 : "Jan", 2 : "Feb", 3 : "Mar", 4 : "Apr", 5 : "May"}}
+        train = ft.category_manual_coding(train, maps)
+        '''
+        return data.replace(maps)
+    elif type(data) is pd.core.series.Series:
+        '''
+        maps = {20 : "SC20", 30 : "SC30", 40 : "SC40", 45 : "SC45"}
+        train["MSSubClass"] = ft.category_manual_coding(train["MSSubClass"], maps)
+        '''
+        return data.map(maps)
+    else:
+        raise Exception('data Type is Error')
+
+
 # In[]:
-# 数据切分
-def data_segmentation_skf(X, y, test_size=0.3):
-    n_splits_temp = int(1 / test_size)
-    # StratifiedKFold用法类似Kfold，但是他是分层采样，确保训练集，测试集中各类别样本的比例与原始数据集中相同。
-    # StratifiedKFold 其实是 5折 交叉验证 的 分层采样： 这里用于 将原始数据集 分为 训练集 和 测试集（共5次循环，其实一次就够了）
-    sss = StratifiedKFold(n_splits=n_splits_temp, random_state=None, shuffle=False)
-
-    for train_index, test_index in sss.split(X, y):  # 每一次循环赋值 都 分层采样，确保训练集，测试集中各类别样本的比例与原始数据集中相同
-        print("Train:", train_index, "Train_len:", len(train_index), "Test:", test_index, "Test_len:", len(test_index))
-        print(len(train_index) / len(y), len(test_index) / len(y))
-        original_Xtrain, original_Xtest = X.iloc[train_index], X.iloc[test_index]
-        original_ytrain, original_ytest = y.iloc[train_index], y.iloc[test_index]
-        break
-
-    return original_Xtrain, original_Xtest, original_ytrain, original_ytest
+# ================================基础操作==============================
 
 
 # In[]:
@@ -715,10 +796,9 @@ def normal_QQ_test(data, feature):
 
 # In[]:
 # -----------------------------正太、偏度检测-------------------------------
+
 # In[]:
-# ================================数据分布==============================
-
-
+# -----------------------------正太、偏度处理-------------------------------
 # In[]:
 # 取对数（可处理负数）
 def logarithm(X_rep, var_x_ln, f_type=1):
@@ -814,6 +894,14 @@ def scipy_boxcox1p(df, skewed_features, lanmuda=0.15):
 
 
 # In[]:
+# -----------------------------正太、偏度处理-------------------------------
+# In[]:
+# ================================数据分布==============================
+
+
+# In[]:
+# ================================特征选择==============================
+# In[]:
 # 相似度计算1
 # 皮尔森相似度
 '''
@@ -823,37 +911,43 @@ def scipy_boxcox1p(df, skewed_features, lanmuda=0.15):
 '''
 
 
-# 1、特征选择：（带 因变量Y）
-def corrFunction_withY(data_corr, label, image_width=20, image_hight=18):  # label： 因变量Y名称
-    corr = data_corr.corr()  # 计算各变量的相关性系数
+# 1、特征选择：（data带 因变量Y）
+def corrFunction_withY(data, label, is_show=True, image_width=20, image_hight=18):  # label： 因变量Y名称
+    corr = data.corr()  # 计算各变量的相关性系数
     # 皮尔森相似度 绝对值 排序
     df_all_corr_abs = corr.abs().unstack().sort_values(kind="quicksort", ascending=False).reset_index()
     df_all_corr_abs.rename(columns={"level_0": "Feature_1", "level_1": "Feature_2", 0: 'Correlation_Coefficient'},
                            inplace=True)
-    print(df_all_corr_abs[(df_all_corr_abs["Feature_1"] != label) & (df_all_corr_abs['Feature_2'] == label)])
+    temp_corr_abs = df_all_corr_abs[(df_all_corr_abs["Feature_1"] != label) & (df_all_corr_abs['Feature_2'] == label)]
+    print(temp_corr_abs)
     print()
     # 皮尔森相似度 排序
     df_all_corr = corr.unstack().sort_values(kind="quicksort", ascending=False).reset_index()
     df_all_corr.rename(columns={"level_0": "Feature_1", "level_1": "Feature_2", 0: 'Correlation_Coefficient'},
                        inplace=True)
-    print(df_all_corr[(df_all_corr["Feature_1"] != label) & (df_all_corr['Feature_2'] == label)])
+    temp_corr = df_all_corr[(df_all_corr["Feature_1"] != label) & (df_all_corr['Feature_2'] == label)]
+    print(temp_corr)
 
-    temp_x = []
-    for i, fe in enumerate(list(corr.index)):  # 也可以是：data_corr.columns
-        temp_x.append("x" + str(i))
-    xticks = temp_x  # x轴标签
-    yticks = list(corr.index)  # y轴标签
-    fig = plt.figure(figsize=(image_width, image_hight))
-    ax1 = fig.add_subplot(1, 1, 1)
-    sns.heatmap(corr, annot=True, cmap='rainbow', ax=ax1,
-                annot_kws={'size': 12, 'weight': 'bold', 'color': 'black'})  # 绘制相关性系数热力图
-    ax1.set_xticklabels(xticks, rotation=0, fontsize=14)
-    ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
-    plt.show()
+    if is_show:
+        temp_x = []
+        for i, fe in enumerate(list(corr.index)):  # 也可以是： data.columns
+            temp_x.append("x" + str(i))
+        xticks = temp_x  # x轴标签
+        yticks = list(corr.index)  # y轴标签
+        fig = plt.figure(figsize=(image_width, image_hight))
+        ax1 = fig.add_subplot(1, 1, 1)
+        sns.heatmap(corr, annot=True, cmap='rainbow', ax=ax1,
+                    annot_kws={'size': 12, 'weight': 'bold', 'color': 'black'})  # 绘制相关性系数热力图
+        ax1.set_xticklabels(xticks, rotation=0, fontsize=14)
+        ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
+        plt.show()
+
+    return temp_corr_abs, temp_corr
 
 
-# 2、特征选择：特征共线性（还可以做 方差膨胀系数）
-def corrFunction(data_corr, image_width=20, image_hight=18):
+# 2、特征选择：特征共线性（data不带 因变量Y； 还可以做 方差膨胀系数）
+#
+def corrFunction(data, is_show=True, image_width=20, image_hight=18):
     '''
     1、特征间共线性：两个或多个特征包含了相似的信息，期间存在强烈的相关关系
     2、常用判断标准：两个或两个以上的特征间的相关性系数高于0.8
@@ -861,9 +955,14 @@ def corrFunction(data_corr, image_width=20, image_hight=18):
     3.1、降低运算效率
     3.2、降低一些模型的稳定性
     3.3、弱化一些模型的预测能力
+
+    取 [::2] 已经没有 交叉值对 的情况了：
+    列1   列2
+    A  →  B
+    B  →  A
     '''
     # 建立共线性表格（是检测特征共线性的，所以排除Y）
-    correlation_table = data_corr.corr()
+    correlation_table = data.corr()
     # 皮尔森相似度 绝对值 排序
     df_all_corr_abs = correlation_table.abs().unstack().sort_values(kind="quicksort", ascending=False).reset_index()
     df_all_corr_abs.rename(columns={"level_0": "Feature_1", "level_1": "Feature_2", 0: 'Correlation_Coefficient'},
@@ -880,21 +979,112 @@ def corrFunction(data_corr, image_width=20, image_hight=18):
     #    temp_corr.to_csv(r"C:\Users\dell\Desktop\123123\temp_corr.csv")
     print(temp_corr)
 
-    # 热力图
-    temp_x = []
-    for i, fe in enumerate(data_corr.columns):
-        temp_x.append("x" + str(i))
-    xticks = temp_x  # x轴标签
-    yticks = list(correlation_table.index)  # y轴标签
-    fig = plt.figure(figsize=(image_width, image_hight))
-    ax1 = fig.add_subplot(1, 1, 1)
-    sns.heatmap(correlation_table, annot=True, cmap='rainbow', ax=ax1,
-                annot_kws={'size': 12, 'weight': 'bold', 'color': 'black'})  #
-    ax1.set_xticklabels(xticks, rotation=0, fontsize=14)
-    ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
+    if is_show:
+        # 热力图
+        temp_x = []
+        for i, fe in enumerate(data.columns):
+            temp_x.append("x" + str(i))
+        xticks = temp_x  # x轴标签
+        yticks = list(correlation_table.index)  # y轴标签
+        fig = plt.figure(figsize=(image_width, image_hight))
+        ax1 = fig.add_subplot(1, 1, 1)
+        sns.heatmap(correlation_table, annot=True, cmap='rainbow', ax=ax1,
+                    annot_kws={'size': 12, 'weight': 'bold', 'color': 'black'})  #
+        ax1.set_xticklabels(xticks, rotation=0, fontsize=14)
+        ax1.set_yticklabels(yticks, rotation=0, fontsize=14)
+        plt.show()
+
+    return temp_corr_abs, temp_corr
 
 
-# 3、最后再对 选出的特征 与 Y 做pairplot图
+# data带 因变量Y  与  data不带 因变量Y  的综合 （入参data中带Y）
+def corrFunction_all(data, y_name, f_importance_num=20, f_collinear_num=0.7):
+    # 1、特征选择：（带 因变量Y）
+    df_all_corr_abs, df_all_corr = corrFunction_withY(data, y_name, False)
+    Feature_1_cols = df_all_corr_abs[0:f_importance_num]["Feature_1"]
+    # 2、特征选择：特征共线性（data不带 因变量Y； 还可以做 方差膨胀系数） 返回值已经没有 交叉值对 情况
+    temp_corr_abs, temp_corr = corrFunction(data.drop(y_name, axis=1), False)
+    Feature_all = temp_corr_abs[
+        temp_corr_abs.apply(lambda x: (x[0] in Feature_1_cols.values) & (x[1] in Feature_1_cols.values), axis=1)]
+    Feature_all = Feature_all[Feature_all["Correlation_Coefficient"] >= 0.5]
+    # 3、合并 特征共线性表格 和 特征重要性表格
+    # 3.1、方式一： map方式
+    '''
+    fpd = pd.DataFrame(Feature_1_cols)
+    fpd = fpd.set_index("Feature_1")
+    fpd["sort"] = np.arange(fpd.shape[0], 0, -1)
+    Feature_all_temp = Feature_all["Feature_1"].map(fpd["sort"])
+    Feature_all_temp.name = "Feature_1_sort"
+    Feature_all = consolidated_data_col(Feature_all, Feature_all_temp)
+    '''
+    # 3.2、方式二： merge表连接方式
+    fpd = pd.DataFrame(Feature_1_cols)
+    fpd["Feature_1_sort"] = np.arange(fpd.shape[0], 0, -1)
+    # 索引自动重置
+    # Feature_all = Feature_all.merge(fpd, left_on='Feature_1',right_on='Feature_1')
+    Feature_all = Feature_all.merge(fpd, on=['Feature_1'])
+
+    # 4、没有针对 Feature_1字段 进行 列顺序交换、合并等操作 的表格
+    f_all_no_f1_merged = data_sort(Feature_all, ["Feature_1_sort", "Correlation_Coefficient"], [False, False])
+    f_all_no_f1_merged = f_all_no_f1_merged[f_all_no_f1_merged["Correlation_Coefficient"] >= f_collinear_num]
+
+    # 5、针对 Feature_1字段 进行 列顺序交换、合并等操作 的表格
+    result = pd.DataFrame(columns=["Feature_1", "Feature_2", "Correlation_Coefficient", "Feature_1_sort"])
+    # 按照 自变量 与 因变量Y 的相关度，从大到小顺序 进行循环（先保证 与Y高相关度的特征 在 特征共线性表格中Feature_1字段的 完整性）
+    for i in Feature_1_cols:
+        '''
+        temp_corr_abs()函数返回值中已经没有 交叉值对，但本处的查询合并又会产生 交叉值对。
+        1、 GrLivArea特征： 
+        查询 Feature_1 得到的 temp_a： 
+        88 GrLivArea AllFlrsSF 0.9954098084600875
+        2、AllFlrsSF特征：
+        查询 Feature_2 得到的 temp_b： 
+        88 GrLivArea AllFlrsSF 0.9954098084600875
+        3、也就是说： A、B特征相关，则A的Feature_1查询temp_a 和 B的Feature_2查询temp_b 一定会查询到同一行（索引相同）；
+        而temp_b又执行 换列顺序 的操作，所以又出现了 交叉值对（索引相同，其实本就是同一行）。 
+        这里 索引相同、其实是同一行的 交叉值对 和 X.corr函数生成的 交叉值对 值是一样的。所以后续需要过滤/删除掉 索引相同行（交叉值对）。
+        4、temp_b执行 换列顺序 的操作，且又将temp_b[Feature_1_sort]字段值，赋值为temp_a[Feature_1_sort]。
+        那么最终 过滤/删除掉 索引相同行（交叉值对） 之后，Feature_1、Feature_1_sort字段中 与Y低相关度的特征 会消失，
+        因为 从大到小顺序进行循环 优先保证 与Y高相关度的特征 在 特征共线性表格中Feature_1字段的 完整性。
+        '''
+        temp_a = Feature_all[Feature_all["Feature_1"] == i]
+        temp_val = temp_a["Feature_1_sort"].iloc[0]
+        #    temp_list = ft.set_diff(result.index, temp_a.index)  # 1.1处： 在联和添加时 过滤掉 索引相同（其实是同一行）
+        #    temp_a = temp_a.loc[temp_a.index.drop(temp_list[0])]
+        result = consolidated_data_col(result, temp_a, axis=0)
+
+        temp_b = Feature_all[Feature_all["Feature_2"] == i]
+        #    temp_list = ft.set_diff(result.index, temp_b.index)  # 1.2处： 在联和添加时 过滤掉 索引相同（其实是同一行）
+        #    temp_b = temp_b.loc[temp_b.index.drop(temp_list[0])]
+        temp_b[["Feature_1", "Feature_2"]] = temp_b[["Feature_2", "Feature_1"]]
+        temp_b["Feature_1_sort"] = temp_val
+        result = consolidated_data_col(result, temp_b, axis=0)
+
+    set_classif_col(result, "Feature_1_sort")  # 设置Feature_1_sort字段为int类型
+
+    # 5.1、 删除重复索引（其实是同一行）
+    result = duplicate_index(result)  # 2处： 一并删除重复索引： 索引相同（其实是同一行）； 和 1.1、1.2处 的作用相同（实现原理是相同的）。
+
+    # 6、最终表格：
+    # 6.1、直接排序：
+    # 外层排序特征Feature_1_sort在前（优先），分组排序特征Correlation_Coefficient在后（次之），直接进行排序 实现分组排序。
+    # 但前提是 必须自定义 外层排序特征Feature_1_sort。
+    result_final = data_sort(result, ["Feature_1_sort", "Correlation_Coefficient"], [False, False])
+    # 6.2、分组排序：（在我的需求 外层特征重要性需要排序时， 分组排序没有意义）
+    '''
+    使用分组排序：外层排序特征Feature_1_sort没用。 因为apply函数是按每个分组标签划分之后，再按该组内的特征进行排序，控制不了分组标签排序。
+    且 每个分组标签 对应的 外层排序特征Feature_1_sort 都相同，没有意义。 但奇怪的是单独使用Feature_1_sort排序时，会带动其他数值类型特征进行排序...
+    result_final = result.groupby(["Feature_1"], group_keys=False).apply(lambda x:x.sort_values(by=["Correlation_Coefficient"], ascending=[False]))
+    这样实现 分组排序groupby.apply 就没有意义。
+    result_final = result_final.sort_values(by=["Feature_1_sort", "Correlation_Coefficient"], ascending=[False, False])
+    '''
+    # 6.3、保留 特征共线性 >= f_collinear_num 的数据（默认0.7）
+    result_final = result_final[result_final["Correlation_Coefficient"] >= f_collinear_num]
+
+    return f_all_no_f1_merged, result_final  # 两者维度相同； 数据结构不同
+
+
+# 4、最后再对 选出的特征 与 Y 做pairplot图 （入参data中带Y）
 def feature_scatterplotWith_y(data, cols):
     sns.set()
     sns.pairplot(data[cols], size=2.5)  # scatterplot
@@ -914,6 +1104,30 @@ def feature_corrWith_y(X, y_series, top_num=20):
 def feature_spearmanrWith_y(X_series, y_series):
     r, p = scipy.stats.spearmanr(X_series, y_series)
     return r, p
+
+
+# In[]:
+# ================================特征选择==============================
+
+
+# In[]:
+# ================================特征创建==============================
+# In[]:
+'''
+1、现有功能的简化
+2、现有功能的组合
+3、现有特征中的多项式
+'''
+# 1、现有功能的简化
+# 1.1、分类特征： 将 分桶类别 进行压缩 ： 如可以调用 category_manual_coding 自定义函数
+
+# 2、现有功能的组合
+
+# 3、现有特征中的多项式
+
+
+# In[]:
+# ================================特征创建==============================
 
 
 # In[]:

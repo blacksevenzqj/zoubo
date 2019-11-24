@@ -39,9 +39,7 @@ def merge_test():
 #    dataQ_On = dataDf1.merge(dataDf2, on=["lkey","rkey"], how='outer')
 
 
-# 简单的将2个DataFrame列向合并
-def concat_test(df1, df2):
-    return pd.concat([df1, df2], axis=1)
+# 简单的将2个DataFrame列向合并： pd.concat 在 def consolidated_data_col(train_X, train_y, axis=1): 函数中
 
 
 # In[]:
@@ -57,10 +55,10 @@ data_group = tc.groupby_agg(data[0:10], ["1_total_fee", "2_total_fee"], aggs)
 '''
 
 
-def groupby_agg(data, group_cols, aggs, as_index=True):
+def groupby_agg(data, group_cols, aggs, as_index=True):  # group_keys在普通groupby中不生效
     if type(group_cols) != list:
-        raise Exception('group_col Type is Error, must list')
-    if type(aggs) != dict:
+        raise Exception('group_cols Type is Error, must list')
+    elif type(aggs) != dict:
         raise Exception('aggs Type is Error, must dict')
 
     # 例子： aggs = {'3_total_fee' : [np.min, np.max, np.mean, np.sum], '4_total_fee' : np.sum}
@@ -68,6 +66,27 @@ def groupby_agg(data, group_cols, aggs, as_index=True):
     data_group = data.groupby(group_cols, as_index=as_index).agg(aggs)
     data_group.columns = ['_'.join(col).strip() for col in data_group.columns.values]
     return data_group
+
+
+# 分组后 按指定特征进行排序
+# groupby 和 apply 配合使用，只有group_keys关键字生效，as_index不适用。
+# result = tc.groupby_apply_sort(result, ["Feature_1"], ["Correlation_Coefficient"], [False], False)
+'''
+使用分组排序：外层排序特征Feature_1_sort没用。 因为apply函数是按每个分组标签划分之后，再按该组内的特征进行排序，控制不了分组标签排序。
+且 每个分组标签 对应的 外层排序特征Feature_1_sort 都相同，没有意义。 但奇怪的是单独使用Feature_1_sort排序时，会带动其他数值类型特征进行排序...
+'''
+
+
+def groupby_apply_sort(data, group_cols, sort_cols, ascendings, group_keys=False):  # group_keys默认True
+    if type(group_cols) != list:
+        raise Exception('group_cols Type is Error, must list')
+    elif type(sort_cols) != list:
+        raise Exception('sort_cols Type is Error, must list')
+    elif type(ascendings) != list:
+        raise Exception('ascendings Type is Error, must list')
+
+    return data.groupby(group_cols, group_keys=group_keys).apply(
+        lambda x: x.sort_values(by=sort_cols, ascending=ascendings))
 
 
 # 1、按count()统计，并将结果展开为DataFrame
