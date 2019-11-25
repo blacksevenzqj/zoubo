@@ -730,7 +730,7 @@ def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
         f, axes = plt.subplots(1, 2, figsize=(23, 8))
         con_data_distribution(temp_data, var, axes)
 
-    # 将偏度大于1的连续变量 取对数
+    # 将偏度大于 阈值（默认1） 的连续变量 取对数
     if len(var_x_ln) > 0:
         logarithm_nagative(temp_data, var_x_ln, 2)
 
@@ -1109,6 +1109,19 @@ def feature_spearmanrWith_y(X_series, y_series):
     return r, p
 
 
+# 特征选择： 线性回归模型： 特征系数重要性 横向柱状图
+def linear_regression_coef(model, X_train, axe, head_num=10, tail_num=10):
+    coefs = pd.Series(model.coef_, index=X_train.columns)
+    print("Ridge picked " + str(sum(coefs != 0)) + " features and eliminated the other " + \
+          str(sum(coefs == 0)) + " features")
+    imp_coefs = pd.concat([coefs.sort_values().head(head_num),
+                           coefs.sort_values().tail(tail_num)])
+
+    imp_coefs.plot(kind="barh", axes=axe)
+    plt.title("Coefficients in the Ridge Model")
+    plt.show()
+
+
 # In[]:
 # ================================特征选择==============================
 
@@ -1448,10 +1461,40 @@ def variance_expansion_coefficient(df, cols):
 
 
 # 训练集 与 测试集 拟合：
-def fitting_comparison(y_true, y_predict):
-    plt.plot(range(len(y_true)), sorted(y_true), c="black", label="Data")
-    plt.plot(range(len(y_predict)), sorted(y_predict), c="red", label="Predict")
-    plt.legend()
+def fitting_comparison(y_train_true, y_train_predict, y_test_true, y_test_predict, axe):
+    x_axis = np.hstack((y_train_predict, y_test_predict))
+    y_axis = np.hstack((y_train_true, y_test_true))
+
+    axe[0].scatter(y_train_predict, y_train_true, c="blue", marker="s", label="Training data")
+    axe[0].scatter(y_test_predict, y_test_true, c="lightgreen", marker="s", label="Validation data")
+    axe[0].set_title("Linear regression")
+    axe[0].set_xlabel("Predicted values")
+    axe[0].set_ylabel("Real values")
+    axe[0].legend(loc="upper left")
+    axe[0].plot([np.min(x_axis).round(2), np.max(x_axis).round(2)], [np.min(y_axis).round(2), np.max(y_axis).round(2)],
+                c="red")
+
+    axe[1].plot(range(len(y_train_true)), sorted(y_train_true), c="darkblue", label="Train_Data")
+    axe[1].plot(range(len(y_train_predict)), sorted(y_train_predict), c="blue", label="Train_Predict")
+    axe[1].legend()
+    axe[2].plot(range(len(y_test_true)), sorted(y_test_true), c="darkgreen", label="Test_Data")
+    axe[2].plot(range(len(y_test_predict)), sorted(y_test_predict), c="lightgreen", label="Test_Predict")
+    axe[2].legend()
+
+    plt.show()
+
+
+# 训练集 与 测试集 残差
+def linear_model_residuals(y_train_true, y_train_predict, y_test_true, y_test_predict, axe):
+    x_axis = np.hstack((y_train_predict, y_test_predict))
+
+    axe.scatter(y_train_predict, y_train_predict - y_train_true, c="blue", marker="s", label="Training data")
+    axe.scatter(y_test_predict, y_test_predict - y_test_true, c="lightgreen", marker="s", label="Validation data")
+    axe.set_title("Linear regression")
+    axe.set_xlabel("Predicted values")
+    axe.set_ylabel("Residuals")
+    axe.legend(loc="upper left")
+    axe.hlines(y=0, xmin=np.min(x_axis).round(2), xmax=np.max(x_axis).round(2), color="red")
     plt.show()
 
 
