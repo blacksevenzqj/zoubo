@@ -89,6 +89,28 @@ def groupby_apply_sort(data, group_cols, sort_cols, ascendings, group_keys=False
         lambda x: x.sort_values(by=sort_cols, ascending=ascendings))
 
 
+# tc.groupby_apply_count(train_order, ["id"], 'type_pay', '在线支付', 'type_pay_zaixian')
+def groupby_apply_conditionCount(data, group_cols, statistics_col, condition, reset_index_name, group_keys=False,
+                                 inplace=False):
+    if type(group_cols) != list:
+        raise Exception('group_cols Type is Error, must list')
+
+    # .reset_index(name=reset_index_name) 其中的 name=reset_index_name 是重命名 apply新生成的统计列的名称
+    return data.groupby(group_cols, group_keys=group_keys).apply(
+        lambda x: x[x[statistics_col] == condition][statistics_col].count()).reset_index(inplace=inplace,
+                                                                                         name=reset_index_name)
+
+
+# tc.groupby_apply_nunique(train_recieve, ["id"], ["fix_phone"])
+def groupby_apply_nunique(data, group_cols, statistics_cols, group_keys=False):
+    if type(group_cols) != list:
+        raise Exception('group_cols Type is Error, must list')
+    elif type(statistics_cols) != list:
+        raise Exception('statistics_cols Type is Error, must list')
+
+    return data.groupby(group_cols, group_keys=group_keys).apply(lambda x: x[statistics_cols].nunique())
+
+
 # 1、按count()统计，并将结果展开为DataFrame
 def groupby_size(data, cols):
     if type(cols) == list:
@@ -148,12 +170,13 @@ def special_groupby_example(data):
 
 # statistical_col待统计特征为单个特征，相当于为单个统计特征 新增统计字段。
 '''
-agg = {'sum':np.sum,"mean":np.mean}
+agg = {'bankcard_count':lambda x :len(x)}
+agg = {'sum':np.sum,"mean":np.mean,"len":len()}
 data_group = tc.groupby_agg_oneCol(data, ["1_total_fee", "2_total_fee"], "3_total_fee", agg)
 '''
 
 
-def groupby_agg_oneCol(data, group_cols, statistical_col, agg):
+def groupby_agg_oneCol(data, group_cols, statistical_col, agg, as_index=True):
     if type(group_cols) != list:
         raise Exception('group_col Type is Error, must list')
     if type(statistical_col) != str:
@@ -161,8 +184,23 @@ def groupby_agg_oneCol(data, group_cols, statistical_col, agg):
     if type(agg) != dict:
         raise Exception('aggs Type is Error, must dict')
 
-    data_group = data.groupby(group_cols)[statistical_col].agg(agg)
+    data_group = data.groupby(group_cols, as_index=as_index)[statistical_col].agg(agg)
     return data_group
+
+
+# In[]:
+# 三、透视表(pivotTab)
+# https://blog.csdn.net/bqw18744018044/article/details/80015840
+# index相当于分组key； margins总计
+def pivot_table_statistical(df, statistical_cols, index=None, columns=None, aggfunc='mean', margins=True):
+    #    pd.pivot_table(df, index=['产地','类别'], values=['价格', '数量'], aggfunc=np.mean) # values 相当于 statistical_cols 待统计字段
+    return df.pivot_table(statistical_cols, index=index, columns=columns, aggfunc=aggfunc, margins=margins)
+
+
+# 交叉表(crossTab)： 相当于 df.groupby([col1, col2])[X].count() 展开显示
+def crossTab_statistical(df, col1, col2, margins=True):
+    return pd.crosstab(df[col1], df[col2], margins=margins)
+
 
 
 

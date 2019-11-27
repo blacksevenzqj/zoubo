@@ -25,11 +25,11 @@ def set_file_path(path):
 
 
 # 读入数据源
-def readFile_inputData(train_name=None, test_name=None, index_col=None, str_dict=None):
+def readFile_inputData(train_name=None, test_name=None, index_col=None, str_dict=None, encoding="UTF-8"):
     if train_name is not None:
-        train = pd.read_csv(train_name, index_col=index_col, dtype=str_dict)
+        train = pd.read_csv(train_name, index_col=index_col, dtype=str_dict, encoding=encoding)
     if test_name is not None:
-        test = pd.read_csv(test_name, index_col=index_col, dtype=str_dict)
+        test = pd.read_csv(test_name, index_col=index_col, dtype=str_dict, encoding=encoding)
         return train, test
     else:
         return train
@@ -149,7 +149,7 @@ def set_classif_col(df, feature_name, val_type=1):
 
 # 统计类别数量： （区分特征） 主要为DataFrame
 def category_quantity_statistics(df, features, axis=0, dropna=True):
-    return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不要在计数中包含NaN。
+    return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不在计数中包含np.nan。
 
 
 # 统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
@@ -225,36 +225,6 @@ def get_notMissing_values(data_temp, feature):
     return data_temp[data_temp[feature] == data_temp[feature]]  # 返回全部Data
 
 
-# 重复值处理（按行统计）
-def duplicate_value(data, subset=None, keep='first', inplace=False):
-    if type(subset) is not list:
-        raise Exception('subset Type is Error')
-    elif len(subset) < 2:
-        raise Exception('subset size must lager than 2')
-
-    # 去除重复项 后 长度
-    nodup = data[-data.duplicated(subset=None, keep='first')]
-    print("去除重复项后长度：%d(按行统计)" % len(nodup))
-    # 去除重复项 后 长度
-    print("去除重复项后长度：%d(按行统计)" % len(data.drop_duplicates(subset=None, keep='first')))
-    # 重复项 长度
-    print("重复项长度：%d(按行统计)" % (len(data) - len(nodup)))
-
-    if inplace:
-        # 按行统计，以subset指定的特征列为统计目标
-        data.drop_duplicates(subset=subset, keep=keep, inplace=inplace)  # 在原数据集上 删除重复项
-        # 重设索引
-        recovery_index([data])
-
-    print(data.info())
-
-
-# 重复索引处理（按行统计）
-def duplicate_index(data, keep='first'):
-    return data[~data.index.duplicated(keep=keep)]
-
-
-# In[]:
 # 缺失值填充
 def missValue_all_fillna(df):
     num_cols = df.select_dtypes(include=[np.number]).columns
@@ -312,6 +282,77 @@ def missValue_group_fillna(df, nan_col, group_col, val_type=1):
     nan_data = df.loc[nan_index, nan_col]
 
     return nan_data
+
+
+# 空单元格读取进来 是 np.nan
+# 缺失值填充0/1值
+def missValue_map_fillzo(df, nan_col):
+    return df[nan_col].map(lambda x: 0 if (
+            (str(x).upper() == 'NA') | (str(x).upper() == 'NAN') | (str(x).upper() == 'NULL')) else 1)  # 缺0有1
+
+
+# 缺失值 统一转换 （本身是np.nan不做转换）
+def missValue_map_conversion(df, nan_col):
+    if df[nan_col].dtypes == object:
+        # 字符串类型 nan != np.nan， x.upper()=='NAN'没有包含np.nan
+        lam = lambda x: np.nan if ((x.upper() == 'NA') | (x.upper() == 'NAN') | (x.upper() == 'NULL')) else float(x)
+    else:
+        # str(x).upper()=='NAN'包含了 字符串类型nan 和 np.nan。 所以前面加上 x is not np.nan，本身不是np.nan才进行后续判断。
+        lam = lambda x: np.nan if ((x is not np.nan) & (
+                (str(x).upper() == 'NA') | (str(x).upper() == 'NAN') | (str(x).upper() == 'NULL'))) else float(x)
+    return df[nan_col].map(lam)
+
+
+# 缺失值 datatime （'<M8[ns]'、'datetime64[ns]'）
+def missValue_datatime(df, col):
+    # datetime.datetime.strptime 字符串 转 datetime
+    # datetime.datetime.utcfromtimestamp 时间戳 转 datetime
+    #  + datetime.timedelta(hours = 8) 向后推8小时
+    # str(x).upper() == 'NAN'包含 字符串类型nan 和 np.nan（空单元格读取进来是np.nan）
+    return df[col] \
+        .map(lambda x: pd.lib.NaT if (
+            str(x) == '0' or str(x).upper() == 'NA' or str(x).upper() == 'NAN' or str(x).upper() == 'NULL')
+    else (datetime.datetime.strptime(str(x), '%Y-%m-%d %H:%M:%S') if ':' in str(
+        x)  # 如果是 包含: 的字符串时间格式，则转换为datetime格式。 否则是数字的时间戳，也转换为datetime格式。
+    else (datetime.datetime.utcfromtimestamp(int(str(x)[0:10])) + datetime.timedelta(hours=8))
+    )
+             )
+
+
+def missValue_datatime_match(df, col):
+    import re
+    return df[col].map(lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d') if (
+            re.match('\d{4}-\d{1,2}-\d{1,2}', str(x)) and '-0' not in str(x)) else pd.lib.NaT)
+
+
+# In[:]
+# 重复值处理（按行统计）
+def duplicate_value(data, subset=None, keep='first', inplace=False):
+    if type(subset) is not list:
+        raise Exception('subset Type is Error')
+    elif len(subset) < 2:
+        raise Exception('subset size must lager than 2')
+
+    # 去除重复项 后 长度
+    nodup = data[-data.duplicated(subset=None, keep='first')]
+    print("去除重复项后长度：%d(按行统计)" % len(nodup))
+    # 去除重复项 后 长度
+    print("去除重复项后长度：%d(按行统计)" % len(data.drop_duplicates(subset=None, keep='first')))
+    # 重复项 长度
+    print("重复项长度：%d(按行统计)" % (len(data) - len(nodup)))
+
+    if inplace:
+        # 按行统计，以subset指定的特征列为统计目标
+        data.drop_duplicates(subset=subset, keep=keep, inplace=inplace)  # 在原数据集上 删除重复项
+        # 重设索引
+        recovery_index([data])
+
+    print(data.info())
+
+
+# 重复索引处理（按行统计）
+def duplicate_index(data, keep='first'):
+    return data[~data.index.duplicated(keep=keep)]
 
 
 # In[]:
