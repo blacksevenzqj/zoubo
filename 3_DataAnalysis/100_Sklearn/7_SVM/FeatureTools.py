@@ -31,7 +31,7 @@ def set_file_path(path):
 字段Seriers类型为object，元素类型为str
 1.1、自动转换为np.nan 的输入字符串：
 空单元格、NA、nan、null、NULL
-则整个 字段Seriers类型 为object； 元素类型为<class 'str'>；
+则整个 字段Seriers类型 为object； 字符串元素类型为<class 'str'>；
 其中的 空单元格、NA、nan、null、NULL 元素类型全部变为<class 'float'>也就是np.nan
 使用 元素 is np.nan 来判断； 注意使用 from math import isnan 的isnan(元素)函数只能判断np.nan的元素（np.nan类型为float），
 在str类型元素上使用报异常，所以 “字符串类型 导入” 不适合使用 isnan(元素)函数进行判断。
@@ -48,6 +48,7 @@ NAN、na
 则整个 字段Seriers类型 为datetime64[ns]； 日期元素类型为<class 'pandas._libs.tslib.Timestamp'>；
 其中的 空单元格、NA、nan、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>也就是pd.lib.NaT。
 只能使用 元素 is pd.lib.NaT 来判断； 不能使用 元素 is np.nan 来判断（pd.lib.NaT 与 np.nan 不是同一个类型）
+注意：能使用 DataFrame.isnull().sum() 检测。
 
 2.2、如果 输入中包含 非日期格式字符串：（PD转换日期失败）
 na
@@ -60,9 +61,10 @@ na
 3.1、dtype = {"tail_num":np.float64} 以 np.floatXX 数据格式导入（默认），才能接受 “空表示字符串”
 3.1.1、自动转换为 numpy.float64类型nan 的输入字符串：
 空单元格、NA、nan、null、NULL
-则整个 字段Seriers类型 为float64； 元素类型为<class 'numpy.float64'>；
+则整个 字段Seriers类型 为float64； 数字元素类型为<class 'numpy.float64'>；
 其中的 空单元格、NA、nan、null、NULL 元素类型全部变为<class 'numpy.float64'>也就是numpy.float64类型nan； 但不是np.nan（<class 'float'>）
 不能使用 元素 is np.nan 来判断； 只能使用 from math import isnan 的isnan(元素)函数来判断是否为空。
+注意：能使用 DataFrame.isnull().sum() 检测。
 
 3.1.2、如果 输入中包含 非数字格式字符串：（PD转换数字失败）
 NAN、na
