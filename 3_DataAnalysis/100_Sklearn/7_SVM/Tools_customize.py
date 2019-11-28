@@ -68,6 +68,62 @@ def groupby_agg(data, group_cols, aggs, as_index=True):  # group_keys在普通gr
     return data_group
 
 
+# statistical_col统计特征为单个特征（速度近10倍于groupby_apply）
+'''
+agg = {'bankcard_count':lambda x:len(set(x)), 'bank_phone_num':lambda x:x.nunique()}
+agg = {'sum':np.sum,"mean":np.mean,"len":len}
+data_group = tc.groupby_agg_oneCol(data, ["1_total_fee", "2_total_fee"], "3_total_fee", agg)
+'''
+
+
+def groupby_agg_oneCol(data, group_cols, statistical_col, agg, as_index=True):
+    if type(group_cols) != list:
+        raise Exception('group_col Type is Error, must list')
+    if type(statistical_col) != str:
+        raise Exception('statistical_col Type is Error, must str')
+    if type(agg) != dict:
+        raise Exception('aggs Type is Error, must dict')
+
+    data_group = data.groupby(group_cols, as_index=as_index)[statistical_col].agg(agg)
+    return data_group
+
+
+# 按count()统计，并将结果展开为DataFrame
+def groupby_size(data, cols):
+    if type(cols) == list:
+        return data.groupby(
+            cols).size().reset_index()  # groupby_result.size() == groupby_result["X"].count()；但.count()的.reset_index()麻烦
+    else:
+        raise Exception('cols Type is Error')
+
+
+# 将groupby的结果 转换为 dict
+def groupby_to_dict(df):
+    from collections import defaultdict
+
+    user_count = df.groupby("user")["event"].count()
+
+    user_count_index = user_count[user_count > 2].index.tolist()
+
+    u = df["user"].isin(user_count_index)
+    # df_train["user"].map(lambda x : x in user_count_index)
+
+    w = df.loc[u, ["user", "event"]].sort_values(by="user")
+
+    z = w.groupby("user")
+
+    eventsForUser = defaultdict(set)
+
+    i = 0
+    for key, val in z:
+        print(key)
+        print(val)  # 分组标签（元组） → DataFrame的原索引 → DataFrame的原值
+        val.apply(lambda x: eventsForUser[x[0]].add(x[1]), axis=1)  # axis=1按列统计； 默认axis=0按行统计
+        i = i + 1
+        if i == 2:
+            break
+
+
 # 分组后 按指定特征进行排序
 # groupby 和 apply 配合使用，只有group_keys关键字生效，as_index不适用。
 # result = tc.groupby_apply_sort(result, ["Feature_1"], ["Correlation_Coefficient"], [False], False)
@@ -111,42 +167,6 @@ def groupby_apply_nunique(data, group_cols, statistics_cols, group_keys=False):
     return data.groupby(group_cols, group_keys=group_keys).apply(lambda x: x[statistics_cols].nunique())
 
 
-# 1、按count()统计，并将结果展开为DataFrame
-def groupby_size(data, cols):
-    if type(cols) == list:
-        return data.groupby(
-            cols).size().reset_index()  # groupby_result.size() == groupby_result["X"].count()；但.count()的.reset_index()麻烦
-    else:
-        raise Exception('cols Type is Error')
-
-
-# 2、将groupby的结果 转换为 dict
-def groupby_to_dict(df):
-    from collections import defaultdict
-
-    user_count = df.groupby("user")["event"].count()
-
-    user_count_index = user_count[user_count > 2].index.tolist()
-
-    u = df["user"].isin(user_count_index)
-    # df_train["user"].map(lambda x : x in user_count_index)
-
-    w = df.loc[u, ["user", "event"]].sort_values(by="user")
-
-    z = w.groupby("user")
-
-    eventsForUser = defaultdict(set)
-
-    i = 0
-    for key, val in z:
-        print(key)
-        print(val)  # 分组标签（元组） → DataFrame的原索引 → DataFrame的原值
-        val.apply(lambda x: eventsForUser[x[0]].add(x[1]), axis=1)  # axis=1按列统计； 默认axis=0按行统计
-        i = i + 1
-        if i == 2:
-            break
-
-
 # 特殊例子
 '''
 def special_groupby_example(data):
@@ -167,25 +187,6 @@ def special_groupby_example(data):
     kkk.columns = ['_'.join(col).strip() for col in kkk.columns.values]
     print(kkk)
 '''
-
-# statistical_col待统计特征为单个特征，相当于为单个统计特征 新增统计字段。
-'''
-agg = {'bankcard_count':lambda x :len(x)}
-agg = {'sum':np.sum,"mean":np.mean,"len":len()}
-data_group = tc.groupby_agg_oneCol(data, ["1_total_fee", "2_total_fee"], "3_total_fee", agg)
-'''
-
-
-def groupby_agg_oneCol(data, group_cols, statistical_col, agg, as_index=True):
-    if type(group_cols) != list:
-        raise Exception('group_col Type is Error, must list')
-    if type(statistical_col) != str:
-        raise Exception('statistical_col Type is Error, must str')
-    if type(agg) != dict:
-        raise Exception('aggs Type is Error, must dict')
-
-    data_group = data.groupby(group_cols, as_index=as_index)[statistical_col].agg(agg)
-    return data_group
 
 
 # In[]:

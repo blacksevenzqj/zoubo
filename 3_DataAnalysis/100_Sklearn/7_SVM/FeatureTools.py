@@ -25,11 +25,65 @@ def set_file_path(path):
 
 
 # 读入数据源
-def readFile_inputData(train_name=None, test_name=None, index_col=None, str_dict=None, encoding="UTF-8"):
+# https://www.cnblogs.com/datablog/p/6127000.html
+'''
+1、字符串类型 导入：
+字段Seriers类型为object，元素类型为str
+1.1、自动转换为np.nan 的输入字符串：
+空单元格、NA、nan、null、NULL
+则整个 字段Seriers类型 为object； 元素类型为<class 'str'>；
+其中的 空单元格、NA、nan、null、NULL 元素类型全部变为<class 'float'>也就是np.nan
+使用 元素 is np.nan 来判断； 注意使用 from math import isnan 的isnan(元素)函数只能判断np.nan的元素（np.nan类型为float），
+在str类型元素上使用报异常，所以 “字符串类型 导入” 不适合使用 isnan(元素)函数进行判断。
+
+1.2、不会自动转换为np.nan 的输入字符串：
+NAN、na
+其相关元素类型为<class 'str'>；
+但不会影响 整个字段Seriers类型，以及其余元素类型。
+===================================================================
+2、日期类型 导入：
+只能使用parse_dates=['auth_time']方式指定日期字段。不能使用dtype={"auth_time":datetime.datetime或pd.Timestamp}方式（无效）。
+2.1、自动转换为pd.lib.NaT 的输入字符串：
+空单元格、NA、nan、null、NULL、NAN、NaT、nat、NAT
+则整个 字段Seriers类型 为datetime64[ns]； 日期元素类型为<class 'pandas._libs.tslib.Timestamp'>；
+其中的 空单元格、NA、nan、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>也就是pd.lib.NaT。
+只能使用 元素 is pd.lib.NaT 来判断； 不能使用 元素 is np.nan 来判断（pd.lib.NaT 与 np.nan 不是同一个类型）
+
+2.2、如果 输入中包含 非日期格式字符串：（PD转换日期失败）
+na
+其相关元素类型为<class 'str'>；
+则整个 字段Seriers类型 变为object，所有元素类型为str，其中包括：
+“2.1”中的 NA、nan、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为str
+其中输入 NA、null、NULL 自动转换为 nan字符串（全部元素类型为str，没有np.nan）
+===================================================================
+3、数字类型 导入：
+3.1、dtype = {"tail_num":np.float64} 以 np.floatXX 数据格式导入（默认），才能接受 “空表示字符串”
+3.1.1、自动转换为 numpy.float64类型nan 的输入字符串：
+空单元格、NA、nan、null、NULL
+则整个 字段Seriers类型 为float64； 元素类型为<class 'numpy.float64'>；
+其中的 空单元格、NA、nan、null、NULL 元素类型全部变为<class 'numpy.float64'>也就是numpy.float64类型nan； 但不是np.nan（<class 'float'>）
+不能使用 元素 is np.nan 来判断； 只能使用 from math import isnan 的isnan(元素)函数来判断是否为空。
+
+3.1.2、如果 输入中包含 非数字格式字符串：（PD转换数字失败）
+NAN、na
+其相关元素类型为<class 'str'>；
+则整个 字段Seriers类型 变为object；
+3.1.2.1、输入字符串 NA、nan、null、NULL 转换为 np.nan。
+3.1.2.2、剩下的所有元素类型为str，包括：NAN、na、9753（字符串类型数字）
+-------------------------------------------------------------------
+3.2、dtype = {"tail_num":np.int64} 以 np.intXX 数据格式导入，不能接受 “空表示字符串”
+空单元格、NA、nan、null、NULL等 直接报异常。
+===================================================================
+'''
+
+
+def readFile_inputData(train_name=None, test_name=None, index_col=None, dtype=None, parse_dates=None, encoding="UTF-8"):
+    if parse_dates is not None and type(parse_dates) != list:
+        raise Exception('parse_dates Type is Error, must list')
     if train_name is not None:
-        train = pd.read_csv(train_name, index_col=index_col, dtype=str_dict, encoding=encoding)
+        train = pd.read_csv(train_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding)
     if test_name is not None:
-        test = pd.read_csv(test_name, index_col=index_col, dtype=str_dict, encoding=encoding)
+        test = pd.read_csv(test_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding)
         return train, test
     else:
         return train
@@ -288,7 +342,8 @@ def missValue_group_fillna(df, nan_col, group_col, val_type=1):
 # 缺失值填充0/1值
 def missValue_map_fillzo(df, nan_col):
     return df[nan_col].map(lambda x: 0 if (
-            (str(x).upper() == 'NA') | (str(x).upper() == 'NAN') | (str(x).upper() == 'NULL')) else 1)  # 缺0有1
+            (str(x).upper() == 'NA') | (str(x).upper() == 'NAN') | (str(x).upper() == 'NULL') | (
+            str(x).upper() == 'NAT')) else 1)  # 缺0有1
 
 
 # 缺失值 统一转换 （本身是np.nan不做转换）
@@ -303,7 +358,8 @@ def missValue_map_conversion(df, nan_col):
     return df[nan_col].map(lam)
 
 
-# 缺失值 datatime （'<M8[ns]'、'datetime64[ns]'）
+# 缺失值 datatime
+# 两种数据类型： 1、字符串时间格式； 2、时间戳
 def missValue_datatime(df, col):
     # datetime.datetime.strptime 字符串 转 datetime
     # datetime.datetime.utcfromtimestamp 时间戳 转 datetime
@@ -319,6 +375,8 @@ def missValue_datatime(df, col):
              )
 
 
+# 缺失值 datatime
+# 有多个字符串类型干扰数据， 所以用正则匹配方式
 def missValue_datatime_match(df, col):
     import re
     return df[col].map(lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d') if (
