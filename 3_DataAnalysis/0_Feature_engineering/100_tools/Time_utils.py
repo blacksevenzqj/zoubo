@@ -9,6 +9,7 @@ import pandas as pd
 import time;
 import datetime
 import sys
+import re
 import numpy as np
 import Tools_customize as tc
 
@@ -71,13 +72,16 @@ dt = datetime.datetime(2015, 4, 19, 12, 20)
 print(dt, type(dt))
 
 # In[]:
-# 2.1、datetime → timestamp
+# 2.1、datetime → timestamp（秒）
 df = datetime.datetime(2015, 4, 19, 12, 20).timestamp()
 print(df, type(df))
 # In[]:
-# 2.2、timestamp → datetime
-t = 1429417200.0
+# 2.2、timestamp（秒） → datetime
+t = 1457829828
 print(datetime.datetime.fromtimestamp(t), type(datetime.datetime.fromtimestamp(t)))
+print(datetime.datetime.utcfromtimestamp(t), type(datetime.datetime.utcfromtimestamp(t)))
+# 使用utcfromtimestamp + timedelta的意义在于 避开系统本地时间的干扰，都可以准确转换到 东八区时间。
+print(datetime.datetime.utcfromtimestamp(int(str(t)[0:10])) + datetime.timedelta(hours=8))
 
 # In[]:
 # 3.1、str → datetime
@@ -248,6 +252,17 @@ print(test1, type(test1))
 
 test1 = pd.to_datetime("1677-09-22 00:00:00")
 print(test1, type(test1))
+# In[]:
+strs = ["0001-01-01", "0001-1-1", "0-0-0", "0000-00-00", "2019-01-01", "1997-1-1", "1995-9-8", "1992-08-28",
+        "1933-9-30", "1990-3-0", "1990-3-19"]
+
+for i in strs:
+    print(i)
+    if (re.match('^(19|20)\d{2}-\d{1,2}-[1-9]\d{0,1}', i) and '-00' not in i):
+        cday = datetime.datetime.strptime(i, '%Y-%m-%d')
+        print(cday, type(cday))
+    else:
+        print("没抓到：", i)
 
 # In[]:
 # ===================================时间间隔=================================
@@ -278,6 +293,29 @@ print(time2, type(time2))
 
 diff = time1 - time2
 print(diff, type(diff), diff.days, diff.seconds, diff.total_seconds())
+# In[]:
+# PD时间格式 - datatime  或  datatime - PD时间格式： 最后都会转换为<class 'pandas._libs.tslib.Timedelta'>，PD时间格式级别高。
+time1 = pd.Timestamp("2019-11-28 18:19:59")
+print(time1, type(time1))
+
+cday2 = datetime.datetime.strptime("2019-11-21 16:19:59", '%Y-%m-%d %H:%M:%S')  # datetime允许最小日期
+print(cday2, type(cday2))
+
+diff = time1 - cday2
+print(diff, type(diff), diff.days, diff.seconds, diff.total_seconds())
+
+diff2 = cday2 - time1
+print(diff2, type(diff2), diff2.days, diff2.seconds, diff2.total_seconds())
+
+# In[]:
+# PD时间格式 == datatime
+time1 = pd.Timestamp("2019-11-28 18:19:59")
+print(time1, type(time1))
+
+time2 = datetime.datetime.strptime("2019-11-28 18:19:59", '%Y-%m-%d %H:%M:%S')
+print(time2, type(time2))
+
+print(time1 == time2, time1 - time2)
 
 
 

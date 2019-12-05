@@ -30,9 +30,9 @@ def set_file_path(path):
 1、字符串类型 导入：
 字段Seriers类型为object，元素类型为str
 1.1、自动转换为np.nan 的输入字符串：
-空单元格、NA、nan、null、NULL
+空单元格、NA、nan、NaN、null、NULL
 则整个 字段Seriers类型 为object； 字符串元素类型为<class 'str'>；
-其中的 空单元格、NA、nan、null、NULL 元素类型全部变为<class 'float'>也就是np.nan
+其中的 空单元格、NA、nan、NaN、null、NULL 元素类型全部变为<class 'float'>也就是np.nan
 使用 元素 is np.nan 来判断； 注意使用 from math import isnan 的isnan(元素)函数只能判断np.nan的元素（np.nan类型为float），
 在str类型元素上使用报异常，所以 “字符串类型 导入” 不适合使用 isnan(元素)函数进行判断。
 
@@ -42,27 +42,34 @@ NAN、na
 但不会影响 整个字段Seriers类型，以及其余元素类型。
 ===================================================================
 2、日期类型 导入：
-只能使用parse_dates=['auth_time']方式指定日期字段。不能使用dtype={"auth_time":datetime.datetime或pd.Timestamp}方式（无效）。
-2.1、自动转换为pd.lib.NaT 的输入字符串：
-空单元格、NA、nan、null、NULL、NAN、NaT、nat、NAT
+Excel的 时间字段 单元格格式 为 日期格式 或 自定义日期格式。
+2.1、使用parse_dates=['auth_time']方式指定日期字段，且导入日期数据必须为 字符串时间类型。不能使用dtype={"auth_time":datetime.datetime或pd.Timestamp}方式（无效）。
+2.1.1、自动转换为pd.lib.NaT 的输入字符串：
+空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT
 则整个 字段Seriers类型 为datetime64[ns]； 日期元素类型为<class 'pandas._libs.tslib.Timestamp'>；
-其中的 空单元格、NA、nan、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>也就是pd.lib.NaT。
+其中的 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>也就是pd.lib.NaT。
 只能使用 元素 is pd.lib.NaT 来判断； 不能使用 元素 is np.nan 来判断（pd.lib.NaT 与 np.nan 不是同一个类型）
 注意：能使用 DataFrame.isnull().sum() 检测。
 
-2.2、如果 输入中包含 非日期格式字符串：（PD转换日期失败）
+2.1.2、如果 输入中包含 非日期格式字符串：（PD转换日期失败）
 na
 其相关元素类型为<class 'str'>；
 则整个 字段Seriers类型 变为object，所有元素类型为str，其中包括：
-“2.1”中的 NA、nan、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为str
+“2.1.1”中的 NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为str
 其中输入 NA、null、NULL 自动转换为 nan字符串（全部元素类型为str，没有np.nan）
+-------------------------------------------------------------------
+2.2、直接导入，不指定日期字段
+则按照 “1、字符串类型 导入” 中情况进行导入。 例如，Excel中 时间字段 输入
+单元格格式 为 日期格式： 9/27/2016  转换为→  2017-06-10<class 'str'>
+单元格格式 为 自定义日期格式： 4/15/2017  9:21:18 AM  转换为→  2017-04-15 09:21:18<class 'str'>
+都转换为了 时间格式字符串（str类型）。其余的np.nan问题都遵循 “1、字符串类型 导入” 中的情况。
 ===================================================================
 3、数字类型 导入：
-3.1、dtype = {"tail_num":np.float64} 以 np.floatXX 数据格式导入（默认），才能接受 “空表示字符串”
+3.1、dtype = {"tail_num":np.float64} 以 np.float64 数据格式导入（默认），才能接受 “空表示字符串”
 3.1.1、自动转换为 numpy.float64类型nan 的输入字符串：
-空单元格、NA、nan、null、NULL
+空单元格、NA、nan、NaN、null、NULL
 则整个 字段Seriers类型 为float64； 数字元素类型为<class 'numpy.float64'>；
-其中的 空单元格、NA、nan、null、NULL 元素类型全部变为<class 'numpy.float64'>也就是numpy.float64类型nan； 但不是np.nan（<class 'float'>）
+其中的 空单元格、NA、nan、NaN、null、NULL 元素类型全部变为<class 'numpy.float64'>也就是numpy.float64类型nan； 但不是np.nan（<class 'float'>）
 不能使用 元素 is np.nan 来判断； 只能使用 from math import isnan 的isnan(元素)函数来判断是否为空。
 注意：能使用 DataFrame.isnull().sum() 检测。
 
@@ -70,7 +77,7 @@ na
 NAN、na
 其相关元素类型为<class 'str'>；
 则整个 字段Seriers类型 变为object；
-3.1.2.1、输入字符串 NA、nan、null、NULL 转换为 np.nan。
+3.1.2.1、输入字符串 NA、nan、NaN、null、NULL 转换为 np.nan。
 3.1.2.2、剩下的所有元素类型为str，包括：NAN、na、9753（字符串类型数字）
 -------------------------------------------------------------------
 3.2、dtype = {"tail_num":np.int64} 以 np.intXX 数据格式导入，不能接受 “空表示字符串”
@@ -92,8 +99,8 @@ def readFile_inputData(train_name=None, test_name=None, index_col=None, dtype=No
 
 
 # 保存数据
-def writeFile_outData(data, path):
-    data.to_csv(path)
+def writeFile_outData(data, path, encoding="UTF-8"):
+    data.to_csv(path, encoding=encoding)
 
 
 # 合并数据源（列向）
@@ -139,6 +146,16 @@ def separation_data_row(all_data, ntrain, y_name=None):
         train_X = all_data[:ntrain]
         test_X = all_data[ntrain:]
         return train_X, test_X, train_y
+
+
+def seriers_change_colname(seriers, col_name):
+    seriers.name = col_name
+
+
+def df_change_colname(df, columns, inplace=True):
+    if type(columns) != dict:
+        raise Exception('columns Type is Error, must dict')
+    df.rename(columns=columns, inplace=inplace)
 
 
 # 排序
@@ -231,12 +248,12 @@ def category_quantity_statistics_all(df, features, return_counts=True):
 '''
 
 
-def missing_values_table(df, percent=None, del_type=1):
+def missing_values_table(df, customize_axis=0, percent=None, del_type=1):
     # Total missing values
-    mis_val = df.isnull().sum()
+    mis_val = df.isnull().sum(axis=customize_axis)
 
     # Percentage of missing values
-    mis_val_percent = 100 * mis_val / len(df)
+    mis_val_percent = 100 * mis_val / df.shape[customize_axis]
 
     # Make a table with the results
     mis_val_table = pd.concat([mis_val, mis_val_percent], axis=1)
@@ -255,13 +272,13 @@ def missing_values_table(df, percent=None, del_type=1):
                                                               "There are " + str(mis_val_table_ren_columns.shape[0]) +
           " columns that have missing values.")
 
-    if percent is not None:
-        if del_type == 1:
+    if customize_axis == 0 and percent is not None:
+        if del_type == 1:  # 删特征列
             temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
             df_nm = df.copy()
             df_nm.drop(temp_drop_col, axis=1, inplace=True)
             return mis_val_table_ren_columns, df_nm
-        elif del_type == 2:
+        elif del_type == 2:  # 删数据行
             temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
             df_nm = df.copy()
             for i in temp_drop_col:
@@ -271,9 +288,64 @@ def missing_values_table(df, percent=None, del_type=1):
             return mis_val_table_ren_columns, df_nm
         else:
             return mis_val_table_ren_columns
+    elif customize_axis == 1 and percent is not None:
+        temp_drop_row = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
+        df_nm = df.copy()
+        df_nm.drop(temp_drop_row, axis=0, inplace=True)
+        # 恢复索引（删除行数据 需要恢复索引）
+        recovery_index([df_nm])
+        return mis_val_table_ren_columns, df_nm
 
     # Return the dataframe with missing information
     return mis_val_table_ren_columns
+
+
+'''
+缺失值特征X 对 因变量Y 的影响： （二分类）
+1、先分析 缺失值特征 对 因变量Y 的影响： missing_values_2categories_compare函数，通过 缺失值百分比 找到 对因变量Y 影响较大的 缺失值特征（Y==1时缺失值百分比 明显高于 Y==0时缺失值百分比）。
+
+2、再对 “1” 中找到的 缺失值特征 进行 再细化分析： feature_missing_value_analysis函数。
+看 04094_my.py 中 “5.1、为订单表建立临时表（目标1：求 缺失值 对 违约率 的影响； 目标2：创建 新特征）”
+2.1、细化到 缺失值特征A：
+2.1.1、当 以每个用户为分组条件 多数样本出现 缺失值特征A 的累加缺失值很大，但因变量Y不是违约状态时，且违约比很低； 缺失值特征A 对 预测因变量Y 没有效果。
+2.1.2、当 以每个用户为分组条件 多数样本出现 缺失值特征A 的累加缺失值很大，因变量Y是违约状态时，缺失值特征A 对 预测因变量Y 有效果。
+2.1.2.1、当以 缺失值特征A 为主要分析对象时，其缺失值百分比为100%，如果 其他缺失值特征 的缺失值百分比 也几乎接近于100%，
+那么新增 缺失值特征A标识 对 预测因变量Y 效果不明显（共线性）。从其中选择部分 缺失值特征 做 新增 缺失值特征标识。
+2.1.2.2、当以 缺失值特征A 为主要分析对象时，其缺失值百分比为100%，如果 其他缺失值特征 的缺失值百分比 远低于100%，那么新增 缺失值特征A标识 对 预测因变量Y 有效果。
+
+2.2、细化到 缺失值特征B：
+2.2.1、当 以每个用户为分组条件 多数样本出现 缺失值特征B 的累加缺失值很大，因变量Y是违约状态时，缺失值特征B 对 预测因变量Y 有效果。
+2.2.1.1、当以 缺失值特征B 为主要分析对象时，其缺失值百分比为100%，如果 缺失值特征A 的缺失值百分比 远低于100%，
+而 缺失值特征B 的 违约比 原大于 缺失值特征A 的 违约比， 则 违约比多出来的部分 就是 缺失值特征B 比 缺失值特征A 多出的缺失值 给出的。 
+（前提条件：当以 缺失值特征A 为主要分析对象时，其缺失值百分比为100%， 缺失值特征B 的缺失值百分比 几乎接近于100%）
+'''
+
+
+def missing_values_2categories_compare(df, y_name):
+    tmp_null_target_1 = missing_values_table(df[df[y_name] == 1])
+    tmp_null_target_1 = tmp_null_target_1.reset_index()
+    tmp_null_target_1.rename(columns={"index": "feature", "Missing Values": "Missing Values_target_1",
+                                      "% of Total Values": "% of Total Values_target_1"}, inplace=True)
+    tmp_null_target_0 = missing_values_table(df[df[y_name] == 0])
+    tmp_null_target_0 = tmp_null_target_0.reset_index()
+    tmp_null_target_0.rename(columns={"index": "feature", "Missing Values": "Missing Values_target_0",
+                                      "% of Total Values": "% of Total Values_target_0"}, inplace=True)
+    tmp_null_target_merge = pd.merge(tmp_null_target_1, tmp_null_target_0, on=['feature'])
+    return tmp_null_target_merge
+
+
+def feature_missing_value_analysis(df, feature_name, groupby_col, y_name):
+    import Tools_customize as tc
+
+    tmp_df_f_null = df[df[feature_name].isnull()]
+    f_null_stat = missing_values_table(tmp_df_f_null)
+    agg = {'f_null_count': len, 'f_null_target': np.mean}  # （速度近10倍于groupby_apply）
+    f_null_stat2 = tc.groupby_agg_oneCol(tmp_df_f_null, [groupby_col], y_name, agg, as_index=False)
+    target1_sum = f_null_stat2[f_null_stat2["f_null_target"] == 1]["f_null_count"].sum()
+    target0_sum = f_null_stat2[f_null_stat2["f_null_target"] == 0]["f_null_count"].sum()
+    f_null_ratio = target1_sum / target0_sum  # 违约比
+
+    return tmp_df_f_null, f_null_stat, f_null_stat2, f_null_ratio
 
 
 # 特征返回非缺失值部分
@@ -282,14 +354,22 @@ def get_notMissing_values(data_temp, feature):
 
 
 # 缺失值填充
-def missValue_all_fillna(df):
-    num_cols = df.select_dtypes(include=[np.number]).columns
-    cat_cols = df.select_dtypes(include=[np.object]).columns
-    # Median is my favoraite fillna mode, which can eliminate the skew impact.
-    # 中位数是我最喜欢的fillna模式，它可以消除偏斜影响。
-    df[num_cols] = df[num_cols].fillna(df[num_cols].median())
-    # 分类（字符）用 字符"NA"填充
-    df[cat_cols] = df[cat_cols].fillna("NA")
+def missValue_all_fillna(df, nan_cols=None, fill_value=None, fillna_type=1):
+    if fillna_type == 1:
+        if nan_cols is None or type(nan_cols) != list:
+            raise Exception('nan_cols Type is Error, must list')
+        elif fill_value is None:
+            raise Exception('fill_value is Null')
+        for i in nan_cols:
+            df[i] = df[i].fillna(fill_value)
+    else:
+        num_cols = df.select_dtypes(include=[np.number]).columns
+        cat_cols = df.select_dtypes(include=[np.object]).columns
+        # Median is my favoraite fillna mode, which can eliminate the skew impact.
+        # 中位数是我最喜欢的fillna模式，它可以消除偏斜影响。
+        df[num_cols] = df[num_cols].fillna(df[num_cols].median())
+        # 分类（字符）用 字符"NA"填充
+        df[cat_cols] = df[cat_cols].fillna("NA")
 
 
 def missValue_fillna(df, feature_name, fill_val=None, val_type=1):
@@ -342,22 +422,31 @@ def missValue_group_fillna(df, nan_col, group_col, val_type=1):
 
 # 空单元格读取进来 是 np.nan
 # 缺失值填充0/1值
-def missValue_map_fillzo(df, nan_col):
-    return df[nan_col].map(lambda x: 0 if (
-            (str(x).upper() == 'NA') | (str(x).upper() == 'NAN') | (str(x).upper() == 'NULL') | (
-            str(x).upper() == 'NAT')) else 1)  # 缺0有1
+def missValue_map_fillzo(df, nan_col, nan_type=1):
+    from math import isnan
 
-
-# 缺失值 统一转换 （本身是np.nan不做转换）
-def missValue_map_conversion(df, nan_col):
-    if df[nan_col].dtypes == object:
-        # 字符串类型 nan != np.nan， x.upper()=='NAN'没有包含np.nan
-        lam = lambda x: np.nan if ((x.upper() == 'NA') | (x.upper() == 'NAN') | (x.upper() == 'NULL')) else float(x)
+    if nan_type == 1:
+        f = lambda x: 0 if x is np.nan else 1
+    elif nan_type == 2:
+        f = lambda x: 0 if x is pd.lib.NaT else 1
     else:
-        # str(x).upper()=='NAN'包含了 字符串类型nan 和 np.nan。 所以前面加上 x is not np.nan，本身不是np.nan才进行后续判断。
-        lam = lambda x: np.nan if ((x is not np.nan) & (
-                (str(x).upper() == 'NA') | (str(x).upper() == 'NAN') | (str(x).upper() == 'NULL'))) else float(x)
-    return df[nan_col].map(lam)
+        f = lambda x: 0 if isnan(x) else 1
+    return df[nan_col].map(f)  # 缺0有1
+
+
+# 缺失值 统一转换
+def missValue_map_conversion(df, nan_col, type_d=1):
+    from math import isnan
+
+    if df[nan_col].dtypes == object:  # 字符串类型
+        # 这2个是不能自动转换为 np.nan 的，所以手动
+        lam = lambda x: np.nan if ((x == 'na') | (x == 'NAN')) else float(x) if type_d == 1 else x
+        return df[nan_col].map(lam)
+    #    elif df[nan_col].dtypes == np.float64: # 数字类型(默认float64)
+    #        lam = lambda x: np.nan if isnan(x) else float(x) # 将 numpy.float64类型nan 转换为 np.nan<float>： 高位转低位，转换无效。
+    #        return df[nan_col].map(lam)
+    else:
+        return df[nan_col]
 
 
 # 缺失值 datatime
@@ -366,23 +455,23 @@ def missValue_datatime(df, col):
     # datetime.datetime.strptime 字符串 转 datetime
     # datetime.datetime.utcfromtimestamp 时间戳 转 datetime
     #  + datetime.timedelta(hours = 8) 向后推8小时
-    # str(x).upper() == 'NAN'包含 字符串类型nan 和 np.nan（空单元格读取进来是np.nan）
+    # 将 np.nan<float> 转换为 numpy.float64类型nan： 低位转高位，转换有效。
+    # 且 貌似使用 np.nan<float> 转换为 numpy.float64类型nan 时，使用datetime.datetime的转换 会自动转换为 pd.Timestamp。
     return df[col] \
-        .map(lambda x: pd.lib.NaT if (
-            str(x) == '0' or str(x).upper() == 'NA' or str(x).upper() == 'NAN' or str(x).upper() == 'NULL')
+        .map(lambda x: pd.lib.NaT if (x is np.nan or str(x) == '0' or str(x) == 'na' or str(x) == 'NAN')
     else (datetime.datetime.strptime(str(x), '%Y-%m-%d %H:%M:%S') if ':' in str(
         x)  # 如果是 包含: 的字符串时间格式，则转换为datetime格式。 否则是数字的时间戳，也转换为datetime格式。
+    # 使用utcfromtimestamp + timedelta的意义在于 避开系统本地时间的干扰，都可以准确转换到 东八区时间。
     else (datetime.datetime.utcfromtimestamp(int(str(x)[0:10])) + datetime.timedelta(hours=8))
     )
              )
 
 
 # 缺失值 datatime
-# 有多个字符串类型干扰数据， 所以用正则匹配方式
+# 当 剩下的都是 可以正常转换的 字符串时间格式 时。 程序会自动把把re.match匹配到的 字符串时间格式 转换为 pd.Timestamp
 def missValue_datatime_match(df, col):
     import re
-    return df[col].map(lambda x: datetime.datetime.strptime(str(x), '%Y-%m-%d') if (
-            re.match('\d{4}-\d{1,2}-\d{1,2}', str(x)) and '-0' not in str(x)) else pd.lib.NaT)
+    return df[col].map(lambda x: x if (re.match("^(19|20)\d{2}-\d{1,2}-\d{1,2}", str(x))) else pd.lib.NaT)
 
 
 # In[:]
@@ -394,10 +483,10 @@ def duplicate_value(data, subset=None, keep='first', inplace=False):
         raise Exception('subset size must lager than 2')
 
     # 去除重复项 后 长度
-    nodup = data[-data.duplicated(subset=None, keep='first')]
+    nodup = data[-data.duplicated(subset=None, keep=keep)]
     print("去除重复项后长度：%d(按行统计)" % len(nodup))
     # 去除重复项 后 长度
-    print("去除重复项后长度：%d(按行统计)" % len(data.drop_duplicates(subset=None, keep='first')))
+    print("去除重复项后长度：%d(按行统计)" % len(data.drop_duplicates(subset=None, keep=keep)))
     # 重复项 长度
     print("重复项长度：%d(按行统计)" % (len(data) - len(nodup)))
 
@@ -517,10 +606,10 @@ def Sample_imbalance(data, y_name):
 # 集合 交、差、补
 def set_diff(set_one, set_two):
     temp_list = []
-    temp_list.append(list(set(set_one) & set(set_two)))  # 交
-    temp_list.append(list(set(set_one) - (set(set_two))))  # 差 （项在set_one中，但不在set_two中）
+    temp_list.append(list(set(set_one) & set(set_two)))  # 交集
+    temp_list.append(list(set(set_one) - (set(set_two))))  # 差集 （项在set_one中，但不在set_two中）
     temp_list.append(list(set(set_one) ^ set(set_two)))  # 补-对称差集（项在set_one或set_two中，但不会同时出现在二者中）
-    temp_list.append(list(set(set_one) | set(set_two)))  # 并
+    temp_list.append(list(set(set_one) | set(set_two)))  # 并集
     return temp_list
 
 
@@ -605,6 +694,7 @@ def category_manual_coding(data, maps):
 # ================================数据分布==============================
 # In[]:
 # 分类模型 连续特征 数据分布： （不能有缺失值）
+# f, axes = plt.subplots(2,2, figsize=(20, 18))
 def class_data_distribution(data, feature, label, axes):
     data = get_notMissing_values(data, feature)
     sns.distplot(data[feature], bins=100, color='green', ax=axes[0][0])
@@ -703,6 +793,7 @@ def con_data_distribution(data, feature, axes):
 '''
 
 
+# 例子： Serigne.py
 def con_data_scatter(x_data, i, y, j):
     f, axes = plt.subplots(2, 1, figsize=(15, 15))
 

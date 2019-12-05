@@ -20,7 +20,7 @@ def merge_test():
     print(dataDf1)
     print(dataDf2)
 
-    # 内连接： 两DataFrame都必须有字段
+    # 内连接： 两DataFrame都必须有字段中的该类别
     dataIn = dataDf1.merge(dataDf2, left_on='lkey', right_on='rkey')
 
     # 右连接： 以右边DataFrame字段为准
@@ -38,8 +38,21 @@ def merge_test():
 
 #    dataQ_On = dataDf1.merge(dataDf2, on=["lkey","rkey"], how='outer')
 
+# 以下两行代码效果相同
+#    pd.merge(pd.DataFrame(age_cut_grouped_good), pd.DataFrame(age_cut_grouped_bad), left_index=True, right_index=True)
+#    pd.concat([age_cut_grouped_good, age_cut_grouped_bad], axis=1)
 
-# 简单的将2个DataFrame列向合并： pd.concat 在 def consolidated_data_col(train_X, train_y, axis=1): 函数中
+
+# 集合去重合并为一维列表：
+# 列表排序： https://www.cnblogs.com/huchong/p/8296025.html
+def set_union(seriers1, seriers2, reverse=False):
+    if type(seriers1) is not pd.Series or type(seriers2) is not pd.Series:
+        raise Exception('seriers1/seriers2 Type is Error, must Series')
+    if (len(seriers1) != len(seriers2)):
+        raise Exception('seriers1 len != seriers2 len')
+
+    #    return sorted(set(pd.concat([seriers1, seriers2], axis=0)), reverse=reverse)
+    return sorted(set(seriers1).union(seriers2), reverse=reverse)
 
 
 # In[]:
@@ -48,7 +61,7 @@ def merge_test():
 # https://www.jianshu.com/p/42f1d2909bb6
 # https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
 
-# 1、传统groupby
+# 1、传统groupby（不会统计 np.nan）
 '''
 aggs = {'3_total_fee' : [np.min, np.max, np.mean, np.sum], '4_total_fee' : np.sum}
 data_group = tc.groupby_agg(data[0:10], ["1_total_fee", "2_total_fee"], aggs)
