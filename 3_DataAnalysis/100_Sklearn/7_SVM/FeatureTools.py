@@ -13,6 +13,7 @@ import seaborn as sns
 import scipy
 import datetime
 from time import time
+import Tools_customize as tc
 
 
 # In[]:
@@ -1138,7 +1139,6 @@ def corrFunction_withY(data, label, is_show=True, image_width=20, image_hight=18
 
 
 # 2、特征选择：特征共线性（data不带 因变量Y； 还可以做 方差膨胀系数）
-#
 def corrFunction(data, is_show=True, image_width=20, image_hight=18):
     '''
     1、特征间共线性：两个或多个特征包含了相似的信息，期间存在强烈的相关关系
@@ -1189,9 +1189,11 @@ def corrFunction(data, is_show=True, image_width=20, image_hight=18):
     return temp_corr_abs, temp_corr
 
 
-# 3、data带 因变量Y  与  data不带 因变量Y  的综合 （入参data中带Y）
+# 3、data带 因变量Y  与  data不带 因变量Y  的综合 （入参data中带Y） 注意：代码还有缺陷
+# 代码： juliencs.py
 def corrFunction_all(data, y_name, f_importance_num=20, f_collinear_num=0.7):
-    import Tools_customize as tc
+    if f_importance_num > data.shape[1]:
+        f_importance_num = data.shape[1]
 
     # 1、特征选择：（带 因变量Y）
     df_all_corr_abs, df_all_corr = corrFunction_withY(data, y_name, False)
@@ -1201,6 +1203,10 @@ def corrFunction_all(data, y_name, f_importance_num=20, f_collinear_num=0.7):
     Feature_all = temp_corr_abs[
         temp_corr_abs.apply(lambda x: (x[0] in Feature_1_cols.values) & (x[1] in Feature_1_cols.values), axis=1)]
     Feature_all = Feature_all[Feature_all["Correlation_Coefficient"] >= 0.5]
+    if Feature_all.shape[0] == 0:
+        print("All Feature corr < 0.5")
+        return np.nan, np.nan
+
     # 3、合并 特征共线性表格 和 特征重要性表格
     # 3.1、方式一： map方式
     '''

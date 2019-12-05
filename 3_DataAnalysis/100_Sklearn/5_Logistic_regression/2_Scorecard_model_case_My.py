@@ -25,6 +25,9 @@ from sklearn.linear_model import LogisticRegression as LR
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
+import Binning_tools as bt
+import Tools_customize as tc
+import FeatureTools as ft
 
 import os
 
@@ -466,7 +469,8 @@ Sample_imbalance(model_data)
 # In[]
 # 1.7、分箱：
 # 1.7.1、按照 等频 对需要分箱的列进行分箱
-model_data["qcut"], updown = pd.qcut(model_data["age"], retbins=True, q=20)  # 等频分箱
+# model_data["qcut"], updown = pd.qcut(model_data["age"], retbins=True, q=20)#等频分箱
+model_data["qcut"], updown = bt.qcut(model_data, "age", 20, True)
 """
 pd.qcut，基于分位数的分箱函数，本质是将连续型变量离散化
 只能够处理一维数据。返回箱子的上限和下限
@@ -480,13 +484,16 @@ print(updown)
 
 # In[]:
 # 1.7.2、统计每个分箱中0和1的数量（这里使用了数据透视表的功能groupby）
+'''
 coount_y0 = model_data[model_data["SeriousDlqin2yrs"] == 0].groupby(by="qcut").count()["SeriousDlqin2yrs"]
 coount_y1 = model_data[model_data["SeriousDlqin2yrs"] == 1].groupby(by="qcut").count()["SeriousDlqin2yrs"]
 
 # num_bins值分别为每个区间的上界，下界，0出现的次数，1出现的次数
-num_bins = [*zip(updown, updown[1:], coount_y0, coount_y1)]
+num_bins = [*zip(updown,updown[1:],coount_y0,coount_y1)]
 # 注意zip会按照最短列来进行结合
 print(num_bins)
+'''
+num_bins = bt.qcut_per_bin_twoClass_num(model_data, "SeriousDlqin2yrs", "qcut", updown)
 
 # In[]:
 num_bins[0:2]
@@ -627,6 +634,8 @@ IV = []
 axisx = []
 PV = []
 pv_state = True
+spearmanr_state = True
+columns = ["min", "max", "count_0", "count_1"]
 
 while len(num_bins_) > 2:  # 大于设置的最低分箱个数
     pvs = []
@@ -649,9 +658,26 @@ while len(num_bins_) > 2:  # 大于设置的最低分箱个数
     '''
     if max(pvs) < 0.001 and pv_state:
         # pv最大值都 < 0.001， 拒绝原假设，接受备选假设： 特征（两个箱子/类别） 与 因变量Y 相关， 箱子不需要合并
-        num_bins_pv = num_bins.copy()
+        num_bins_pv = num_bins_.copy()
         pv_state = False
-    #           break
+        bins_df_pv = get_woe(num_bins_pv)
+        iv_pv = get_iv(bins_df_pv)
+        # break
+
+    if spearmanr_state:
+        df_temp = pd.DataFrame(num_bins_, columns=columns)
+        bin_list = tc.set_union(df_temp["min"], df_temp["max"])
+        X = model_data["age"]
+        Y = model_data['SeriousDlqin2yrs']
+        d1 = pd.DataFrame(
+            {"X": X, "Y": Y, "Bucket": pd.cut(X, bin_list)})  # 用pd.qcut实现最优分箱，Bucket：将X分为n段，n由斯皮尔曼系数决定
+        d2 = d1.groupby('Bucket', as_index=True)  # 按照分箱结果进行分组聚合
+        r, p = scipy.stats.spearmanr(d2.mean().X, d2.mean().Y)  # 以斯皮尔曼系数作为分箱终止条件
+        if abs(r) == 1:
+            num_bins_spearmanr = num_bins_.copy()
+            spearmanr_state = False
+            bins_df_spearmanr = get_woe(num_bins_spearmanr)
+            iv_spearmanr = get_iv(bins_df_spearmanr)
 
     i = pvs.index(max(pvs))
     num_bins_[i:i + 2] = [(
@@ -682,6 +708,11 @@ x2 = num_bins_[0 + 1][2:]  # (0:3571, 1:5635)
 # 0 返回 chi2 值，1 返回 p 值。
 pv = scipy.stats.chi2_contingency([x1, x2])[1]  # p值 0.0005943767678537757
 chi2 = scipy.stats.chi2_contingency([x1, x2])[0]  # 计算卡方值 11.793506471136046
+# In[]:
+afterbins, bins_woe, bins_iv, bins_pv, bins_woe_pv, bins_iv_pv, \
+bins_spearmanr, bins_woe_spearmanr, bins_iv_spearmanr = \
+    bt.chi_test_merge_boxes_IV_curve(num_bins=num_bins, data=model_data, x_name="age", y_name="SeriousDlqin2yrs",
+                                     min_bins=6, is_spearmanr=True)
 
 
 # In[]:
@@ -848,95 +879,116 @@ hand_bins = {"NumberOfTime30-59DaysPastDueNotWorse": [0, 1, 2, 13]
 # 保证区间覆盖使用 np.inf替换最大值，用-np.inf替换最小值
 # 原因：比如一些新的值出现，例如家庭人数为30，以前没出现过，改成范围为极大值之后，这些新值就都能分到箱里边了
 # hand_bins = {k:[-np.inf,*v[:-1],np.inf] for k,v in hand_bins.items()} # 1维数组
-hand_bins = {k: [[-np.inf, *v[:-1], np.inf]] for k, v in hand_bins.items()}  # 扩为2维数组
+# hand_bins = {k:[[-np.inf,*v[:-1],np.inf]] for k,v in hand_bins.items()} # 扩为2维数组
+# hand_bins = bt.hand_bins_customize(hand_bins) # 换到后面的 综合函数 运行
 
 # In[]:
+'''
 bins_of_col = {}
 # 生成自动分箱的分箱区间和分箱后的 IV 值
 for col in auto_col_bins:
     print(col)
-    bins_df_temp, num_bins_pv_temp, iv_temp = graphforbestbin(model_data, col
-                                                              , "SeriousDlqin2yrs"
-                                                              , n=auto_col_bins[col]
-                                                              # 使用字典的性质来取出每个特征所对应的箱的数量
-                                                              , q=20
-                                                              , graph=True)
-    bins_list = sorted(set(bins_df_temp["min"]).union(bins_df_temp["max"]))
-    # 保证区间覆盖使用 np.inf 替换最大值 -np.inf 替换最小值
-    bins_list[0], bins_list[-1] = -np.inf, np.inf
-    bins_of_col[col] = [bins_list, iv_temp]
+#    bins_df_temp, num_bins_pv_temp, iv_temp = graphforbestbin(model_data,col
+#                             ,"SeriousDlqin2yrs"
+#                             ,n=auto_col_bins[col]
+#                             #使用字典的性质来取出每个特征所对应的箱的数量
+#                             ,q=20
+#                             ,graph=True)
+    afterbins, bins_df_temp, iv_temp, bins_pv, bins_woe_pv, bins_iv_pv = bt.graphforbestbin(
+                                model_data, col, "SeriousDlqin2yrs", 
+                                min_bins = auto_col_bins[col], q_num=20
+                                )
 
+    bins_list = sorted(set(bins_df_temp["min"]).union(bins_df_temp["max"]))
+    #保证区间覆盖使用 np.inf 替换最大值 -np.inf 替换最小值
+    bins_list[0],bins_list[-1] = -np.inf,np.inf
+    bins_of_col[col] = [bins_list, iv_temp]
+# In[]:
 for col in hand_bins:
     print(col)
+     # 手动分箱区间已给定，使用cut函数指定分箱后，求WOE及其IV值。
     num_bins_temp = get_num_bins(model_data, col, 'SeriousDlqin2yrs', hand_bins[col][0])
     iv_temp = get_iv(get_woe(num_bins_temp))
     hand_bins[col].append(iv_temp)
 
 # 合并手动分箱数据    
 bins_of_col.update(hand_bins)
-bins_of_col
+'''
+# In[]:
+bins_of_col = bt.automatic_hand_binning_all(model_data, 'SeriousDlqin2yrs', auto_col_bins, hand_bins)
 
 # In[]:
 # 1.7.8、探索性分析：   使用 上采样 → 卡方检验分桶 后的数据
 # 1.7.8.1、单变量分析：
 # 年龄
+'''
 model_data['cut'] = pd.cut(model_data.age, bins_of_col['age'][0])
-age_cut_grouped_good = model_data[model_data["SeriousDlqin2yrs"] == 0].groupby('cut').count()["SeriousDlqin2yrs"]
-age_cut_grouped_bad = model_data[model_data["SeriousDlqin2yrs"] == 1].groupby('cut').count()["SeriousDlqin2yrs"]
-df1 = pd.merge(pd.DataFrame(age_cut_grouped_good), pd.DataFrame(age_cut_grouped_bad), right_index=True, left_index=True)
-df1.rename(columns={"SeriousDlqin2yrs_x": "good", "SeriousDlqin2yrs_y": "bad"}, inplace=True)
-df1.insert(2, "badgrade", df1["bad"] / (df1["good"] + df1["bad"]))
-ax1 = df1[["good", "bad"]].plot.bar()
-ax1.set_xticklabels(df1.index, rotation=15)
+age_cut_grouped_good = model_data[model_data["SeriousDlqin2yrs"] == 0].groupby('cut')["SeriousDlqin2yrs"].count()
+ft.seriers_change_colname(age_cut_grouped_good, "good")
+age_cut_grouped_bad = model_data[model_data["SeriousDlqin2yrs"] == 1].groupby('cut')["SeriousDlqin2yrs"].count()
+ft.seriers_change_colname(age_cut_grouped_bad, "bad")
+#df1 = pd.merge(pd.DataFrame(age_cut_grouped_good), pd.DataFrame(age_cut_grouped_bad), left_index=True, right_index=True)
+df1 = pd.concat([age_cut_grouped_good, age_cut_grouped_bad], axis=1)
+df1.insert(2,"badgrade", df1["bad"] / (df1["good"] + df1["bad"]))
+ax1 = df1[["good","bad"]].plot.bar()
+ax1.set_xticklabels(df1.index,rotation=15)
 ax1.set_ylabel("Num")
 ax1.set_title("bar of age")
 # In[]:
-ax11 = df1["badgrade"].plot()
-ax11.set_xticklabels(df1.index, rotation=50)
+ax11=df1["badgrade"].plot()
+ax11.set_xticklabels(df1.index,rotation=50)
 ax11.set_ylabel("badgrade")
 ax11.set_title("badgrade of age")
+'''
+# In[]
+bt.box_indicator_visualization(model_data, "age", "SeriousDlqin2yrs", bins_of_col)
 
 # In[]:
 # 月收入
+'''
 model_data['cut'] = pd.cut(model_data.MonthlyIncome, bins_of_col['MonthlyIncome'][0])
-MonthlyIncome_cut_grouped_good = model_data[model_data["SeriousDlqin2yrs"] == 0].groupby('cut').count()[
-    "SeriousDlqin2yrs"]
-MonthlyIncome_cut_grouped_bad = model_data[model_data["SeriousDlqin2yrs"] == 1].groupby('cut').count()[
-    "SeriousDlqin2yrs"]
-df2 = pd.merge(pd.DataFrame(MonthlyIncome_cut_grouped_good), pd.DataFrame(MonthlyIncome_cut_grouped_bad),
-               right_index=True, left_index=True)
-df2.rename(columns={"SeriousDlqin2yrs_x": "good", "SeriousDlqin2yrs_y": "bad"}, inplace=True)
-df2.insert(2, "badgrade", df2["bad"] / (df2["good"] + df2["bad"]))
-ax2 = df2[["good", "bad"]].plot.bar()
-ax2.set_xticklabels(df2.index, rotation=15)
+MonthlyIncome_cut_grouped_good = model_data[model_data["SeriousDlqin2yrs"] == 0].groupby('cut').count()["SeriousDlqin2yrs"]
+MonthlyIncome_cut_grouped_bad = model_data[model_data["SeriousDlqin2yrs"] == 1].groupby('cut').count()["SeriousDlqin2yrs"]
+df2 = pd.merge(pd.DataFrame(MonthlyIncome_cut_grouped_good), pd.DataFrame(MonthlyIncome_cut_grouped_bad),right_index=True,left_index=True)
+df2.rename(columns={"SeriousDlqin2yrs_x":"good","SeriousDlqin2yrs_y":"bad"},inplace=True)
+df2.insert(2,"badgrade", df2["bad"] / (df2["good"] + df2["bad"]))
+ax2 = df2[["good","bad"]].plot.bar()
+ax2.set_xticklabels(df2.index,rotation=15)
 ax2.set_ylabel("Num")
 ax2.set_title("bar of MonthlyIncome")
 # In[]:
-ax22 = df2["badgrade"].plot()
-ax22.set_xticklabels(df2.index, rotation=50)
+ax22=df2["badgrade"].plot()
+ax22.set_xticklabels(df2.index,rotation=50)
 ax22.set_ylabel("badgrade")
 ax22.set_title("badgrade of MonthlyIncome")
+'''
+# In[]:
+bt.box_indicator_visualization(model_data, "MonthlyIncome", "SeriousDlqin2yrs", bins_of_col)
 
 # In[]:
 # 家庭成员数量
+'''
 model_data['cut'] = pd.cut(model_data.NumberOfDependents, bins_of_col['NumberOfDependents'][0])
-NumberOfDependents_cut_grouped_good = model_data[model_data["SeriousDlqin2yrs"] == 0].groupby('cut').count()[
-    "SeriousDlqin2yrs"]
-NumberOfDependents_cut_grouped_bad = model_data[model_data["SeriousDlqin2yrs"] == 1].groupby('cut').count()[
-    "SeriousDlqin2yrs"]
-df3 = pd.merge(pd.DataFrame(NumberOfDependents_cut_grouped_good), pd.DataFrame(NumberOfDependents_cut_grouped_bad),
-               right_index=True, left_index=True)
-df3.rename(columns={"SeriousDlqin2yrs_x": "good", "SeriousDlqin2yrs_y": "bad"}, inplace=True)
-df3.insert(2, "badgrade", df3["bad"] / (df3["good"] + df3["bad"]))
-ax3 = df3[["good", "bad"]].plot.bar()
-ax3.set_xticklabels(df3.index, rotation=15)
+NumberOfDependents_cut_grouped_good = model_data[model_data["SeriousDlqin2yrs"] == 0].groupby('cut').count()["SeriousDlqin2yrs"]
+NumberOfDependents_cut_grouped_bad = model_data[model_data["SeriousDlqin2yrs"] == 1].groupby('cut').count()["SeriousDlqin2yrs"]
+df3 = pd.merge(pd.DataFrame(NumberOfDependents_cut_grouped_good), pd.DataFrame(NumberOfDependents_cut_grouped_bad),right_index=True,left_index=True)
+df3.rename(columns={"SeriousDlqin2yrs_x":"good","SeriousDlqin2yrs_y":"bad"},inplace=True)
+df3.insert(2,"badgrade", df3["bad"] / (df3["good"] + df3["bad"]))
+ax3 = df3[["good","bad"]].plot.bar()
+ax3.set_xticklabels(df3.index,rotation=15)
 ax3.set_ylabel("Num")
 ax3.set_title("bar of NumberOfDependents")
 # In[]:
-ax33 = df3["badgrade"].plot()
-ax33.set_xticklabels(df3.index, rotation=50)
+ax33=df3["badgrade"].plot()
+ax33.set_xticklabels(df3.index,rotation=50)
 ax33.set_ylabel("badgrade")
 ax33.set_title("badgrade of NumberOfDependents")
+'''
+# In[]:
+bt.box_indicator_visualization(model_data, "NumberOfDependents", "SeriousDlqin2yrs", bins_of_col)
+
+# In[]:
+bt.box_indicator_visualization(model_data, "NumberOfTime30-59DaysPastDueNotWorse", "SeriousDlqin2yrs", bins_of_col)
 
 
 # In[]:
@@ -971,11 +1023,18 @@ def corrFunction(data_corr):
 
 corrFunction(model_data.iloc[:, :-2])
 # NumberOfTime30-59DaysPastDueNotWorse、NumberOfTimes90DaysLate、89DaysPastDueNotWorse、age
+# In[]:
+# 1、
+temp_corr_abs, temp_corr = ft.corrFunction_withY(model_data.iloc[:, :-2], "SeriousDlqin2yrs")
+# In[]:
+# 2、
+temp_corr_abs1, temp_corr1 = ft.corrFunction(model_data.iloc[:, :-2])
 
 # In[]:
 # 1.7.8.2.2、斯皮尔曼相关系数[-1,1]： （对之前的 分箱结果 进行 检测验证）
 rlist = []
 index = []  # x轴的标签
+collist = []
 for i, col in enumerate(bins_of_col):
     print("x" + str(i + 1), col, bins_of_col[col][0])
     X = model_data[col]
@@ -985,6 +1044,7 @@ for i, col in enumerate(bins_of_col):
     r, p = scipy.stats.spearmanr(d2.mean().X, d2.mean().Y)  # 源码中 以斯皮尔曼系数作为分箱终止条件 while np.abs(r) < 1:
     rlist.append(r)
     index.append("x" + str(i + 1))
+    collist.append(col)
 
 fig1 = plt.figure(1, figsize=(8, 5))
 ax1 = fig1.add_subplot(1, 1, 1)
@@ -999,6 +1059,8 @@ for a, b in zip(x, rlist):
     plt.text(a, b + 0.01, '%.4f' % b, ha='center', va='bottom', fontsize=12)
 plt.show()
 # RevolvingUtilizationOfUnsecuredLines、age、NumberOfTime30-59DaysPastDueNotWorse、NumberOfTimes90DaysLate、NumberRealEstateLoansOrLines、NumberOfTime60-89DaysPastDueNotWorse
+# In[]:
+df_ = bt.spearmanr_visualization(model_data, 'SeriousDlqin2yrs', bins_of_col)
 
 # In[]:
 # 1.7.8.2.3、卡方值比较： （在样本量很大的情况下，很容易显著，只能做参考而已）
@@ -1036,10 +1098,12 @@ plt.show()
 # 1.7.8.2.4、IV值 比较选择： （从大到小排列 选择特征）
 ivlist = []  # 各变量IV
 index = []  # x轴的标签
+collist = []
 for i, col in enumerate(bins_of_col):
     print("x" + str(i + 1), col, bins_of_col[col][1])
     ivlist.append(bins_of_col[col][1])
     index.append("x" + str(i + 1))
+    collist.append(col)
 
 fig1 = plt.figure(1, figsize=(8, 5))
 ax1 = fig1.add_subplot(1, 1, 1)
@@ -1053,6 +1117,8 @@ for a, b in zip(x, ivlist):
     plt.text(a, b + 0.01, '%.4f' % b, ha='center', va='bottom', fontsize=12)
 plt.show()
 # RevolvingUtilizationOfUnsecuredLines、NumberOfTime30-59DaysPastDueNotWorse、NumberOfTimes90DaysLate、NumberOfTime60-89DaysPastDueNotWorse
+# In[]:
+df_ = bt.iv_visualization(bins_of_col)
 
 # In[]:
 # 1.7.9、计算WOE值
@@ -1089,7 +1155,7 @@ for col in bins_of_col:
 woeall
 
 # In[]:
-# 训练集 WOE数据 映射：
+# 训练集 WOE数据 映射： （所有数据都隐射为WOE值）
 model_woe = pd.DataFrame(index=model_data.index)
 
 # 将原数据分箱后，按箱的结果把WOE结构用map函数映射到数据中
@@ -1103,9 +1169,11 @@ for col in bins_of_col:
 model_woe["SeriousDlqin2yrs"] = model_data["SeriousDlqin2yrs"]
 # 这就是我们的建模数据了
 # model_woe.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\model_woe.csv")
+# In[]:
+pd.cut(model_data[col], bins_of_col[col][0])
 
 # In[]:
-# 测试集 WOE数据 映射：
+# 测试集 WOE数据 映射： （所有数据都隐射为WOE值）
 vali_woe = pd.DataFrame(index=vali_data.index)
 # 只能用训练集的WOE， 不能重新计算测试集WOE， 因为测试集是没有Y值的（测试集Y值是最后评分用）
 for col in bins_of_col:
