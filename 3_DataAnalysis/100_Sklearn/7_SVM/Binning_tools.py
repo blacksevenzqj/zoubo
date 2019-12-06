@@ -13,6 +13,25 @@ import Tools_customize as tc
 import FeatureTools as ft
 
 # In[]:
+'''
+概念：
+1、一个特征一个分箱方式的： 每个分箱区间（每个箱子）有一个WOE值
+2、一个特征一个分箱方式的： 整个箱体有一个IV值（整个箱体的多个分箱区间的WOE值计算得到一个IV值）
+
+
+终极目标： 将WOE值 映射 到所有特征元素上（所有特征数据都 映射 为WOE值） 进模型
+1、使用qcut=20得到每个特征的最初分箱区间num_bins，并调用chi_test_merge_boxes_IV_curve函数将num_bins的分箱区间进行合箱计算：看其IV值变化曲线（卡方、斯皮尔曼：我自己定义的）
+并选出每个特征的最优分箱数。
+2、还是使用qcut=20得到每个特征的最初分箱区间num_bins，然后调用chi_test_merge_boxes_IV_curve函数将num_bins的分箱区间进行合箱计算 直到 “1中得到的每个特征最优分箱数”；
+得到bins_of_col字典：存储了每个特征num_bins的分箱区间进行合箱计算 直到 指定最优箱数 的分箱区间、以及该分箱方式的IV值。
+3、通过各种可视化方法验证上述分箱结果（特征分箱区间WOE值曲线、特征IV值柱状图）
+4.1、通过到bins_of_col存储的每个特征的分箱区间，计算每个特征每个分箱区间的WOE值（使用cut分箱）；虽然WOE值和上面计算结果相同，但目的是得到分箱区间索引（为了后续WOE数据映射）；
+4.2、训练集/测试集 WOE数据 映射： 将每个原始特征数据 按bins_of_col存储的每个特征的分箱区间 分箱后， 再按分箱的结果把WOE结构用map函数映射到数据中；
+并将标签Y补充到数据中。
+5、所有 原始特征数据 现在都映射成WOE值，进模型训练。
+'''
+
+# In[]:
 """
 pd.qcut，基于分位数的分箱函数，本质是将连续型变量离散化
 只能够处理一维数据。返回箱子的上限和下限
@@ -48,6 +67,13 @@ def get_num_bins(data, col, y_name, bins):
     return num_bins, coount_y0.index
 
 
+# 分解 num_bins 数据结构：
+def break_down_num_bins(num_bins, columns, col1, col2):
+    df_temp = pd.DataFrame(num_bins, columns=columns)
+    bin_list = tc.set_union(df_temp[col1], df_temp[col2])
+    return bin_list
+
+
 '''
 ******重点******
 希望每组的bad_rate相差越大越好；
@@ -72,6 +98,15 @@ def get_woe(num_bins):
     df["bad%"] = df.count_1 / df.count_1.sum()  # 一个箱子 坏样本 的数量 占 所有箱子里 坏样本 的比例
     df["woe"] = np.log(df["good%"] / df["bad%"])
     return df
+
+
+# 单独计算出woe： 因为测试集映射数据时使用的是训练集的WOE值（测试集不能使用Y值的） 和上面get_num_bins+get_woe函数是一样的，只是简便点
+def get_woe_only(data, col, y_name, bins):
+    df = data[[col, y_name]].copy()
+    df["cut"] = pd.cut(df[col], bins)
+    bins_df = tc.groupby_value_counts_unstack(df, "cut", y_name)
+    woe = bins_df["woe"] = np.log((bins_df[0] / bins_df[0].sum()) / (bins_df[1] / bins_df[1].sum()))
+    return woe
 
 
 # 计算IV值
@@ -197,9 +232,7 @@ def chi_test_merge_boxes_IV_curve(num_bins, data, x_name, y_name, min_bins=2, pv
 
         # 斯皮尔曼相关系数选择分箱
         if is_spearmanr and spearmanr_state:
-            # 解开 num_bins 的数据结构
-            df_temp = pd.DataFrame(num_bins_, columns=columns)
-            bin_list = tc.set_union(df_temp["min"], df_temp["max"])
+            bin_list = break_down_num_bins(num_bins_, columns, "min", "max")
             X = data[x_name]
             Y = data[y_name]
             d1 = pd.DataFrame(
@@ -332,7 +365,7 @@ def box_indicator_visualization(df, feature_name, y_name, bins_of_col):
     axe1 = bins_woe[["good%", "bad%"]].plot.bar()
     axe1.set_xticklabels(bin_index, rotation=15)
     axe1.set_ylabel("Num")
-    #    axe1.set_title("bar of " + feature_name)
+    axe1.set_title("bar of " + feature_name)
 
     fig, axe = plt.subplots(1, 1, figsize=(10, 10))
     # 柱状图：
@@ -347,9 +380,9 @@ def box_indicator_visualization(df, feature_name, y_name, bins_of_col):
     axe.plot(bins_woe["bad%"], color='green', label='bad%')
     axe.plot(bins_woe["woe"], color='red', label='woe')
     axe.legend(fontsize=16)  # 图例
-    axe.set_xlabel("共%d个箱体：差第一个箱体" % len(bin_index), fontsize=16)  # x轴标签
+    axe.set_xlabel("共%d个箱体：差第一个箱体%s" % (len(bin_index), bin_index[0]), fontsize=16)  # x轴标签
     axe.set_xticklabels(bin_index, rotation=50, fontsize=12)
-    axe.set_title('bad_rate、good%、bad%、woe', fontsize=16)  # 图名
+    axe.set_title(feature_name + ' WOE cure', fontsize=16)  # 图名
 
 
 # 2、斯皮尔曼相关系数[-1,1]： （对之前的 分箱结果 进行 检测验证）
@@ -424,7 +457,31 @@ def iv_visualization(bins_of_col):
     return df_
 
 
+# =============================================================================
+# 将WOE值 映射 到所有特征元素上（所有特征数据都 映射 为WOE值）
+# 1、将 所有特征的 WOE值 存储到 字典 中
+def storage_woe_dict(data, y_name, bins_of_col):
+    woeall = {}
+    for col in bins_of_col:
+        woeall[col] = get_woe_only(data, col, y_name, bins_of_col[col][0])
+    return woeall
 
 
+# 2、训练集/测试集 WOE数据 映射：
+def woe_mapping(data, y_name, bins_of_col, woeall, is_validation=True, save_path=None, encoding="UTF-8"):
+    model_woe = pd.DataFrame(index=data.index)
 
+    # 将每个原始特征数据 按bins_of_col存储的每个特征的分箱区间 分箱后， 再按分箱的结果把WOE结构用map函数映射到数据中
+    for col in bins_of_col:
+        model_woe[col] = pd.cut(data[col], bins_of_col[col][0]).map(woeall[col])
+
+    # 将标签补充到数据中（只有训练集、验证集/测试集 有标签Y， 真实提交测试集是没有标签Y的）
+    if is_validation:
+        model_woe[y_name] = data[y_name]  # 这就是建模数据了
+
+    # 保存 建模数据
+    if save_path is not None:
+        ft.writeFile_outData(model_woe, save_path, encoding)
+
+    return model_woe
 

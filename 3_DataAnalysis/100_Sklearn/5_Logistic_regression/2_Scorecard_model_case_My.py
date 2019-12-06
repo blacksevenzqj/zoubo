@@ -1060,7 +1060,7 @@ for a, b in zip(x, rlist):
 plt.show()
 # RevolvingUtilizationOfUnsecuredLines、age、NumberOfTime30-59DaysPastDueNotWorse、NumberOfTimes90DaysLate、NumberRealEstateLoansOrLines、NumberOfTime60-89DaysPastDueNotWorse
 # In[]:
-df_ = bt.spearmanr_visualization(model_data, 'SeriousDlqin2yrs', bins_of_col)
+df_spearmanr = bt.spearmanr_visualization(model_data, 'SeriousDlqin2yrs', bins_of_col)
 
 # In[]:
 # 1.7.8.2.3、卡方值比较： （在样本量很大的情况下，很容易显著，只能做参考而已）
@@ -1118,7 +1118,7 @@ for a, b in zip(x, ivlist):
 plt.show()
 # RevolvingUtilizationOfUnsecuredLines、NumberOfTime30-59DaysPastDueNotWorse、NumberOfTimes90DaysLate、NumberOfTime60-89DaysPastDueNotWorse
 # In[]:
-df_ = bt.iv_visualization(bins_of_col)
+df_iv = bt.iv_visualization(bins_of_col)
 
 # In[]:
 # 1.7.9、计算WOE值
@@ -1127,10 +1127,10 @@ df_ = bt.iv_visualization(bins_of_col)
 # 参数为 pd.cut(数据，以列表表示的分箱间隔)
 data = model_data[["age", "SeriousDlqin2yrs"]].copy()
 data["cut"] = pd.cut(data["age"], bins_of_col['age'][0])
-
+# In[]:
 # 将数据按分箱结果聚合，并取出其中的标签值
 data.groupby("cut")["SeriousDlqin2yrs"].value_counts()
-
+# In[]:
 # 使用unstack()来将树状结构变成表状结构
 bins_df = data.groupby("cut")["SeriousDlqin2yrs"].value_counts().unstack()
 woe = bins_df["woe"] = np.log((bins_df[0] / bins_df[0].sum()) / (bins_df[1] / bins_df[1].sum()))
@@ -1170,7 +1170,10 @@ model_woe["SeriousDlqin2yrs"] = model_data["SeriousDlqin2yrs"]
 # 这就是我们的建模数据了
 # model_woe.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\model_woe.csv")
 # In[]:
-pd.cut(model_data[col], bins_of_col[col][0])
+woeall = bt.storage_woe_dict(model_data, "SeriousDlqin2yrs", bins_of_col)
+# In[]:
+save_path = r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\model_woe.csv"
+model_woe = bt.woe_mapping(model_data, "SeriousDlqin2yrs", bins_of_col, woeall, True, save_path)
 
 # In[]:
 # 测试集 WOE数据 映射： （所有数据都隐射为WOE值）
@@ -1182,7 +1185,9 @@ for col in bins_of_col:
 vali_woe["SeriousDlqin2yrs"] = vali_data["SeriousDlqin2yrs"]
 # 这就是我们的建模数据了
 # vali_woe.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\vali_woe.csv")
-
+# In[]:
+save_path = r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\vali_woe.csv"
+vali_woe = bt.woe_mapping(vali_data, "SeriousDlqin2yrs", bins_of_col, woeall, True, save_path)
 
 # In[]:
 # 1.8、建模：

@@ -101,13 +101,18 @@ def groupby_agg_oneCol(data, group_cols, statistical_col, agg, as_index=True):
     return data_group
 
 
+# groupby的value_counts结果使用unstack()来将树状结构变成表状结构（相当于statistical_col=1或0时做两次groupby）
+def groupby_value_counts_unstack(data, group_col, statistical_col):
+    return data.groupby(group_col)[statistical_col].value_counts().unstack()
+
+
 # 按count()统计，并将结果展开为DataFrame
-def groupby_size(data, cols):
-    if type(cols) == list:
+def groupby_size(data, group_cols):
+    if type(group_cols) == list:
         return data.groupby(
-            cols).size().reset_index()  # groupby_result.size() == groupby_result["X"].count()；但.count()的.reset_index()麻烦
+            group_cols).size().reset_index()  # groupby_result.size() == groupby_result["X"].count()；但.count()的.reset_index()麻烦
     else:
-        raise Exception('cols Type is Error')
+        raise Exception('group_cols Type is Error, must list')
 
 
 # 将groupby的结果 转换为 dict
