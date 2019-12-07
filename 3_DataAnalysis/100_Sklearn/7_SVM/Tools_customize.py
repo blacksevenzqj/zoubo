@@ -38,7 +38,7 @@ def merge_test():
 
 #    dataQ_On = dataDf1.merge(dataDf2, on=["lkey","rkey"], how='outer')
 
-# 以下两行代码效果相同
+# 以下两行代码效果相同（索引要相同）
 #    pd.merge(pd.DataFrame(age_cut_grouped_good), pd.DataFrame(age_cut_grouped_bad), left_index=True, right_index=True)
 #    pd.concat([age_cut_grouped_good, age_cut_grouped_bad], axis=1)
 
@@ -102,6 +102,7 @@ def groupby_agg_oneCol(data, group_cols, statistical_col, agg, as_index=True):
 
 
 # groupby的value_counts结果使用unstack()来将树状结构变成表状结构（相当于statistical_col=1或0时做两次groupby）
+# 分组中某一组统计数量为0时，value_counts维度报错（改为使用分别groupby的方式，保险一些）
 def groupby_value_counts_unstack(data, group_col, statistical_col):
     return data.groupby(group_col)[statistical_col].value_counts().unstack()
 

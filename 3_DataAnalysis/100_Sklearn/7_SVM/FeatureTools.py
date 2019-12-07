@@ -153,10 +153,23 @@ def seriers_change_colname(seriers, col_name):
     seriers.name = col_name
 
 
+def seriers_change_index(seriers, index):
+    seriers.index = index
+
+
 def df_change_colname(df, columns, inplace=True):
     if type(columns) != dict:
         raise Exception('columns Type is Error, must dict')
     df.rename(columns=columns, inplace=inplace)
+
+
+# 恢复索引（删除数据后：如果X集恢复了索引，那么Y集也必须恢复索引）
+def recovery_index(data_list):
+    for i in data_list:
+        i.index = range(i.shape[0])
+
+
+#        i = i.reset_index(drop=True)
 
 
 # 排序
@@ -187,15 +200,6 @@ def data_segmentation_skf(X, y, test_size=0.3):
 
 
 # In[]:
-# 恢复索引（删除数据后：如果X集恢复了索引，那么Y集也必须恢复索引）
-def recovery_index(data_list):
-    for i in data_list:
-        i.index = range(i.shape[0])
-
-
-#        i = i.reset_index(drop=True)
-
-
 def astype_customize(x, t):
     try:
         return t(x)
@@ -233,7 +237,7 @@ def category_quantity_statistics_all(df, features, return_counts=True):
 
 
 # In[]:
-# 缺失值（1:删特征; 2:删数据）
+# 缺失值：行向（特征缺失值）、列向（数据缺失值）； 1:删特征、 2:删数据
 '''
 笔记：“5.2、数据清洗”
 5.2.2、缺失值处理：（对于 缺失值在80%甚至更高的情况 如下处理方式只能作为参考）
@@ -336,8 +340,6 @@ def missing_values_2categories_compare(df, y_name):
 
 
 def feature_missing_value_analysis(df, feature_name, groupby_col, y_name):
-    import Tools_customize as tc
-
     tmp_df_f_null = df[df[feature_name].isnull()]
     f_null_stat = missing_values_table(tmp_df_f_null)
     agg = {'f_null_count': len, 'f_null_target': np.mean}  # （速度近10倍于groupby_apply）
@@ -694,7 +696,7 @@ def category_manual_coding(data, maps):
 # In[]:
 # ================================数据分布==============================
 # In[]:
-# 分类模型 连续特征 数据分布： （不能有缺失值）
+# 分类模型 连续特征 数据分布（直方图、盒须图）： （不能有缺失值）
 # f, axes = plt.subplots(2,2, figsize=(20, 18))
 def class_data_distribution(data, feature, label, axes):
     data = get_notMissing_values(data, feature)
@@ -715,6 +717,24 @@ def class_data_distribution(data, feature, label, axes):
     axes[1][1].set_title('feature: ' + str(feature))
     axes[1][1].set_xlabel('')
     axes[1][1].set_ylabel('')
+
+
+# 计算盒须图区间：
+def box_whisker_diagram_Interval(df):
+    if type(df) is not pd.Series:
+        raise Exception('df Type is Error, must Series')
+
+    max_val = np.max(df)
+    min_val = np.min(df)
+    #    mean_val = np.mean(df)
+    iqr = df.quantile(0.75) - df.quantile(0.25)
+    twenty_five_percent = df.quantile(0.25)
+    five_percent = df.quantile(0.50)
+    seventy_five_percent = df.quantile(0.75)
+    upper_point = df.quantile(0.75) + 1.5 * iqr
+    down_point = df.quantile(0.25) - 1.5 * iqr
+    val_list = [min_val, down_point, twenty_five_percent, five_percent, seventy_five_percent, upper_point, max_val]
+    return val_list
 
 
 # 分类模型 连续特征 2个特征之间 散点分布：
@@ -1318,6 +1338,9 @@ def linear_regression_coef(model, X_train, axe, head_num=10, tail_num=10):
     imp_coefs.plot(kind="barh", axes=axe)
     plt.title("Coefficients in the Ridge Model")
     plt.show()
+
+
+# WOE转换 → 计算IV值可视化
 
 
 # In[]:

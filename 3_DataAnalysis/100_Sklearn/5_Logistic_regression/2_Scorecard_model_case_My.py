@@ -712,7 +712,7 @@ chi2 = scipy.stats.chi2_contingency([x1, x2])[0]  # 计算卡方值 11.793506471
 afterbins, bins_woe, bins_iv, bins_pv, bins_woe_pv, bins_iv_pv, \
 bins_spearmanr, bins_woe_spearmanr, bins_iv_spearmanr = \
     bt.chi_test_merge_boxes_IV_curve(num_bins=num_bins, data=model_data, x_name="age", y_name="SeriousDlqin2yrs",
-                                     min_bins=6, is_spearmanr=True)
+                                     is_spearmanr=True)
 
 
 # In[]:
@@ -894,10 +894,11 @@ for col in auto_col_bins:
 #                             #使用字典的性质来取出每个特征所对应的箱的数量
 #                             ,q=20
 #                             ,graph=True)
-    afterbins, bins_df_temp, iv_temp, bins_pv, bins_woe_pv, bins_iv_pv = bt.graphforbestbin(
-                                model_data, col, "SeriousDlqin2yrs", 
-                                min_bins = auto_col_bins[col], q_num=20
-                                )
+    afterbins, bins_df_temp, iv_temp, bins_pv, bins_woe_pv, bins_iv_pv, \
+    bins_spearmanr, bins_woe_spearmanr, bins_iv_spearmanr = bt.graphforbestbin(
+                                    model_data, col, "SeriousDlqin2yrs", 
+                                    min_bins = auto_col_bins[col], q_num=20
+                                    )
 
     bins_list = sorted(set(bins_df_temp["min"]).union(bins_df_temp["max"]))
     #保证区间覆盖使用 np.inf 替换最大值 -np.inf 替换最小值
@@ -941,7 +942,7 @@ ax11.set_ylabel("badgrade")
 ax11.set_title("badgrade of age")
 '''
 # In[]
-bt.box_indicator_visualization(model_data, "age", "SeriousDlqin2yrs", bins_of_col)
+bt.box_indicator_visualization(model_data, "age", "SeriousDlqin2yrs", bins_of_col=bins_of_col)
 
 # In[]:
 # 月收入
@@ -963,7 +964,7 @@ ax22.set_ylabel("badgrade")
 ax22.set_title("badgrade of MonthlyIncome")
 '''
 # In[]:
-bt.box_indicator_visualization(model_data, "MonthlyIncome", "SeriousDlqin2yrs", bins_of_col)
+bt.box_indicator_visualization(model_data, "MonthlyIncome", "SeriousDlqin2yrs", bins_of_col=bins_of_col)
 
 # In[]:
 # 家庭成员数量
@@ -985,10 +986,11 @@ ax33.set_ylabel("badgrade")
 ax33.set_title("badgrade of NumberOfDependents")
 '''
 # In[]:
-bt.box_indicator_visualization(model_data, "NumberOfDependents", "SeriousDlqin2yrs", bins_of_col)
+bt.box_indicator_visualization(model_data, "NumberOfDependents", "SeriousDlqin2yrs", bins_of_col=bins_of_col)
 
 # In[]:
-bt.box_indicator_visualization(model_data, "NumberOfTime30-59DaysPastDueNotWorse", "SeriousDlqin2yrs", bins_of_col)
+bt.box_indicator_visualization(model_data, "NumberOfTime30-59DaysPastDueNotWorse", "SeriousDlqin2yrs",
+                               bins_of_col=bins_of_col)
 
 
 # In[]:
@@ -1122,35 +1124,34 @@ df_iv = bt.iv_visualization(bins_of_col)
 
 # In[]:
 # 1.7.9、计算WOE值
+'''
 # 测试
 # 函数pd.cut，可以根据已知的分箱间隔把数据分箱
 # 参数为 pd.cut(数据，以列表表示的分箱间隔)
-data = model_data[["age", "SeriousDlqin2yrs"]].copy()
-data["cut"] = pd.cut(data["age"], bins_of_col['age'][0])
+data = model_data[["age","SeriousDlqin2yrs"]].copy()
+data["cut"] = pd.cut(data["age"],bins_of_col['age'][0])
 # In[]:
 # 将数据按分箱结果聚合，并取出其中的标签值
 data.groupby("cut")["SeriousDlqin2yrs"].value_counts()
 # In[]:
 # 使用unstack()来将树状结构变成表状结构
 bins_df = data.groupby("cut")["SeriousDlqin2yrs"].value_counts().unstack()
-woe = bins_df["woe"] = np.log((bins_df[0] / bins_df[0].sum()) / (bins_df[1] / bins_df[1].sum()))
+woe = bins_df["woe"] = np.log((bins_df[0]/bins_df[0].sum())/(bins_df[1]/bins_df[1].sum()))
 print(woe)
-
 
 # In[]:
 # 单独计算出woe： 因为测试集映射数据时使用的是训练集的WOE值（测试集不能使用Y值的）
-def get_woe_only(data, col, y, bins):
-    df = data[[col, y]].copy()
-    df["cut"] = pd.cut(df[col], bins)
+def get_woe_only(data,col,y,bins):
+    df = data[[col,y]].copy()
+    df["cut"] = pd.cut(df[col],bins)
     bins_df = df.groupby("cut")[y].value_counts().unstack()
-    woe = bins_df["woe"] = np.log((bins_df[0] / bins_df[0].sum()) / (bins_df[1] / bins_df[1].sum()))
+    woe = bins_df["woe"] = np.log((bins_df[0]/bins_df[0].sum())/(bins_df[1]/bins_df[1].sum()))
     return woe
 
-
-# 将所有特征的WOE存储到字典当中
+#将所有特征的WOE存储到字典当中
 woeall = {}
 for col in bins_of_col:
-    woeall[col] = get_woe_only(model_data, col, "SeriousDlqin2yrs", bins_of_col[col][0])
+    woeall[col] = get_woe_only(model_data,col,"SeriousDlqin2yrs",bins_of_col[col][0])
 
 woeall
 
@@ -1159,16 +1160,17 @@ woeall
 model_woe = pd.DataFrame(index=model_data.index)
 
 # 将原数据分箱后，按箱的结果把WOE结构用map函数映射到数据中
-# model_woe["age"] = pd.cut(model_data["age"],bins_of_col["age"]).map(woeall["age"])
+#model_woe["age"] = pd.cut(model_data["age"],bins_of_col["age"]).map(woeall["age"])
 
 # 对所有特征操作可以写成：
 for col in bins_of_col:
-    model_woe[col] = pd.cut(model_data[col], bins_of_col[col][0]).map(woeall[col])
+    model_woe[col] = pd.cut(model_data[col],bins_of_col[col][0]).map(woeall[col])
 
 # 将标签补充到数据中
 model_woe["SeriousDlqin2yrs"] = model_data["SeriousDlqin2yrs"]
 # 这就是我们的建模数据了
-# model_woe.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\model_woe.csv")
+#model_woe.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\model_woe.csv") 
+'''
 # In[]:
 woeall = bt.storage_woe_dict(model_data, "SeriousDlqin2yrs", bins_of_col)
 # In[]:
@@ -1177,14 +1179,16 @@ model_woe = bt.woe_mapping(model_data, "SeriousDlqin2yrs", bins_of_col, woeall, 
 
 # In[]:
 # 测试集 WOE数据 映射： （所有数据都隐射为WOE值）
+'''
 vali_woe = pd.DataFrame(index=vali_data.index)
 # 只能用训练集的WOE， 不能重新计算测试集WOE， 因为测试集是没有Y值的（测试集Y值是最后评分用）
 for col in bins_of_col:
-    vali_woe[col] = pd.cut(vali_data[col], bins_of_col[col][0]).map(woeall[col])
+    vali_woe[col] = pd.cut(vali_data[col],bins_of_col[col][0]).map(woeall[col])
 
 vali_woe["SeriousDlqin2yrs"] = vali_data["SeriousDlqin2yrs"]
 # 这就是我们的建模数据了
-# vali_woe.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\vali_woe.csv")
+#vali_woe.to_csv(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\vali_woe.csv")
+'''
 # In[]:
 save_path = r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\101_Sklearn\5_Logistic_regression\vali_woe.csv"
 vali_woe = bt.woe_mapping(vali_data, "SeriousDlqin2yrs", bins_of_col, woeall, True, save_path)

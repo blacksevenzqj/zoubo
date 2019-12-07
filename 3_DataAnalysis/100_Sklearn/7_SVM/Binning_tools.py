@@ -17,6 +17,7 @@ import FeatureTools as ft
 概念：
 1、一个特征一个分箱方式的： 每个分箱区间（每个箱子）有一个WOE值
 2、一个特征一个分箱方式的： 整个箱体有一个IV值（整个箱体的多个分箱区间的WOE值计算得到一个IV值）
+3、WOE指标评价特征分箱好坏； IV指标评价特征重要性，做特征选择（一个特征分箱，其中每个箱子都可以计算一个iv，但是箱子单独的iv没有意义）
 
 
 终极目标： 将WOE值 映射 到所有特征元素上（所有特征数据都 映射 为WOE值） 进模型
@@ -60,6 +61,7 @@ def qcut_per_bin_twoClass_num(df, y_name, groupby_col, updown):
 # 计算WOE和BAD RATE
 def get_num_bins(data, col, y_name, bins):
     df = data[[col, y_name]].copy()
+    # 注意： 使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
     df["cut"], updown = pd.cut(df[col], bins, retbins=True)
     coount_y0 = df[df[y_name] == 0].groupby(by="cut")[y_name].count()
     coount_y1 = df[df[y_name] == 1].groupby(by="cut")[y_name].count()
@@ -68,9 +70,11 @@ def get_num_bins(data, col, y_name, bins):
 
 
 # 分解 num_bins 数据结构：
-def break_down_num_bins(num_bins, columns, col1, col2):
+def break_down_num_bins(num_bins, columns=["min", "max", "count_0", "count_1"]):
     df_temp = pd.DataFrame(num_bins, columns=columns)
-    bin_list = tc.set_union(df_temp[col1], df_temp[col2])
+    bin_list = tc.set_union(df_temp[columns[0]], df_temp[columns[1]])
+    # 注意： 使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
+    bin_list[0], bin_list[-1] = -np.inf, np.inf
     return bin_list
 
 
@@ -96,24 +100,41 @@ def get_woe(num_bins):
     df["bad_rate"] = df.count_1 / df.total  # 一个箱子坏样本的数量 占 一个箱子里所有样本数的比例
     df["good%"] = df.count_0 / df.count_0.sum()  # 一个箱子 好样本 的数量 占 所有箱子里 好样本 的比例
     df["bad%"] = df.count_1 / df.count_1.sum()  # 一个箱子 坏样本 的数量 占 所有箱子里 坏样本 的比例
-    df["woe"] = np.log(df["good%"] / df["bad%"])
+    df["good_cumsum"] = df["good%"].cumsum()
+    df["bad_cumsum"] = df["bad%"].cumsum()
+    df["woe"] = np.log(df["bad%"] / df["good%"])
     return df
 
 
 # 单独计算出woe： 因为测试集映射数据时使用的是训练集的WOE值（测试集不能使用Y值的） 和上面get_num_bins+get_woe函数是一样的，只是简便点
+# 本方法有个弊端： 分箱中某一箱统计数量为0时，value_counts维度报错（改为使用上面分别groupby的方式，保险一些）
 def get_woe_only(data, col, y_name, bins):
     df = data[[col, y_name]].copy()
+    # 注意： 使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
     df["cut"] = pd.cut(df[col], bins)
     bins_df = tc.groupby_value_counts_unstack(df, "cut", y_name)
-    woe = bins_df["woe"] = np.log((bins_df[0] / bins_df[0].sum()) / (bins_df[1] / bins_df[1].sum()))
-    return woe
+    # 返回 特征分箱的WOE值，数据类型时Series（Index索引为分箱区间，这样才能做WOE映射）
+    return np.log((bins_df[1] / bins_df[1].sum()) / (bins_df[0] / bins_df[0].sum()))
 
 
 # 计算IV值
 def get_iv(df):
-    rate = df["good%"] - df["bad%"]
+    #    rate = df["good%"] - df["bad%"]
+    rate = df["bad%"] - df["good%"]
     iv = np.sum(rate * df.woe)
     return iv
+
+
+# 计算分箱的斯皮尔曼系数
+def spearmanr_bins(df, col, y_name, bin_list):
+    X = df[col]
+    Y = df[y_name]
+    # 注意： 使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
+    d1 = pd.DataFrame({"X": X, "Y": Y, "Bucket": pd.cut(X, bin_list)})
+    d2 = d1.groupby('Bucket', as_index=True)  # 按照分箱结果进行分组聚合
+    # 源码中 以斯皮尔曼系数作为分箱终止条件 while np.abs(r) < 1:
+    r, p = scipy.stats.spearmanr(d2.mean().X, d2.mean().Y)  # d2.mean()得到每个箱子的均值
+    return r, p
 
 
 # 确保每个箱中都有0和1
@@ -198,7 +219,6 @@ def chi_test_merge_boxes_IV_curve(num_bins, data, x_name, y_name, min_bins=2, pv
     bins_woe_pv = np.nan
     bins_iv_pv = np.nan
     spearmanr_state = True
-    columns = ["min", "max", "count_0", "count_1"]
     bins_spearmanr = np.nan
     bins_woe_spearmanr = np.nan
     bins_iv_spearmanr = np.nan
@@ -232,13 +252,8 @@ def chi_test_merge_boxes_IV_curve(num_bins, data, x_name, y_name, min_bins=2, pv
 
         # 斯皮尔曼相关系数选择分箱
         if is_spearmanr and spearmanr_state:
-            bin_list = break_down_num_bins(num_bins_, columns, "min", "max")
-            X = data[x_name]
-            Y = data[y_name]
-            d1 = pd.DataFrame(
-                {"X": X, "Y": Y, "Bucket": pd.cut(X, bin_list)})  # 用pd.qcut实现最优分箱，Bucket：将X分为n段，n由斯皮尔曼系数决定
-            d2 = d1.groupby('Bucket', as_index=True)  # 按照分箱结果进行分组聚合
-            r, p = scipy.stats.spearmanr(d2.mean().X, d2.mean().Y)  # 以斯皮尔曼系数作为分箱终止条件
+            bin_list = break_down_num_bins(num_bins_)
+            r, p = spearmanr_bins(data, x_name, y_name, bin_list)
             if abs(r) == spearmanr_limit:
                 bins_spearmanr = num_bins_.copy()
                 spearmanr_state = False
@@ -268,9 +283,11 @@ def chi_test_merge_boxes_IV_curve(num_bins, data, x_name, y_name, min_bins=2, pv
         plt.show()
         # 选择转折点处，也就是下坠最快的折线点，6→5折线点最陡峭，所以这里对于age来说选择箱数为6
 
+    # 注意： 返回的分箱区间在使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
     return num_bins_, bins_woe, bins_iv, bins_pv, bins_woe_pv, bins_iv_pv, bins_spearmanr, bins_woe_spearmanr, bins_iv_spearmanr
 
 
+# 1、自动分箱可视化（画IV曲线：选择最优分箱个数）； 2、根据给定最优分箱个数，得到分箱区间、整个箱体IV值
 def graphforbestbin(data, x_name, y_name, min_bins=2, q_num=20, qcut_name="qcut", pv_limit=0.00001, is_spearmanr=False,
                     spearmanr_limit=1, graph=True):
     df = data[[x_name, y_name]].copy()
@@ -281,6 +298,7 @@ def graphforbestbin(data, x_name, y_name, min_bins=2, q_num=20, qcut_name="qcut"
 
     num_bins = makeSure_zero_one_in_eachBox(num_bins, q_num)
 
+    # 注意： 返回的分箱区间在使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
     return chi_test_merge_boxes_IV_curve(num_bins, df, x_name, y_name, min_bins, pv_limit, is_spearmanr,
                                          spearmanr_limit, graph)
 
@@ -297,7 +315,9 @@ def hand_bins_customize(hand_bins):
     return {k: [[-np.inf, *v[:-1], np.inf]] for k, v in hand_bins.items()}  # 扩为2维数组
 
 
-# 自动分箱、手动分箱
+# 得到 特征分箱区间 以及 整个箱体IV值：
+# 1、自动分箱： 已知最优分箱个数，填充 分箱区间、IV值。
+# 2、手动分箱： 已知最优分箱区间，填充 IV值（分箱区间已知，不用填充）
 '''
 auto_col_bins = {"RevolvingUtilizationOfUnsecuredLines":6,
                 "age":6,
@@ -353,36 +373,62 @@ num_bins保留的信息越多越好
 
 
 # 1、WOE曲线
-def box_indicator_visualization(df, feature_name, y_name, bins_of_col):
-    num_bins, bin_index = get_num_bins(df, feature_name, y_name, bins_of_col[feature_name][0])
-    bins_woe = get_woe(num_bins)
+def box_indicator_visualization(df, feature_name, y_name, bins_of_col=None, bin_list=None):
+    # 分箱区间
+    if bins_of_col is not None and type(bins_of_col) is dict:
+        bin_interval = bins_of_col[feature_name][0]
+    elif bin_list is not None and type(bin_list) is list:
+        bin_interval = bin_list
+    else:
+        raise Exception('bins_of_col Type is Error')
 
-    print(bin_index.tolist())
+    num_bins, bin_index = get_num_bins(df, feature_name, y_name, bin_interval)
+    bins_woe = get_woe(num_bins)
+    bins_woe["bin_index"] = bin_index  # 列值为索引，type为Index
+    bins_iv = get_iv(bins_woe)
+
     import matplotlib as mpl
     mpl.rcParams['font.sans-serif'] = 'SimHei'
     mpl.rcParams['axes.unicode_minus'] = False
 
-    axe1 = bins_woe[["good%", "bad%"]].plot.bar()
-    axe1.set_xticklabels(bin_index, rotation=15)
-    axe1.set_ylabel("Num")
-    axe1.set_title("bar of " + feature_name)
+    # 柱状图：
+    #    axe1 = bins_woe[["good%","bad%"]].plot.bar()
+    #    axe1.set_xticklabels(bin_index,rotation=15)
+    #    axe1.set_ylabel("Num")
+    #    axe1.set_title("bar of " + feature_name)
 
     fig, axe = plt.subplots(1, 1, figsize=(10, 10))
     # 柱状图：
-    # bar_index = np.arange(len(bin_index))
-    # axe.bar(bar_index-0.3/2, bins_woe["count_0"], width=.3)
-    # axe.bar(bar_index+0.3/2, bins_woe["count_1"], width=.3)
-    # axe.set_xticklabels(bin_index, rotation=15)
-    # axe.set_title("Normal distribution for skew")
+    bar_index = np.arange(len(bin_index))
+    axe.bar(bar_index - 0.2 / 2, bins_woe["good%"], width=.2, label='good%')
+    axe.bar(bar_index + 0.2 / 2, bins_woe["bad%"], width=.2, label='bad%')
+    axe.legend(fontsize=16)  # 图例
+    axe.set_xlabel("共%d个箱体：差第一个箱体%s" % (len(bin_index), bin_index[0]), fontsize=16)  # x轴标签
+    axe.set_xticklabels(bin_index, rotation=15, fontsize=12)
+    axe.set_title("bar of " + feature_name, fontsize=16)
 
+    # 折线图：
+    fig, axe = plt.subplots(1, 1, figsize=(10, 10))
     axe.plot(bins_woe["bad_rate"], color='blue', label='bad_rate')
     axe.plot(bins_woe["good%"], color='black', label='good%')
     axe.plot(bins_woe["bad%"], color='green', label='bad%')
     axe.plot(bins_woe["woe"], color='red', label='woe')
     axe.legend(fontsize=16)  # 图例
-    axe.set_xlabel("共%d个箱体：差第一个箱体%s" % (len(bin_index), bin_index[0]), fontsize=16)  # x轴标签
+    axe.set_xlabel("共%d个箱体：差第一个箱体%s，IV=%.4f" % (len(bin_index), bin_index[0], bins_iv), fontsize=16)  # x轴标签
     axe.set_xticklabels(bin_index, rotation=50, fontsize=12)
     axe.set_title(feature_name + ' WOE cure', fontsize=16)  # 图名
+
+    fig, axe = plt.subplots(1, 1, figsize=(10, 10))
+    axe.plot(bins_woe["good_cumsum"], bins_woe["bad_cumsum"], color='purple', label='ROC曲线')
+    axe.plot((0, 1), (0, 1), c='b', lw=1.5, ls='--', alpha=0.7)  # 横轴fprs2：0→1范围；竖轴tprs2：0→1范围
+    axe.plot((0, bins_woe["good_cumsum"][0]), (0, bins_woe["bad_cumsum"][0]), c='r', lw=1.5, ls='--', alpha=0.7)
+    axe.legend(loc="top left", fontsize=16)  # 图例
+    axe.grid(b=True)
+    axe.set_xlabel('FPR: good_cumsum', fontsize=16)  # x轴标签
+    axe.set_ylabel('TPR: bad_cumsum', fontsize=16)  # y轴标签
+    axe.set_title('good/bad-ROC曲线', fontsize=16)  # 图名
+
+    return bins_woe, bins_iv
 
 
 # 2、斯皮尔曼相关系数[-1,1]： （对之前的 分箱结果 进行 检测验证）
@@ -392,11 +438,7 @@ def spearmanr_visualization(df, y_name, bins_of_col):
     collist = []
     for i, col in enumerate(bins_of_col):
         print("x" + str(i + 1), col, bins_of_col[col][0])
-        X = df[col]
-        Y = df[y_name]
-        d1 = pd.DataFrame({"X": X, "Y": Y, "Bucket": pd.cut(X, bins_of_col[col][0])})
-        d2 = d1.groupby('Bucket', as_index=True)  # 按照分箱结果进行分组聚合
-        r, p = scipy.stats.spearmanr(d2.mean().X, d2.mean().Y)  # 源码中 以斯皮尔曼系数作为分箱终止条件 while np.abs(r) < 1:
+        r, p = spearmanr_bins(df, col, y_name, bins_of_col[col][0])
         rlist.append(r)
         index.append("x" + str(i + 1))
         collist.append(col)
@@ -424,7 +466,7 @@ def spearmanr_visualization(df, y_name, bins_of_col):
     return df_
 
 
-# 3、IV可视化
+# 3、IV可视化（特征选择）
 def iv_visualization(bins_of_col):
     ivlist = []  # 各变量IV
     index = []  # x轴的标签
@@ -457,22 +499,33 @@ def iv_visualization(bins_of_col):
     return df_
 
 
+# 盒须图分箱： 根据Y=1的盒须图区间 对 整体数据进行分箱：
+def box_whisker_diagram(df, feature_name, y_name, y_value=1):
+    df_temp = df[df[y_name] == y_value][feature_name]
+    val_list = ft.box_whisker_diagram_Interval(df_temp)
+    # 注意： 使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
+    val_list[0], val_list[-1] = -np.inf, np.inf
+    return val_list
+
+
 # =============================================================================
 # 将WOE值 映射 到所有特征元素上（所有特征数据都 映射 为WOE值）
 # 1、将 所有特征的 WOE值 存储到 字典 中
 def storage_woe_dict(data, y_name, bins_of_col):
     woeall = {}
     for col in bins_of_col:
+        # woeall字典中每个元素（特征）的value为： 特征分箱的WOE值，数据类型时Series（Index索引为分箱区间，这样才能做WOE映射）
         woeall[col] = get_woe_only(data, col, y_name, bins_of_col[col][0])
     return woeall
 
 
-# 2、训练集/测试集 WOE数据 映射：
+# 2.1、训练集/测试集 WOE数据 映射：
 def woe_mapping(data, y_name, bins_of_col, woeall, is_validation=True, save_path=None, encoding="UTF-8"):
     model_woe = pd.DataFrame(index=data.index)
 
     # 将每个原始特征数据 按bins_of_col存储的每个特征的分箱区间 分箱后， 再按分箱的结果把WOE结构用map函数映射到数据中
     for col in bins_of_col:
+        # 注意： 使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
         model_woe[col] = pd.cut(data[col], bins_of_col[col][0]).map(woeall[col])
 
     # 将标签补充到数据中（只有训练集、验证集/测试集 有标签Y， 真实提交测试集是没有标签Y的）
@@ -484,4 +537,64 @@ def woe_mapping(data, y_name, bins_of_col, woeall, is_validation=True, save_path
         ft.writeFile_outData(model_woe, save_path, encoding)
 
     return model_woe
+
+
+# 2.2、单特征 WOE数据 映射：
+# feature_woe_series： 特征分箱的WOE值，数据类型为Series（索引Index为分箱区间，这样才能做WOE映射）
+def woe_mapping_simple(data, col, y_name, bin_list, feature_woe_series):
+    if type(bin_list) is not list:
+        raise Exception('bin_list Type is Error, must list')
+    if type(feature_woe_series) is not pd.Series:
+        raise Exception('feature_woe_series Type is Error, must Series')
+
+    return pd.cut(data[col], bin_list).map(feature_woe_series)
+
+
+# =============================================================================
+# 特征分箱选择过程记录：
+'''
+代码：04094_my.py
+# In[]:
+# 4.1.2.3、评分的分箱
+# 4.1.2.3.1.1、自动分箱可视化（画IV曲线：选择最优分箱个数）
+afterbins, bins_woe, bins_iv, bins_pv, bins_woe_pv, bins_iv_pv, \
+bins_spearmanr, bins_woe_spearmanr, bins_iv_spearmanr = \
+bt.graphforbestbin(tmp_train_credit, "credit_score", "target", is_spearmanr=True) # 注意： 返回的分箱区间在使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
+# In[]:
+# 给出的卡方分箱区间 画WOE曲线
+bin_list = bt.break_down_num_bins(bins_pv)
+# kf_bins_woe == bins_woe_pv、 kf_bins_iv == bins_iv_pv（分箱区间相同，只是从算一遍而已）
+kf_bins_woe, kf_bins_iv = bt.box_indicator_visualization(tmp_train_credit, "credit_score", "target", bin_list=bin_list)
+print(bt.spearmanr_bins(tmp_train_credit, "credit_score", "target", bin_list)) # 斯皮尔曼分箱系数
+# In[]:
+# 给出的斯皮尔曼分箱区间 画WOE曲线
+bin_list2 = bt.break_down_num_bins(bins_spearmanr)
+# sp_bins_woe == bins_woe_spearmanr、 sp_bins_iv == bins_iv_spearmanr（分箱区间相同，只是从算一遍而已）
+sp_bins_woe, sp_bins_iv = bt.box_indicator_visualization(tmp_train_credit, "credit_score", "target", bin_list=bin_list2)
+print(bt.spearmanr_bins(tmp_train_credit, "credit_score", "target", bin_list2)) # 斯皮尔曼分箱系数
+
+# In[]:
+# 先看credit_score的直方图、盒须图（平台信用评分在200-400之间的违约率最高，并非信用评分越低就表征用户越可能逾期还款，所以需要做WOE分箱）
+f, axes = plt.subplots(2, 2, figsize=(20, 18))
+ft.class_data_distribution(tmp_train_credit, "credit_score", "target", axes)
+# In[]:
+# 4.1.2.3.1.2、盒须图分箱： 根据Y=1的盒须图区间 画WOE曲线
+val_list = bt.box_whisker_diagram(tmp_train_credit, "credit_score", "target")
+cs_bins_woe, cs_bins_iv = bt.box_indicator_visualization(tmp_train_credit, "credit_score", "target", bin_list=val_list)
+print(bt.spearmanr_bins(tmp_train_credit, "credit_score", "target", val_list)) # 斯皮尔曼分箱系数
+
+# In[]:
+# 4.1.2.3.2、训练集 WOE数据 映射： 
+# 选择 斯皮尔曼分箱区间 因为从 WOE图 和 sp_bins_woe（bins_woe_spearmanr）统计表格中看出，各项指标都相对比较好。
+bin_woe_map = sp_bins_woe["woe"]
+ft.seriers_change_index(bin_woe_map, sp_bins_woe["bin_index"])
+tmp_train_credit["credit_score_woe"] = bt.woe_mapping_simple(tmp_train_credit, "credit_score", "target", bin_list, bin_woe_map)
+'''
+
+
+
+
+
+
+
 
