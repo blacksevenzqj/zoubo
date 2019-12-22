@@ -25,6 +25,11 @@ def set_file_path(path):
     os.chdir(path)
 
 
+def print_path():
+    import os
+    print(os.path.abspath(os.curdir))  # 当前路径
+
+
 # 读入数据源
 # https://www.cnblogs.com/datablog/p/6127000.html
 '''
@@ -43,27 +48,34 @@ NAN、na
 但不会影响 整个字段Seriers类型，以及其余元素类型。
 ===================================================================
 2、日期类型 导入：
-Excel的 时间字段 单元格格式 为 日期格式 或 自定义日期格式。
-2.1、使用parse_dates=['auth_time']方式指定日期字段，且导入日期数据必须为 字符串时间类型。不能使用dtype={"auth_time":datetime.datetime或pd.Timestamp}方式（无效）。
-2.1.1、自动转换为pd.lib.NaT 的输入字符串：
+2.1、Excel的 时间字段 单元格格式 为 日期格式 或 自定义日期格式。
+2.1.1、使用parse_dates=['auth_time']方式指定日期字段，且导入日期数据必须为 字符串时间类型。不能使用dtype={"auth_time":datetime.datetime或pd.Timestamp}方式（无效）。
+2.1.1.1、自动转换为pd.lib.NaT 的输入字符串：
 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT
 则整个 字段Seriers类型 为datetime64[ns]； 日期元素类型为<class 'pandas._libs.tslib.Timestamp'>；
 其中的 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>也就是pd.lib.NaT。
 只能使用 元素 is pd.lib.NaT 来判断； 不能使用 元素 is np.nan 来判断（pd.lib.NaT 与 np.nan 不是同一个类型）
 注意：能使用 DataFrame.isnull().sum() 检测。
 
-2.1.2、如果 输入中包含 非日期格式字符串：（PD转换日期失败）
+2.1.1.2、如果 输入中包含 非日期格式字符串：（PD转换日期失败）
 na
 其相关元素类型为<class 'str'>；
 则整个 字段Seriers类型 变为object，所有元素类型为str，其中包括：
-“2.1.1”中的 NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为str
+“2.1.1.1”中的 NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为str
 其中输入 NA、null、NULL 自动转换为 nan字符串（全部元素类型为str，没有np.nan）
 -------------------------------------------------------------------
-2.2、直接导入，不指定日期字段
+2.1.2、直接导入，不指定日期字段
 则按照 “1、字符串类型 导入” 中情况进行导入。 例如，Excel中 时间字段 输入
 单元格格式 为 日期格式： 9/27/2016  转换为→  2017-06-10<class 'str'>
 单元格格式 为 自定义日期格式： 4/15/2017  9:21:18 AM  转换为→  2017-04-15 09:21:18<class 'str'>
 都转换为了 时间格式字符串（str类型）。其余的np.nan问题都遵循 “1、字符串类型 导入” 中的情况。
+*******************************************************************
+2.2、Excel的 时间字段 单元格格式 为 常规。
+2.2.1、使用parse_dates=['auth_time']方式指定日期字段。。。未知
+-------------------------------------------------------------------
+2.2.2、直接导入，不指定日期字段： 按照 “3、数字类型 导入” 的规则进行导入
+如果Execl中值为20160712，则导入后转换为 <class 'numpy.int64'>类型 20160712
+如果Execl中值为20160217.0，则导入后转换为 <class 'numpy.float64'>类型 20160217.0
 ===================================================================
 3、数字类型 导入：
 3.1、dtype = {"tail_num":np.float64} 以 np.float64 数据格式导入（默认），才能接受 “空表示字符串”
@@ -97,6 +109,14 @@ def readFile_inputData(train_name=None, test_name=None, index_col=None, dtype=No
         return train, test
     else:
         return train
+
+
+# 没有表头的导入方式：
+# tags = ft.readFile_inputData_no_header('tags.csv', ["uid", "mid", "tag", "timestamp"])
+def readFile_inputData_no_header(path, names):
+    if type(names) != list:
+        raise Exception('names Type is Error, must list')
+    return pd.read_csv(path, header=None, names=names)
 
 
 # 保存数据
@@ -225,13 +245,17 @@ def set_classif_col(df, feature_name, val_type=1):
         df[feature_name] = df[feature_name].apply(lambda x: astype_customize(x, temp_type))
 
 
-# 统计类别数量： （区分特征） 主要为DataFrame
+# 统计类别数量： （区分特征） 主要为DataFrame（当为DataFrame时才能使用axis关键字）
 def category_quantity_statistics(df, features, axis=0, dropna=True):
-    return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不在计数中包含np.nan。
+    if type(features) is list:
+        return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不在计数中包含np.nan。
+    else:
+        return df[features].nunique(dropna=dropna)
 
 
 # 统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
 def category_quantity_statistics_all(df, features, return_counts=True):
+    # unique_label：非重复值集合列表； counts_label：每个非重复值的数量
     unique_label, counts_label = np.unique(df[features], return_counts=return_counts)
     return unique_label, counts_label
 
@@ -250,6 +274,9 @@ def category_quantity_statistics_all(df, features, return_counts=True):
 • 另外每个有缺失值的变量生成一个指示哑变量，参与后续的建模（填补后的变量 和 缺失值指示变量 同时进模型，让模型来选择取舍）
 3、缺失值在大于80%
 • 每个有缺失值的变量生成一个指示哑变量，参与后续的建模，原始变量不使用。
+
+被除数为0， 除数为0： float64数据类型的 商 为numpy.float64类型nan。
+被除数非0， 除数为0： float64数据类型的 商 为inf正无穷。 所以除数字段的缺失值在相除计算之后，再填充。
 '''
 
 
@@ -425,15 +452,24 @@ def missValue_group_fillna(df, nan_col, group_col, val_type=1):
 
 # 空单元格读取进来 是 np.nan
 # 缺失值填充0/1值
-def missValue_map_fillzo(df, nan_col, nan_type=1):
+def missValue_map_fillzo(df, nan_col, nan_type=1, null_val=0, non_null_val=1):
     from math import isnan
 
-    if nan_type == 1:
-        f = lambda x: 0 if x is np.nan else 1
-    elif nan_type == 2:
-        f = lambda x: 0 if x is pd.lib.NaT else 1
-    else:
-        f = lambda x: 0 if isnan(x) else 1
+    if nan_type == 1:  # str
+        if non_null_val is None:
+            f = lambda x: null_val if x is np.nan else x
+        else:
+            f = lambda x: null_val if x is np.nan else non_null_val
+    elif nan_type == 2:  # 日期
+        if non_null_val is None:
+            f = lambda x: null_val if x is pd.lib.NaT else x
+        else:
+            f = lambda x: null_val if x is pd.lib.NaT else non_null_val
+    else:  # 浮点数
+        if non_null_val is None:
+            f = lambda x: null_val if isnan(x) else x
+        else:
+            f = lambda x: null_val if isnan(x) else non_null_val
     return df[nan_col].map(f)  # 缺0有1
 
 
@@ -454,19 +490,29 @@ def missValue_map_conversion(df, nan_col, type_d=1):
 
 # 缺失值 datatime
 # 两种数据类型： 1、字符串时间格式； 2、时间戳
-def missValue_datatime(df, col):
+def missValue_datatime(df, col, str_format="%Y-%m-%d %H:%M:%S"):
+    from math import isnan
     # datetime.datetime.strptime 字符串 转 datetime
     # datetime.datetime.utcfromtimestamp 时间戳 转 datetime
     #  + datetime.timedelta(hours = 8) 向后推8小时
     # 将 np.nan<float> 转换为 numpy.float64类型nan： 低位转高位，转换有效。
-    # 且 貌似使用 np.nan<float> 转换为 numpy.float64类型nan 时，使用datetime.datetime的转换 会自动转换为 pd.Timestamp。
+    # 且 使用 np.nan<float> 转换为 numpy.float64类型nan 时，使用datetime.datetime的转换 会自动转换为 pd.Timestamp。
+    # 且 只要有值转换为 pd.lib.NaT，使用datetime.datetime的转换 会自动转换为 pd.Timestamp。
     return df[col] \
-        .map(lambda x: pd.lib.NaT if (x is np.nan or str(x) == '0' or str(x) == 'na' or str(x) == 'NAN')
-    else (datetime.datetime.strptime(str(x), '%Y-%m-%d %H:%M:%S') if ':' in str(
+        .map(lambda x: pd.lib.NaT if (x is np.nan or isnan(x) or str(x) == '0' or str(x) == 'na' or str(x) == 'NAN')
+    else (datetime.datetime.strptime(str(x), str_format) if ':' in str(
         x)  # 如果是 包含: 的字符串时间格式，则转换为datetime格式。 否则是数字的时间戳，也转换为datetime格式。
     # 使用utcfromtimestamp + timedelta的意义在于 避开系统本地时间的干扰，都可以准确转换到 东八区时间。
     else (datetime.datetime.utcfromtimestamp(int(str(x)[0:10])) + datetime.timedelta(hours=8))
     )
+             )
+
+
+def missValue_datatime_simple(df, col, str_format="%Y%m%d"):
+    from math import isnan
+    return df[col] \
+        .map(lambda x: pd.lib.NaT if (x is np.nan or isnan(x) or str(x) == '0' or str(x) == 'na' or str(x) == 'NAN')
+    else (datetime.datetime.strptime(str(x)[0:8], str_format))
              )
 
 
@@ -480,10 +526,10 @@ def missValue_datatime_match(df, col):
 # In[:]
 # 重复值处理（按行统计）
 def duplicate_value(data, subset=None, keep='first', inplace=False):
-    if type(subset) is not list:
-        raise Exception('subset Type is Error')
-    elif len(subset) < 2:
-        raise Exception('subset size must lager than 2')
+    #    if type(subset) is not list:
+    #        raise Exception('subset Type is Error')
+    #    elif len(subset) < 2:
+    #        raise Exception('subset size must lager than 2')
 
     # 去除重复项 后 长度
     nodup = data[-data.duplicated(subset=None, keep=keep)]
@@ -696,6 +742,7 @@ def category_manual_coding(data, maps):
 # In[]:
 # ================================数据分布==============================
 # In[]:
+# --------------------------------分类模型------------------------------
 # 分类模型 连续特征 数据分布（直方图、盒须图）： （不能有缺失值）
 # f, axes = plt.subplots(2,2, figsize=(20, 18))
 def class_data_distribution(data, feature, label, axes):
@@ -719,32 +766,71 @@ def class_data_distribution(data, feature, label, axes):
     axes[1][1].set_ylabel('')
 
 
-# 计算盒须图区间：
-def box_whisker_diagram_Interval(df):
-    if type(df) is not pd.Series:
-        raise Exception('df Type is Error, must Series')
+# 分类模型 2个连续特征的散点分布（因变量Y作为颜色区分）：
+def class_data_scatter(x_data, one_f_name, two_f_name, y_data, axes):
+    axes.scatter(x_data.loc[:, one_f_name], x_data.loc[:, two_f_name], c=y_data, s=10, cmap="rainbow")  # 蓝色
+    axes.set_xlabel(one_f_name)  # x轴标签
+    axes.set_ylabel(two_f_name)  # y轴标签
 
-    max_val = np.max(df)
-    min_val = np.min(df)
-    #    mean_val = np.mean(df)
-    iqr = df.quantile(0.75) - df.quantile(0.25)
-    twenty_five_percent = df.quantile(0.25)
-    five_percent = df.quantile(0.50)
-    seventy_five_percent = df.quantile(0.75)
-    upper_point = df.quantile(0.75) + 1.5 * iqr
-    down_point = df.quantile(0.25) - 1.5 * iqr
+
+# 分类模型 连续特征 与 因变量Y 散点图： （类似于 盒须图）
+def class_data_with_y_scatter(data, feature_name, y_name):
+    import matplotlib as mpl
+    mpl.rcParams['font.sans-serif'] = 'SimHei'
+    mpl.rcParams['axes.unicode_minus'] = False
+    # https://blog.csdn.net/weixin_42398658/article/details/82960379
+    sns.FacetGrid(data, hue=y_name, size=5).map(plt.scatter, feature_name, y_name).add_legend()
+
+
+# --------------------------------连续模型------------------------------
+# 连续模型 连续特征 与 Y 散点分布：
+'''
+方差齐次性： 测试两个特征的均方差的最佳方法是图形方式。 
+通过圆锥（在图形的一侧较小的色散，在相反侧的较大色散）或菱形（在分布中心的大量点）来表示偏离均等色散的形状。
+'''
+
+
+# 例子： Pedro_Marcelino.py
+def con_data_scatter(x_data, featur_name, y_data, y_name):
+    f, axes = plt.subplots(2, 1, figsize=(15, 15))
+
+    axes[0].scatter(x_data[featur_name], y_data[y_name], c='#0000FF', s=10, cmap="rainbow")  # 蓝色
+    axes[0].set_xlabel(featur_name)  # x轴标签
+    axes[0].set_ylabel(y_name)  # y轴标签
+
+    sns.regplot(x_data[featur_name], y_data[y_name], ax=axes[1])
+
+
+# 特征多类别 四分位图：
+# 连续模型 分类特征 与 连续因变量Y 四分位图
+# 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐特征类别递增，斯皮尔曼相关系数很高，分类特征 对 连续因变量Y 有用
+# 例子： Pedro_Marcelino.py
+def box_diagram(data, x_axis_name, y_axis_name, axes, ymin=None, ymax=None):
+    if ymin is not None and ymax is not None:
+        axes.axis(ymin=ymin, ymax=ymax)
+    sns.boxplot(x=x_axis_name, y=y_axis_name, data=data, ax=axes)
+
+
+# --------------------------------复用------------------------------
+# 连续特征 计算盒须图 区间：
+def box_whisker_diagram_Interval(series):
+    if type(series) is not pd.Series:
+        raise Exception('series Type is Error, must Series')
+
+    max_val = np.max(series)
+    min_val = np.min(series)
+    #    mean_val = np.mean(series)
+    iqr = series.quantile(0.75) - series.quantile(0.25)
+    twenty_five_percent = series.quantile(0.25)
+    five_percent = series.quantile(0.50)
+    seventy_five_percent = series.quantile(0.75)
+    upper_point = series.quantile(0.75) + 1.5 * iqr
+    down_point = series.quantile(0.25) - 1.5 * iqr
     val_list = [min_val, down_point, twenty_five_percent, five_percent, seventy_five_percent, upper_point, max_val]
     return val_list
 
 
-# 分类模型 连续特征 2个特征之间 散点分布：
-def class_data_scatter(x_data, one_f, two_f, y, axes):
-    axes.scatter(x_data[:, one_f], x_data[:, two_f], c=y, s=10, cmap="rainbow")  # 蓝色
-    axes.set_xlabel(one_f)  # x轴标签
-    axes.set_ylabel(two_f)  # y轴标签
-
-
-# 连续/分类模型 连续 特征/因变量 直方图分布： （不能有缺失值）
+# 连续/分类模型 连续 特征/因变量 直方图分布、盒须图： （不能有缺失值）
 '''
 笔记：“5.2、数据清洗”
 5.2.3.1、单变量离群值的发现：
@@ -807,31 +893,21 @@ def con_data_distribution(data, feature, axes):
     axes[1].set_ylabel('')
 
 
-# 连续模型 连续特征 与 Y 散点分布：
-'''
-方差齐次性： 测试两个特征的均方差的最佳方法是图形方式。 
-通过圆锥（在图形的一侧较小的色散，在相反侧的较大色散）或菱形（在分布中心的大量点）来表示偏离均等色散的形状。
-'''
+# 多特征线性关系图：
+# 是 函数class_data_scatter 和 class_data_with_y_scatter的综合
+def multi_feature_linear_diagram(data, y_name, size=2):
+    sns.pairplot(data, hue=y_name, size=size)
 
 
-# 例子： Serigne.py
-def con_data_scatter(x_data, i, y, j):
-    f, axes = plt.subplots(2, 1, figsize=(15, 15))
+# 分类特征 与 连续特征 柱状图（这里只是个示例，使用时重新写）
+def barplot(axis_x, axis_y, p=sns.color_palette(), xlabel=u'用户职业', ylabel=u'逾期用户比例', label='train'):
+    fig = plt.figure(figsize=(20, 20))
 
-    axes[0].scatter(x_data[i], y[j], c='#0000FF', s=10, cmap="rainbow")  # 蓝色
-    axes[0].set_xlabel(i)  # x轴标签
-    axes[0].set_ylabel(j)  # y轴标签
-
-    sns.regplot(x_data[i], y[j], ax=axes[1])
-
-
-# 连续模型 分类特征 与 连续因变量Y 四分位图：
-# 分类模型 连续特征 与 分类因变量Y 四分位图：
-# 可以作为 斯皮尔曼相关系数 辅助可视化分析： 分类特征 对 连续因变量Y 有用； 连续特征 对 分类因变量Y 有用。
-def box_diagram(data, x_axis_name, y_axis_name, axes, ymin=None, ymax=None):
-    if ymin is not None and ymax is not None:
-        axes.axis(ymin=ymin, ymax=ymax)
-    sns.boxplot(x=x_axis_name, y=y_axis_name, data=data, ax=axes)
+    ax1 = fig.add_subplot(3, 2, 1)
+    ax1 = sns.barplot(axis_x, axis_y, alpha=0.8, color=p[0], label=label)
+    ax1.legend()
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(ylabel)
 
 
 # In[]:
