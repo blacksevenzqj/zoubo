@@ -8,6 +8,7 @@ Created on Wed Nov 27 13:09:12 2019
 import pandas as pd
 import time;
 import datetime
+import timeit
 import sys
 import re
 import numpy as np
@@ -122,6 +123,10 @@ print(time1, type(time1))
 
 test2 = pd.to_datetime(str1)
 print(test2, type(test2))
+
+# 1.1.1、数字 → PD时间格式
+print(pd.Timestamp(2016, 6, 30))
+
 # In[]:
 # 1.2、str → PD时间格式（使用匹配格式化字符串）
 # 时间字符串转成时间格式时： 匹配格式化字符串 需要与 时间字符串 格式相同
@@ -223,6 +228,12 @@ df3 = df1.dt.to_period('D')  # 日
 print(df3, df3.dtypes)
 
 # In[]:
+# 函数执行时间：
+time_start = timeit.default_timer()
+time_end = timeit.default_timer()
+print(time_end - time_start)
+
+# In[]:
 # ===================================异常处理=================================
 # In[]:
 min_day = "0001-01-01"  # datetime允许最小日期
@@ -316,6 +327,25 @@ time2 = datetime.datetime.strptime("2019-11-28 18:19:59", '%Y-%m-%d %H:%M:%S')
 print(time2, type(time2))
 
 print(time1 == time2, time1 - time2)
+
+# In[]:
+# ==================================时间大小比较=================================
+# In[]:
+# 使用 Timestamp 与 字符串时间格式 直接比较选择数据
+# 使用 Series.isnull()找到 pd.lib.NaT <class 'pandas._libs.tslib.NaTType'> 数据
+# off_train[((off_train.date>='20160315')&(off_train.date<='20160630'))|((off_train["date"].isnull())&(off_train.date_received>='20160315')&(off_train.date_received<='20160630'))]
+
+'''
+将分组之后的多个Timestamp 拼接成字符串
+t2 = t2.groupby(['user_id','coupon_id'], as_index=False)['date_received'].agg(lambda x:':'.join(x))
+print(t2["date_received"].dtypes, type(t2.loc[6,"date_received"])) # object， 已经不是Timestamp
+t2['receive_number'] = t2.date_received.apply(lambda s:len(s.split(':'))) # 分组中有几个值
+
+max()函数求 Timestamp 的最大值
+t2['max_date_received'] = t2.date_received.apply(lambda s:max([pd.Timestamp(d) for d in s.split(':')]))
+t2['min_date_received'] = t2.date_received.apply(lambda s:min([pd.Timestamp(d) for d in s.split(':')]))
+'''
+
 
 
 

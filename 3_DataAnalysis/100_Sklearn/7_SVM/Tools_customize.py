@@ -77,14 +77,16 @@ def groupby_agg(data, group_cols, aggs, as_index=True):  # group_keys在普通gr
     # 例子： aggs = {'3_total_fee' : [np.min, np.max, np.mean, np.sum], '4_total_fee' : np.sum}
     # aggs中必须是 DataFrame中存在的、 待统计的特征。
     data_group = data.groupby(group_cols, as_index=as_index).agg(aggs)
+    # '_'.join(col).strip()连接列名： ('item_id', '') 和 ('rating', 'mean') 得到： item_id_, rating_mean
     data_group.columns = ['_'.join(col).strip() for col in data_group.columns.values]
     return data_group
 
 
 # statistical_col统计特征为单个特征（速度近10倍于groupby_apply）
 '''
-agg = {'bankcard_count':lambda x:len(set(x)), 'bank_phone_num':lambda x:x.nunique()}
-agg = {'sum':np.sum,"mean":np.mean,"len":len}
+agg = {'bankcard_count':lambda x:len(set(x)), 'bank_phone_num':lambda x:x.nunique(), '放款前账单金额为负数':lambda x:x.where(x<0).count(), 'rating_mean':lambda x:x.count() if x.count() == 2 else 0}
+agg = lambda x:':'.join(x) 将分组之后的多个统计值 拼接成字符串
+agg = {'sum':np.sum, "mean":np.mean, "len":len}  注意：不要写成 aggs = {'rating_mean' : [np.mean, np.sum]} 列名是混乱的
 data_group = tc.groupby_agg_oneCol(data, ["1_total_fee", "2_total_fee"], "3_total_fee", agg)
 '''
 
@@ -164,6 +166,7 @@ def groupby_apply_sort(data, group_cols, sort_cols, ascendings, group_keys=False
         lambda x: x.sort_values(by=sort_cols, ascending=ascendings))
 
 
+# tmp3 = tmp.groupby(["user_id"], group_keys=False).apply(lambda x: x["rating"].count() if x["rating"].count() == 2 else 0)
 # tc.groupby_apply_count(train_order, ["id"], 'type_pay', '在线支付', 'type_pay_zaixian')
 def groupby_apply_conditionCount(data, group_cols, statistics_col, condition, reset_index_name, group_keys=False,
                                  inplace=False):
@@ -176,7 +179,8 @@ def groupby_apply_conditionCount(data, group_cols, statistics_col, condition, re
                                                                                          name=reset_index_name)
 
 
-# tc.groupby_apply_nunique(train_recieve, ["id"], ["fix_phone"])
+# Series.nunique()返回去重后数量； np.unique(Series).size返回去重后数量；
+# unique_label, counts_label = np.unique(Series, return_counts=return_counts)
 def groupby_apply_nunique(data, group_cols, statistics_cols, group_keys=False):
     if type(group_cols) != list:
         raise Exception('group_cols Type is Error, must list')
@@ -188,6 +192,7 @@ def groupby_apply_nunique(data, group_cols, statistics_cols, group_keys=False):
 
 # 特殊例子
 '''
+1、
 def special_groupby_example(data):
     kkk = data[0:10].groupby(["1_total_fee", "2_total_fee"])[["3_total_fee","4_total_fee"]]
 
@@ -205,6 +210,9 @@ def special_groupby_example(data):
 
     kkk.columns = ['_'.join(col).strip() for col in kkk.columns.values]
     print(kkk)
+
+
+2、同一个用户 同一种优惠卷 中 优惠券自身 离其他同一种优惠卷 收货时间 的差值（代码在：extract_feature.py）
 '''
 
 
@@ -220,6 +228,62 @@ def pivot_table_statistical(df, statistical_cols, index=None, columns=None, aggf
 # 交叉表(crossTab)： 相当于 df.groupby([col1, col2])[X].count() 展开显示
 def crossTab_statistical(df, col1, col2, margins=True):
     return pd.crosstab(df[col1], df[col2], margins=margins)
+
+
+# In[]:
+'''
+# 四、单apply
+t2['receive_number'] = t2.date_received.apply(lambda s:len(s.split(':')))
+t2['max_date_received'] = t2.date_received.apply(lambda s:max([pd.Timestamp(d) for d in s.split(':')]))
+'''
+
+# In[]:
+'''
+五、单map
+error_list1 = ["后", "null", "?", "？"]
+# 找索引
+for i in error_list1:
+    a = train_user1[train_user1['birthday'].map(lambda x: i in str(x))]["birthday"].index.tolist()
+    train_user1.loc[a, 'birthday'] = pd.lib.NaT
+# 直接赋值
+for i in error_list1:
+    train_user1['birthday'] = train_user1['birthday'].map(lambda x: pd.lib.NaT if i in str(x) else x)
+
+# In[]:
+# re.match 返回 匹配对象 或 None
+re_list = ["^(19|20)\d{2}-\d{1,2}-0", "^0-", "^-", "^(19|20)\d{2}-\d{1,2}-$"]
+# 1、找索引
+for i in re_list:
+    a = train_user1[train_user1['birthday'].map(lambda x: re.match(i, str(x)) != None)]["birthday"].index.tolist()
+    train_user1.loc[a, 'birthday'] = pd.lib.NaT
+# 2、直接赋值
+for i in re_list:
+    train_user1['birthday'] = train_user1['birthday'].map(lambda x: pd.lib.NaT if (re.match(i, str(x))) else x)
+'''
+
+
+# In[]:
+# 字典排序
+def dict_sorted(dict_data, position=1, reverse=True):
+    import operator
+    if type(dict_data) is not dict:
+        raise Exception('dict_data Type is Error, must dict')
+    return sorted(dict_data.items(), key=operator.itemgetter(position), reverse=reverse)
+
+
+# 列表（元组元素）排序
+def list_tuple_sorted(list_data, position=1, reverse=True):
+    if type(list_data) is not list:
+        raise Exception('list_data Type is Error, must list')
+    return sorted(list_data, key=lambda element: element[position], reverse=reverse)
+
+
+
+
+
+
+
+
 
 
 

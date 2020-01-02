@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy
 import datetime
+import os
 from time import time
 import Tools_customize as tc
 
@@ -99,13 +100,16 @@ NAN、na
 '''
 
 
-def readFile_inputData(train_name=None, test_name=None, index_col=None, dtype=None, parse_dates=None, encoding="UTF-8"):
+def readFile_inputData(train_name=None, test_name=None, index_col=None, dtype=None, parse_dates=None, encoding="UTF-8",
+                       sep=','):
     if parse_dates is not None and type(parse_dates) != list:
         raise Exception('parse_dates Type is Error, must list')
     if train_name is not None:
-        train = pd.read_csv(train_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding)
+        train = pd.read_csv(train_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding,
+                            sep=sep)
     if test_name is not None:
-        test = pd.read_csv(test_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding)
+        test = pd.read_csv(test_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding,
+                           sep=sep)
         return train, test
     else:
         return train
@@ -113,15 +117,41 @@ def readFile_inputData(train_name=None, test_name=None, index_col=None, dtype=No
 
 # 没有表头的导入方式：
 # tags = ft.readFile_inputData_no_header('tags.csv', ["uid", "mid", "tag", "timestamp"])
-def readFile_inputData_no_header(path, names):
+def readFile_inputData_no_header(path, names, encoding="UTF-8", sep=','):
     if type(names) != list:
         raise Exception('names Type is Error, must list')
-    return pd.read_csv(path, header=None, names=names)
+    return pd.read_csv(path, header=None, names=names, encoding=encoding, sep=sep)
 
 
 # 保存数据
 def writeFile_outData(data, path, encoding="UTF-8"):
     data.to_csv(path, encoding=encoding)
+
+
+# 原生读取.txt文件（只是个示例）
+# item_info = get_item_info('movies.txt') 需先调用set_file_path设置路径
+def get_item_info(input_file, split_char="::", title_num=None, encoding="UTF-8"):
+    if not os.path.exists(input_file):
+        return {}
+    item_info = {}
+    fp = open(input_file, encoding=encoding)
+    line_num = 0
+    for line in fp:
+        if (title_num is not None) and (line_num <= title_num):
+            line_num += 1
+            continue
+        item = line.strip().split(split_char)
+        if len(item) < 3:
+            continue
+        elif len(item) == 3:
+            itemId, title, genre = item[0], item[1], item[2]
+        else:
+            itemId = item[0]
+            genre = item[-1]
+            title = ",".join(item[1:-1])
+        item_info[itemId] = [title, genre]
+    fp.close
+    return item_info
 
 
 # 合并数据源（列向）
