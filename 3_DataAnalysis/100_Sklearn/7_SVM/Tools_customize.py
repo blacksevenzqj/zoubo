@@ -261,6 +261,15 @@ for i in re_list:
     train_user1['birthday'] = train_user1['birthday'].map(lambda x: pd.lib.NaT if (re.match(i, str(x))) else x)
 '''
 
+# In[]:
+'''
+六、列表展开式
+1、[x for x in zip(user_ids,item_ids)]
+user_ids、item_ids为Series长度需相等，组成列表（元素为元组）： [(15, 539), ..., (15, 73)]； x元素为元组。
+2、items = [x[1] for x in zip(user_ids,item_ids) if x[0]==user_id]
+if条件判断在 列表展开式 之后， 返回值在 列表展开式 之前。
+'''
+
 
 # In[]:
 # 字典排序
@@ -278,7 +287,14 @@ def list_tuple_sorted(list_data, position=1, reverse=True):
     return sorted(list_data, key=lambda element: element[position], reverse=reverse)
 
 
-
+'''
+kkk = {}
+kkk["a"] = {}
+kkk["a"]["aaa"] = 11
+kkk["b"] = {}
+kkk["b"]["bbb"] = 22
+{point:0 for point in kkk} # 迭代的是dict的key
+'''
 
 
 

@@ -7,7 +7,7 @@ Created on Wed Jan  1 09:53:24 2020
 
 import numpy as np
 import pandas as pd
-import os 
+import os
 import timeit
 
 import FeatureTools as ft
@@ -21,7 +21,10 @@ import Tools_customize as tc
 2、负样本以item的平均评分倒排序。
 3、以map为临时存储结构，速度较快。
 '''
-def native_get_train_data_pos_neg(input_file, score_dict, split_char="::", title_num=None, score_thr=4.0, encoding="UTF-8"):
+
+
+def native_get_train_data_pos_neg(input_file, score_dict, split_char="::", title_num=None, score_thr=4.0,
+                                  encoding="UTF-8"):
     if not os.path.exists(input_file):
         return {}
     neg_dict = {}
@@ -45,9 +48,9 @@ def native_get_train_data_pos_neg(input_file, score_dict, split_char="::", title
             pos_dict[userId].append((itemId, 1))
         else:
             score = score_dict.get(itemId, 0)
-            neg_dict[userId].append((itemId, score)) # 设置item的平均评分，后续做排序
+            neg_dict[userId].append((itemId, score))  # 设置item的平均评分，后续做排序
     fp.close
-    
+
     print(pos_dict["1"])
     print(neg_dict["1"])
     for userId in pos_dict:
@@ -63,8 +66,10 @@ def native_get_train_data_pos_neg(input_file, score_dict, split_char="::", title
             print(len(neg_dict[userId]))
             print(sorted_neg_list)
             print(len(sorted_neg_list))
-        
+
     return train_data
+
+
 # In[]:
 def get_train_data_pos_neg(rating_df, score_df):
     rating_df_tmp = rating_df.merge(score_df, left_on='item_id', right_on='item_id', how='left')
@@ -73,11 +78,11 @@ def get_train_data_pos_neg(rating_df, score_df):
     rating_df_tmp_neg = rating_df_tmp[rating_df_tmp["label"] == 0]
     rating_df_tmp_neg_sort = tc.groupby_apply_sort(rating_df_tmp_neg, ["user_id"], ["rating_mean"], [False], False)
     train_data_df = pd.DataFrame(columns=rating_df_tmp.columns)
-    
+
     tmp = rating_df_tmp.groupby(["user_id", "label"], as_index=False)["rating"].count()
     tmp1 = tmp.groupby(["user_id"], as_index=False)["rating"].count()
     user_id_tmp = tmp1[tmp1["rating"] == 2]
-    tmp2 = tmp.merge(user_id_tmp, left_on='user_id',right_on='user_id') 
+    tmp2 = tmp.merge(user_id_tmp, left_on='user_id', right_on='user_id')
     tmp3 = tmp2.groupby(["user_id"], as_index=False)["rating_x"].min()
     # 这里太耗时，只能寻找更快的方式
     time_start = timeit.default_timer()
@@ -87,14 +92,14 @@ def get_train_data_pos_neg(rating_df, score_df):
         temp2 = rating_df_tmp_neg_sort[rating_df_tmp_neg_sort["user_id"] == item.user_id][:item.rating_x]
         train_data_df = pd.concat([train_data_df, temp1, temp2])
     time_end = timeit.default_timer()
-    print(time_end - time_start) # 324.5745487
-    
+    print(time_end - time_start)  # 324.5745487
+
     # 检查抽样情况：
     tmp4 = train_data_df.groupby(["user_id", "label"], as_index=False)["rating"].count()
-    agg = {'rating_count1':lambda x:len(set(x)), 'rating_count2':lambda x:x.nunique()}
+    agg = {'rating_count1': lambda x: len(set(x)), 'rating_count2': lambda x: x.nunique()}
     tmp5 = tc.groupby_agg_oneCol(tmp4, ["user_id"], "rating", agg, as_index=False)
     print(tmp5[(tmp5["rating_count1"] > 1) | (tmp5["rating_count2"] > 1)])
-    
+
     return train_data_df
 
 
