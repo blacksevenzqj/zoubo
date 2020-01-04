@@ -73,12 +73,15 @@ dt = datetime.datetime(2015, 4, 19, 12, 20)
 print(dt, type(dt))
 
 # In[]:
-# 2.1、datetime → timestamp（秒）
+# 2.1、datetime → timestamp（秒，10位）
 df = datetime.datetime(2015, 4, 19, 12, 20).timestamp()
 print(df, type(df))
 # In[]:
-# 2.2、timestamp（秒） → datetime
-t = 1457829828
+# 2.2、timestamp（秒，10位） → datetime
+'''
+原来java的date默认精度是毫秒，也就是说生成的时间戳就是13位的，而像c++、php、python生成的时间戳默认就是10位的，因为其精度是秒。
+'''
+t = 1476086345
 print(datetime.datetime.fromtimestamp(t), type(datetime.datetime.fromtimestamp(t)))
 print(datetime.datetime.utcfromtimestamp(t), type(datetime.datetime.utcfromtimestamp(t)))
 # 使用utcfromtimestamp + timedelta的意义在于 避开系统本地时间的干扰，都可以准确转换到 东八区时间。
