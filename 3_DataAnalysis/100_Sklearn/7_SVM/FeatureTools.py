@@ -105,22 +105,35 @@ def readFile_inputData(train_name=None, test_name=None, index_col=None, dtype=No
     if parse_dates is not None and type(parse_dates) != list:
         raise Exception('parse_dates Type is Error, must list')
     if train_name is not None:
-        train = pd.read_csv(train_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding,
-                            sep=sep)
+        train = pd.read_csv(filepath_or_buffer=train_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates,
+                            encoding=encoding, sep=sep)
     if test_name is not None:
-        test = pd.read_csv(test_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates, encoding=encoding,
-                           sep=sep)
+        test = pd.read_csv(filepath_or_buffer=test_name, index_col=index_col, dtype=dtype, parse_dates=parse_dates,
+                           encoding=encoding, sep=sep)
         return train, test
     else:
         return train
 
 
+# 关于low_memory参数： pandas read_csv mixed types问题： https://www.jianshu.com/p/a70554726f26
+
+
 # 没有表头的导入方式：
-# tags = ft.readFile_inputData_no_header('tags.csv', ["uid", "mid", "tag", "timestamp"])
-def readFile_inputData_no_header(path, names, encoding="UTF-8", sep=','):
-    if type(names) != list:
+'''
+header=None： 文件中没有列名这一行，使用names指定的列名。
+header=0： 使用文件中的第0行作为列名。
+header=0与names共用：丢弃文件中的第0行，使用names指定的列名。 header=1与names共用：丢弃文件中的第0、1两行，使用names指定的列名。
+
+tags = ft.readFile_inputData_no_header('tags.csv', ["uid", "mid", "tag", "timestamp"])
+'''
+
+
+def readFile_inputData_no_header(path, names=None, header=None, index_col=None, dtype=None, na_values=None,
+                                 usecols=None, encoding="UTF-8", sep=','):
+    if names is not None and type(names) != list:
         raise Exception('names Type is Error, must list')
-    return pd.read_csv(path, header=None, names=names, encoding=encoding, sep=sep)
+    return pd.read_csv(filepath_or_buffer=path, names=names, header=header, index_col=index_col, dtype=dtype,
+                       na_values=na_values, usecols=usecols, encoding=encoding, sep=sep)
 
 
 # 保存数据
@@ -152,6 +165,39 @@ def get_item_info(input_file, split_char="::", title_num=None, encoding="UTF-8")
         item_info[itemId] = [title, genre]
     fp.close
     return item_info
+
+
+# 读取数据 转化为 二分图数据结构
+def get_graph_from_data(input_file, split_char="::", score_thr=3.0, title_num=None, encoding="UTF-8"):
+    '''
+    Args:
+        input_file: user item rating file
+    Return:
+        a dict: {UserA:{itemb:1, itemc:1}, itemb:{UserA:1}}
+    '''
+    if not os.path.exists(input_file):
+        return {}
+    graph = {}
+    fp = open(input_file, encoding=encoding)
+    line_num = 0
+    for line in fp:
+        if (title_num is not None) and (line_num <= title_num):
+            line_num += 1
+            continue
+        item = line.strip().split(split_char)
+        if len(item) < 3:
+            continue
+        userid, itemid, rating = item[0], "item_" + item[1], item[2]
+        if float(rating) < score_thr:
+            continue
+        if userid not in graph:
+            graph[userid] = {}  # 字典套字典
+        graph[userid][itemid] = 1
+        if itemid not in graph:
+            graph[itemid] = {}
+        graph[itemid][userid] = 1
+    fp.close
+    return graph
 
 
 # 合并数据源（列向）
@@ -199,6 +245,7 @@ def separation_data_row(all_data, ntrain, y_name=None):
         return train_X, test_X, train_y
 
 
+# 更改列名
 def seriers_change_colname(seriers, col_name):
     seriers.name = col_name
 
@@ -284,10 +331,15 @@ def category_quantity_statistics(df, features, axis=0, dropna=True):
 
 
 # 统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
-def category_quantity_statistics_all(df, features, return_counts=True):
+def category_quantity_statistics_all(df, features):
     # unique_label：非重复值集合列表； counts_label：每个非重复值的数量
-    unique_label, counts_label = np.unique(df[features], return_counts=return_counts)
-    return unique_label, counts_label
+    unique_label, counts_label = np.unique(df[features], return_counts=True)
+    unique_dict = {}
+    for i in range(len(unique_label)):
+        unique_dict[unique_label[i]] = counts_label[i]
+        print(unique_label[i], counts_label[i])
+    return unique_label, counts_label, unique_dict
+    # df[features].value_count().to_dict() 直接就是个dict
 
 
 # In[]:
@@ -616,8 +668,8 @@ def outlier_detection(X, feature, y, y_name):
     upper_point = X[feature].quantile(0.75) + 1.5 * iqr
     down_point = X[feature].quantile(0.25) - 1.5 * iqr
 
-    upper_more_index = X[X[feature] > upper_point].index
-    down_more_index = X[X[feature] < down_point].index
+    upper_more_index = X[X[feature] >= upper_point].index
+    down_more_index = X[X[feature] <= down_point].index
 
     #    print(X.iloc[upper_more_index].shape)
     #    print(y.iloc[upper_more_index].shape)
@@ -743,6 +795,27 @@ def category_getdummies(pre_combined, cat_cols=None, cat_threshold=0):
     return pre_combined
 
 
+# 分类变量去除空格
+# https://blog.csdn.net/lynxzong/article/details/90552470
+def category_remove_spaces(data, cat_cols=None, del_str=None):
+    if del_str is not None:
+        tmp_f = lambda x: x.strip().replace(del_str, '')  # lambda x : re.sub(",","",x.strip())
+    else:
+        tmp_f = lambda x: x.strip()
+
+    if type(data) is pd.core.frame.DataFrame:
+        if cat_cols is None:
+            cat_cols = data.select_dtypes(include=[np.object]).columns.tolist()
+        else:
+            if type(cat_cols) is not list:
+                raise Exception('cat_cols Type is Error, must list')
+        data[cat_cols] = data[cat_cols].applymap(tmp_f)
+    elif type(data) is pd.core.series.Series:
+        return data.map(tmp_f)
+    else:
+        raise Exception('data Type is Error')
+
+
 # 分类变量手动编码
 def category_manual_coding(data, maps):
     if type(maps) is not dict:
@@ -763,6 +836,43 @@ def category_manual_coding(data, maps):
         return data.map(maps)
     else:
         raise Exception('data Type is Error')
+
+
+# 分类变量手动编码： 按分类变量的 每个类别的样本数量来设置离散值的前后顺序，再自定义one-hot编码字符串
+def category_customize_coding(train_data, test_data, features=None):
+    from sklearn.preprocessing import LabelEncoder
+
+    # 以train训练集的类别为基准
+    if features is None:
+        features = train_data.select_dtypes(include=[np.object]).columns.tolist()
+    if type(features) is not list:
+        raise Exception('features Type is Error, must list')
+
+    for feature in features:
+        _, _, unique_dict = category_quantity_statistics_all(train_data, feature)
+        if len(unique_dict) == 1:
+            continue
+        elif len(unique_dict) == 2:
+            lbl = LabelEncoder()
+            train_data[feature] = lbl.fit_transform(list(train_data[feature].values))
+            test_data[feature] = lbl.fit_transform(list(test_data[feature].values))
+        else:
+            output_dict = {}
+            tmp_index = 0
+            for zuhe in tc.dict_sorted(unique_dict):
+                output_dict[zuhe[0]] = tmp_index
+                tmp_index += 1
+
+            train_data[feature] = train_data[feature].apply(customize_one_hot, args=(output_dict,))
+            test_data[feature] = test_data[feature].apply(customize_one_hot, args=(output_dict,))
+
+
+def customize_one_hot(x, feature_dict):
+    output_list = [0] * len(feature_dict)
+    if x in feature_dict:  # else: 如果 test数据集中 没有 train数据集中的类别，就全部置为0。
+        index = feature_dict[x]
+        output_list[index] = 1
+    return ",".join([str(ele) for ele in output_list])
 
 
 # In[]:
@@ -918,7 +1028,24 @@ def con_data_distribution(data, feature, axes):
     axes[0].set_title('feature: ' + str(feature))
     axes[0].set_xlabel('')
 
+    # 盒须图
     sns.boxplot(y=feature, data=data, ax=axes[1])
+    iqr = data[feature].quantile(0.75) - data[feature].quantile(0.25)
+    # 利用 众数 减去 中位数 的差值  除以  四分位距来 查找是否有可能存在异常值
+    temp_outlier = abs((data[feature].mode().iloc[0,] - data[feature].median()) / iqr)
+    print(temp_outlier)
+
+    upper_point = data[feature].quantile(0.75) + 1.5 * iqr
+    down_point = data[feature].quantile(0.25) - 1.5 * iqr
+    upper_more = data[data[feature] >= upper_point]
+    down_more = data[data[feature] <= down_point]
+    #    print(len(upper_more))
+    #    print(len(down_more))
+
+    if len(upper_more) != 0:
+        axes[1].plot((-1, 1), (upper_point, upper_point), c='r', lw=1.5, ls='--', alpha=0.3)  # 99%
+    elif len(down_more) != 0:
+        axes[1].plot((-1, 1), (down_point, down_point), c='b', lw=1.5, ls='--', alpha=0.3)  # 99%
     axes[1].set_title('feature: ' + str(feature))
     axes[1].set_ylabel('')
 

@@ -61,6 +61,13 @@ def set_union(seriers1, seriers2, reverse=False):
 # https://www.jianshu.com/p/42f1d2909bb6
 # https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
 
+# groupby() 之后直接 sum()： 得到分组后数据矩阵
+def groupby_sum(data, group_cols, as_index=True):
+    if type(group_cols) != list:
+        raise Exception('group_cols Type is Error, must list')
+    return data.groupby(group_cols, as_index=as_index).sum().reset_index()  # 需重置索引： 因是完整的数据
+
+
 # 1、传统groupby（不会统计 np.nan）
 '''
 aggs = {'3_total_fee' : [np.min, np.max, np.mean, np.sum], '4_total_fee' : np.sum}
@@ -235,6 +242,34 @@ def crossTab_statistical(df, col1, col2, margins=True):
 # 四、单apply
 t2['receive_number'] = t2.date_received.apply(lambda s:len(s.split(':')))
 t2['max_date_received'] = t2.date_received.apply(lambda s:max([pd.Timestamp(d) for d in s.split(':')]))
+
+# 细看：
+def testr(x, feature_dict):
+    output_list = [0] * len(feature_dict)
+    if x in feature_dict:
+        index = feature_dict[x]
+        output_list[index] = 1
+    return ",".join([str(ele) for ele in output_list])
+
+# 1、apply用在Series上，元素级别的操作：传入的是元素，使用args关键字
+test_data["workclass"].apply(testr, args=(output_dict,))
+# 2、apply用在Series上，元素级别的操作：传入的是元素，传统调用方式
+test_data["workclass"].apply(lambda x : testr(x, output_dict))
+# 3、map用在Series上，元素级别的操作：传入的是元素，传统调用方式
+test_data["workclass"].map(lambda x : testr(x, output_dict))
+
+# 4、apply用在DataFrame上，Series级别的操作：使用x["workclass"]传入的是元素，传统调用方式
+test_data.apply(lambda x : testr(x["workclass"], output_dict), axis=1)
+
+# 5、apply用在DataFrame上，Series级别的操作：传入的是一行数据，使用args关键字
+def testr2(x, feature_dict):
+    output_list = [0] * len(feature_dict)
+    print(x) # 一行数据
+    if x["workclass"] in feature_dict:
+        index = feature_dict[x["workclass"]]
+        output_list[index] = 1
+    return ",".join([str(ele) for ele in output_list])
+test_data.apply(testr2, args=(output_dict,), axis=1) # 列向： 传入一行数据
 '''
 
 # In[]:
@@ -263,11 +298,16 @@ for i in re_list:
 
 # In[]:
 '''
-六、列表展开式
-1、[x for x in zip(user_ids,item_ids)]
+六、列表：
+1、列表展开式
+1.1、[x for x in zip(user_ids,item_ids)]
 user_ids、item_ids为Series长度需相等，组成列表（元素为元组）： [(15, 539), ..., (15, 73)]； x元素为元组。
-2、items = [x[1] for x in zip(user_ids,item_ids) if x[0]==user_id]
+1.2、items = [x[1] for x in zip(user_ids,item_ids) if x[0]==user_id]
 if条件判断在 列表展开式 之后， 返回值在 列表展开式 之前。
+
+2、列表降维：
+网址： https://segmentfault.com/a/1190000018903731
+sum(recom_result["1"][cate], [])
 '''
 
 
