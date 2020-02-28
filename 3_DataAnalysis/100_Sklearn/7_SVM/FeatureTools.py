@@ -270,13 +270,13 @@ def recovery_index(data_list):
 
 
 # 排序
-def data_sort(data, sort_cols, ascendings):
+def data_sort(data, sort_cols, ascendings, inplace=False):
     if type(sort_cols) != list:
         raise Exception('sort_cols Type is Error, must list')
     elif type(ascendings) != list:
         raise Exception('ascendings Type is Error, must list')
 
-    return data.sort_values(by=sort_cols, ascending=ascendings)
+    return data.sort_values(by=sort_cols, ascending=ascendings, inplace=inplace)
 
 
 # 数据切分

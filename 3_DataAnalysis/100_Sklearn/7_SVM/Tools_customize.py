@@ -20,7 +20,7 @@ def merge_test():
     print(dataDf1)
     print(dataDf2)
 
-    # 内连接： 两DataFrame都必须有字段中的该类别
+    # 内连接： 两DataFrame都必须有字段中的该类别 （两者都必须为DataFrame）
     dataIn = dataDf1.merge(dataDf2, left_on='lkey', right_on='rkey')
 
     # 右连接： 以右边DataFrame字段为准
@@ -327,6 +327,13 @@ def list_tuple_sorted(list_data, position=1, reverse=True):
     return sorted(list_data, key=lambda element: element[position], reverse=reverse)
 
 
+# numpy.ndarray排序
+def ndarray_sort(data, axis=0):
+    if (type(data) != np.ndarray):
+        raise Exception('data Type is Error, must numpy.ndarray')
+    return np.sort(data, axis=axis)  # axis=0 按列跨行排序（行向： 每一行的元素进行排序）； axis=1 按行跨列排序（列向： 每一列的元素进行排序）
+
+
 '''
 kkk = {}
 kkk["a"] = {}
@@ -337,8 +344,13 @@ kkk["b"]["bbb"] = 22
 '''
 
 
-
-
+# In[]:
+# 笛卡尔积
+# product([0], sales.shop_id.unique(), sales.item_id.unique())
+def cartesian_product(data):
+    from itertools import product
+    # 每个入参类型都必须是iterable：可迭代集合
+    # return product([0], sales.shop_id.unique(), sales.item_id.unique())
 
 
 
