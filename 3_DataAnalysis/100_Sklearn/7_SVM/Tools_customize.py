@@ -61,7 +61,7 @@ def set_union(seriers1, seriers2, reverse=False):
 # https://www.jianshu.com/p/42f1d2909bb6
 # https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
 
-# groupby() 之后直接 sum()： 得到分组后数据矩阵
+# groupby() 之后直接 sum()： 得到分组后数据矩阵，可数据是非标准的DataFrame，必须进行reset_index()变为标准的DataFrame
 def groupby_sum(data, group_cols, as_index=True):
     if type(group_cols) != list:
         raise Exception('group_cols Type is Error, must list')
@@ -228,7 +228,7 @@ def special_groupby_example(data):
 # https://blog.csdn.net/bqw18744018044/article/details/80015840
 # index相当于分组key； margins总计
 def pivot_table_statistical(df, statistical_cols, index=None, columns=None, aggfunc='mean', margins=True):
-    #    pd.pivot_table(df, index=['产地','类别'], values=['价格', '数量'], aggfunc=np.mean) # values 相当于 statistical_cols 待统计字段
+    #    pd.pivot_table(df, index=['产地','类别'], values=['价格', '数量'], aggfunc=np.mean) # values 相当于 statistical_cols 待统计字段； index行名称； columns列名称
     return df.pivot_table(statistical_cols, index=index, columns=columns, aggfunc=aggfunc, margins=margins)
 
 
