@@ -43,6 +43,14 @@ def merge_test():
 #    pd.concat([age_cut_grouped_good, age_cut_grouped_bad], axis=1)
 
 
+# https://www.cnblogs.com/nxf-rabbit75/p/10475320.html
+def concat(objs):
+    # ignore_index： 默认False，当为True时： 1、合并之后重置索引； 2、如果遇到两张表的列字段本来就不一样，但又想将两个表合并，其中无效的值用nan来表示。那么可以使用ignore_index来实现。
+    # keys： 默认None，用来给合并后的表增加key来区分不同的表数据来源 （索引会多出一列 数据来源列）
+    return pd.concat(objs, axis=0, join='outer', join_axes=None, ignore_index=False, keys=None, levels=None, names=None,
+                     verify_integrity=False)
+
+
 # 集合去重合并为一维列表：
 # 列表排序： https://www.cnblogs.com/huchong/p/8296025.html
 def set_union(seriers1, seriers2, reverse=False):
@@ -346,11 +354,33 @@ kkk["b"]["bbb"] = 22
 
 # In[]:
 # 笛卡尔积
-# product([0], sales.shop_id.unique(), sales.item_id.unique())
+# product([0], sales.shop_id.unique(), sales.item_id.unique()) 代码在： 2_myLearn_simple2.ipynb
 def cartesian_product(data):
     from itertools import product
     # 每个入参类型都必须是iterable：可迭代集合
-    # return product([0], sales.shop_id.unique(), sales.item_id.unique())
+
+
+#    return product([0], sales.shop_id.unique(), sales.item_id.unique())
+
+
+# 限定矩阵值范围： DataFrame的方法
+def clip(data, lower=None, upper=None, axis=None):
+    aa = np.array([[0.335232, -1.256177],
+                   [-1.367855, 0.746646],
+                   [0.027753, -1.176076],
+                   [0.230930, -0.679613],
+                   [1.261967, 0.570967]
+                   ])
+
+    print(aa.clip(-1.0, 0.5))  # ndarrary可以使用，没有axis参数
+    df_temp = pd.DataFrame(aa)
+    df_temp
+    print(df_temp.clip(-1.0, 0.5, axis=0))  # 貌似都是一样的
+    print(df_temp.clip(-1.0, 0.5, axis=1))
+
+    return data.clip(lower=lower, upper=upper, axis=axis)
+
+
 
 
 
