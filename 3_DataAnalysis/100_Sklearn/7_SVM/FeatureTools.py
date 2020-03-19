@@ -331,9 +331,12 @@ def category_quantity_statistics(df, features, axis=0, dropna=True):
 
 
 # 统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
-def category_quantity_statistics_all(df, features):
+def category_quantity_statistics_all(df, features=None):
     # unique_label：非重复值集合列表； counts_label：每个非重复值的数量
-    unique_label, counts_label = np.unique(df[features], return_counts=True)
+    if features is None:
+        unique_label, counts_label = np.unique(df, return_counts=True)  # df是Seriers
+    else:
+        unique_label, counts_label = np.unique(df[features], return_counts=True)  # df是DataFrame
     unique_dict = {}
     for i in range(len(unique_label)):
         unique_dict[unique_label[i]] = counts_label[i]
@@ -703,8 +706,8 @@ def delete_outliers(X_Seriers, X_name, X_value, y_Seriers, y_name, y_value):
 # In[]:
 # 分类模型 数据类别 样本不均衡（训练集 与 测试集）
 def sample_category(ytest, ytrain):
-    train_unique_label, train_counts_label = category_quantity_statistics_all(ytrain, return_counts=True)
-    test_unique_label, test_counts_label = category_quantity_statistics_all(ytest, return_counts=True)
+    train_unique_label, train_counts_label = category_quantity_statistics_all(ytrain)
+    test_unique_label, test_counts_label = category_quantity_statistics_all(ytest)
     print('-' * 60)
     print('Label Distributions: \n')
     print("训练集类别%s，数量%s，占比%s" % (train_unique_label, train_counts_label, (train_counts_label / len(ytrain))))

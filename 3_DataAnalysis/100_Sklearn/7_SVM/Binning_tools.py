@@ -62,7 +62,7 @@ def qcut_per_bin_twoClass_num(df, y_name, groupby_col, updown):
 def get_num_bins(data, col, y_name, bins):
     df = data[[col, y_name]].copy()
     # 注意： 使用pd.cut函数之前，确保分箱区间bins的首尾分别为： -np.inf, np.inf
-    df["cut"], updown = pd.cut(df[col], bins, retbins=True)
+    df["cut"], updown = pd.cut(df[col], bins, retbins=True)  # 可以指定labels=[0,1,2,3]参数
     coount_y0 = df[df[y_name] == 0].groupby(by="cut")[y_name].count()
     coount_y1 = df[df[y_name] == 1].groupby(by="cut")[y_name].count()
     num_bins = [*zip(updown, updown[1:], coount_y0, coount_y1)]
