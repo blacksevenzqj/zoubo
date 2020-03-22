@@ -25,8 +25,10 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
+# import statsmodels.api as sm
 from statsmodels.formula.api import ols
+from sklearn.linear_model import LinearRegression as LR, Ridge, Lasso
+import FeatureTools as ft
 
 os.chdir(
     r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\4_HousingPrice_analysis\7linearmodel")
@@ -122,6 +124,28 @@ exp['Pred'] = ana1.predict(exp)
 exp['resid'] = ana1.resid  # 残差随着x的增大呈现 喇叭口形状，出现异方差
 exp.plot('Pred', 'resid', kind='scatter')  # Pred = β*Income，随着预测值的增大，残差resid呈现 喇叭口形状
 ana1.summary()
+# In[]:
+Xtrain = exp[['Age', 'Income', 'dist_home_val']]
+Ytrain = exp[['avg_exp']]
+
+reg = LR().fit(Xtrain, Ytrain)
+yhat = reg.predict(Xtrain)  # 预测我们的yhat
+print(reg.score(Xtrain, Ytrain))
+
+predict = pd.DataFrame(yhat, columns=['Pred'])
+print(Ytrain.dtypes, predict.dtypes)
+
+y = Ytrain.copy()
+ft.recovery_index([y])
+# resid = pd.DataFrame((y['avg_exp'] - predict["Pred"]), columns=['resid'])
+resid = pd.DataFrame(y['avg_exp'].sub(predict["Pred"]), columns=['resid'])
+
+resid_1 = pd.concat([predict, resid], axis=1)
+resid_1.plot('Pred', 'resid', kind='scatter')
+
+print(ft.r2_score_customize(Ytrain, yhat, 1))
+print(ft.r2_score_customize(Ytrain, yhat, 2))
+print(ft.adj_r2_customize(Ytrain, yhat, Xtrain.shape[1], 2))
 
 # In[15]:
 # ols类计算 线性回归模型 并得到 预测值 和 残差
@@ -151,6 +175,11 @@ exp['Pred'] = ana3.predict(exp)
 exp['resid'] = ana3.resid
 exp.plot('Income_ln', 'resid', kind='scatter')  # 随着Income的增大，残差resid稍微形状好了些
 ana3.summary()
+# In[16]:
+# 调用封装好的函数：残差分析
+Ytrain = exp['avg_exp']
+Ytrain.name = 'Y'
+r_sq = ft.heteroscedastic(exp, Ytrain, ['Age', 'Income', 'dist_home_val'])
 
 # 7.3.2 强影响点分析：学生化残差
 # In[18]:
@@ -172,15 +201,22 @@ exp[abs(exp['resid_t']) > 2]
 # In[21]:
 # 剔除强影响点后，重新建立模型。 R-squared为0.494，为截止最高值。
 # 异常值 剔除 只做一次。
-exp2 = exp[abs(exp['resid_t']) <= 2].copy()
+exp2 = exp[abs(exp['resid_t']) <= 2]
 ana4 = ols('avg_exp_ln ~ Income_ln', exp2).fit()
 exp2['Pred'] = ana4.predict(exp2)
 exp2['resid'] = ana4.resid
 exp2.plot('Income_ln', 'resid', kind='scatter')
 ana4.summary()
-
 # In[22]:
 ana4.rsquared  # 就是 R-squared 指标
+# In[]:
+# 封装 学生化残差 函数
+temp_index = ft.studentized_residual(exp['Income_ln'], exp['avg_exp_ln'], ['Income_ln'], 'avg_exp_ln', num=2)
+print(temp_index)
+exp.loc[temp_index]
+# In[]
+# 离群特征检测
+ft.outlier_detection(exp, 'Income_ln', exp[['avg_exp_ln']], 'avg_exp_ln')
 
 # In[23]:
 # 7.3.2.2、statemodels包提供了更多强影响点判断指标
@@ -198,10 +234,11 @@ exp2['dist_home_val_ln'] = np.log(exp2['dist_home_val'])  # 所住小区房屋�
 exp2['dist_avg_income_ln'] = np.log(exp2['dist_avg_income'])  # 当地人均收入
 
 # ols类计算 线性回归模型
-# 第一次： Income_ln 和 dist_avg_income_ln 是强相关性，必须剔除一个（根据方差膨胀因子）
-# ana5 = ols('''avg_exp_ln ~ Income_ln + dist_home_val_ln + dist_avg_income_ln''', exp2).fit()
+# 第一次： Income_ln 和 dist_avg_income_ln 是强相关性，必须剔除一个（根据方差膨胀因子） R-squared=0.553
+ana5 = ols('''avg_exp_ln ~ Income_ln + dist_home_val_ln + dist_avg_income_ln''', exp2).fit()
 # 第二次
-ana5 = ols('''avg_exp_ln ~ dist_home_val_ln + dist_avg_income_ln''', exp2).fit()
+# ana5 = ols('''avg_exp_ln ~ dist_home_val_ln + dist_avg_income_ln''', exp2).fit() # R-squared=0.552
+
 ana5.summary()
 
 # In[25]:
@@ -242,12 +279,22 @@ vl = 1. / (1. - r2)
 '''
 # ols类计算 线性回归模型
 # 第一次： Income_ln 和 dist_avg_income_ln 是强相关性，必须剔除一个（根据方差膨胀因子）
-# exog = exp2[['Income_ln', 'dist_home_val_ln','dist_avg_income_ln']]
+exog = exp2[['Income_ln', 'dist_home_val_ln', 'dist_avg_income_ln']]
 # 第二次
-exog = exp2[['dist_home_val_ln', 'dist_avg_income_ln']]
+# exog = exp2[['dist_home_val_ln','dist_avg_income_ln']]
 
+# i 相当于 Y因变量 进行预测
 for i in exog.columns:
-    print(i, '\t', vif(df=exog, col_i=i))
+    print(i, '\t', ft.vif(df=exog, col_i=i))  # 封装了
+
+# In[]:
+# i 相当于 Y因变量 进行预测
+for i in exog.columns:
+    print(i, '\t', ft.vif_sklearn(df=exog, col_i=i))  # 封装了
+
+# In[]:
+# 先求没有取对数的方差膨胀因子，再求取了对数的方差膨胀因子 方便对比
+temp_dict, temp_dict_ln = ft.variance_expansion_coefficient(exp2, ['Income', 'dist_home_val', 'dist_avg_income'], 2)
 
 # In[29]:
 # Income_ln与dist_avg_income_ln具有共线性，使用“高出平均收入的比率”代替其中一个

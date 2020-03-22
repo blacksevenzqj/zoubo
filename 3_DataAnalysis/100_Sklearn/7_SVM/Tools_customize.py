@@ -381,8 +381,22 @@ def clip(data, lower=None, upper=None, axis=None):
     return data.clip(lower=lower, upper=upper, axis=axis)
 
 
+# In[]:
+'''
+# 两DataFrame相减：
+# 1、使用drop：相当于删除
+dt = {'date_time': ['2018-03-11', '2018-03-12', '2018-03-16', '2018-03-17'], 'code': ['000000', '000001', '000002', '000003']}
+dateframe1 = pd.DataFrame(data=dt)
 
+dateframe2 = dateframe1[dateframe1.date_time < '2018-03-15']
 
+# DateFrame.axes[0]获取行轴的标签名。 删除行轴标签名相同的行数据
+dateframe3 = dateframe1.drop(labels=dateframe2.axes[0]) 
 
+# 2、两Seriers相减 求差值：行索引必须相同，否则就是Shit
+# 先恢复索引，再相减
+resid = pd.DataFrame((y['avg_exp'] - predict["Pred"]), columns=['resid'])
+resid = pd.DataFrame(y['avg_exp'].sub(predict["Pred"]), columns=['resid'])
+'''
 
 

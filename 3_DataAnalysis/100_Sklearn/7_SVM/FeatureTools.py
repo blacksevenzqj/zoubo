@@ -8,17 +8,19 @@ Created on Sat Oct 19 16:48:40 2019
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold, ShuffleSplit, StratifiedKFold, StratifiedShuffleSplit, cross_val_score as CVS
+from sklearn.linear_model import LinearRegression as LR, Ridge, Lasso
 import matplotlib.pyplot as plt
 import seaborn as sns
 import scipy
 import datetime
 import os
 from time import time
+from statsmodels.formula.api import ols
 import Tools_customize as tc
 
 
 # In[]:
-# ================================基础操作==============================
+# ================================基础操作 开始==============================
 # In[]:
 # 路径设置
 def set_file_path(path):
@@ -262,11 +264,12 @@ def df_change_colname(df, columns, inplace=True):
 
 # 恢复索引（删除数据后：如果X集恢复了索引，那么Y集也必须恢复索引）
 def recovery_index(data_list):
-    for i in data_list:
-        i.index = range(i.shape[0])
-
-
-#        i = i.reset_index(drop=True)
+    if type(data_list) == list:
+        for i in data_list:
+            i.index = range(i.shape[0])
+    #            i = i.reset_index(drop=True)
+    else:
+        data_list.index = range(data_list.shape[0])
 
 
 # 排序
@@ -654,6 +657,10 @@ def standardScaler_outlier(df, name):
 
 # 离群值检测： 使用 箱型图、散点趋势图 观测离群值
 def outlier_detection(X, feature, y, y_name):
+    if type(feature) == list:
+        # 盒须图 要求 特征必须为单特征，不能传['x']进来
+        raise Exception('feature Type is Error, must not list')
+
     ntrain = y[y_name].notnull().sum()
     X = X[0:ntrain]
 
@@ -879,11 +886,11 @@ def customize_one_hot(x, feature_dict):
 
 
 # In[]:
-# ================================基础操作==============================
+# ================================基础操作 结束==============================
 
 
 # In[]:
-# ================================数据分布==============================
+# ================================数据分布 开始==============================
 # In[]:
 # --------------------------------分类模型------------------------------
 # 分类模型 连续特征 数据分布（直方图、盒须图）： （不能有缺失值）
@@ -999,7 +1006,12 @@ def box_whisker_diagram_Interval(series):
 '''
 
 
+# f, axes = plt.subplots(1,2, figsize=(23, 8))
 def con_data_distribution(data, feature, axes):
+    if type(feature) == list:
+        # 盒须图 要求 特征必须为单特征，不能传['x']进来
+        raise Exception('feature Type is Error, must not list')
+
     data = get_notMissing_values(data, feature)
 
     sns.set()  # 切换到seaborn的默认运行配置
@@ -1071,7 +1083,7 @@ def barplot(axis_x, axis_y, p=sns.color_palette(), xlabel=u'用户职业', ylabe
 
 
 # In[]:
-# -----------------------------正太、偏度检测-------------------------------
+# -----------------------------正太、偏度检测 开始-------------------------------
 # In[]:
 # 正太分布检测：
 '''
@@ -1244,10 +1256,10 @@ def normal_QQ_test(data, feature):
 
 
 # In[]:
-# -----------------------------正太、偏度检测-------------------------------
+# -----------------------------正太、偏度检测 结束-------------------------------
 
 # In[]:
-# -----------------------------正太、偏度处理-------------------------------
+# -----------------------------正太、偏度处理 开始-------------------------------
 # In[]:
 # 取对数（可处理负数）
 def logarithm(X_rep, var_x_ln, f_type=1):
@@ -1264,7 +1276,7 @@ def logarithm(X_rep, var_x_ln, f_type=1):
                 X_rep[i] = np.log(X_rep[i] + abs(min(X_rep[i])) + 0.01)  # 负数取对数的技巧
             else:
                 X_rep[i] = np.log(X_rep[i])
-    return X_rep
+    return X_rep  # 直接在原DataFrame上操作
 
 
 def logarithm_nagative(data, var_ln, f_type=1):
@@ -1343,13 +1355,13 @@ def scipy_boxcox1p(df, skewed_features, lanmuda=0.15):
 
 
 # In[]:
-# -----------------------------正太、偏度处理-------------------------------
+# -----------------------------正太、偏度处理 结束-------------------------------
 # In[]:
-# ================================数据分布==============================
+# ================================数据分布 结束==============================
 
 
 # In[]:
-# ================================特征选择==============================
+# ================================特征选择 开始==============================
 # In[]:
 # 相似度计算1
 # 皮尔森相似度
@@ -1580,11 +1592,11 @@ def linear_regression_coef(model, X_train, axe, head_num=10, tail_num=10):
 
 
 # In[]:
-# ================================特征选择==============================
+# ================================特征选择 结束==============================
 
 
 # In[]:
-# ================================特征创建==============================
+# ================================特征创建 开始==============================
 # In[]:
 '''
 1、现有功能的简化
@@ -1600,11 +1612,11 @@ def linear_regression_coef(model, X_train, axe, head_num=10, tail_num=10):
 
 
 # In[]:
-# ================================特征创建==============================
+# ================================特征创建 结束==============================
 
 
 # In[]:
-# ================================线性回归特征分析==============================
+# ================================线性回归特征分析 开始==============================
 # In[]:
 from sklearn.metrics import mean_squared_error as MSE  # 均方误差
 from sklearn.metrics import mean_absolute_error  # 平方绝对误差
@@ -1658,7 +1670,7 @@ i=1 当有截距项时，反之等于0
 n=用于拟合该模型的观察值数量
 p=模型中参数的个数
 Adj.R^2  =  1  -  (n-i)(1-R^2) / (n-p) 
-各处查询后用下面的公式：
+网上查询后用下面的公式：
 Adj.R^2  =  1  -  (n-i)(1-R^2) / (n-p-1) 
 '''
 
@@ -1695,9 +1707,7 @@ AIC = 2k + n(log(RSS/n))
 
 # 1.1、扰动项ε 独立同分布 （异方差检验、DW检验）
 # 1.1.1、异方差： 随着x的增大，残差呈扇面型分布，残差的方差呈放大趋势。出现在“横截面”数据中（样本是同一时间采集到的）
-def heteroscedastic(X, Y, col_list):
-    from statsmodels.formula.api import ols
-
+def heteroscedastic(X, Y, col_list):  # Y的列名必须为：'Y'
     temp_X = X[col_list]
     temp_Y = Y
     temp_data = pd.concat([temp_X, temp_Y], axis=1)
@@ -1741,8 +1751,6 @@ def heteroscedastic(X, Y, col_list):
 
 
 def heteroscedastic_singe(X, Y, col):
-    from statsmodels.formula.api import ols
-
     temp_X = X[col]
     temp_Y = pd.DataFrame(Y, columns=['Y'])
     temp_data = pd.concat([temp_X, temp_Y], axis=1)
@@ -1786,8 +1794,6 @@ def heteroscedastic_singe(X, Y, col):
 
 # 1.2、扰动项ε 服从正太分布 （QQ检验）
 def disturbance_term_normal(X, Y, col_list):
-    from statsmodels.formula.api import ols
-
     temp_X = X[col_list]
     temp_Y = Y
     temp_data = pd.concat([temp_X, temp_Y], axis=1)
@@ -1813,15 +1819,10 @@ def disturbance_term_normal(X, Y, col_list):
 '''
 
 
-def studentized_residual(Xtrain, Ytrain):
-    from statsmodels.formula.api import ols
-
-    temp_Y = Ytrain
-    temp_data = pd.concat([Xtrain, temp_Y], axis=1)
-    cols = list(temp_data.columns)
-    cols.remove("Y")
-    cols_noti = cols
-    formula = "Y" + '~' + '+'.join(cols_noti)
+# ft.studentized_residual(exp['Income_ln'], exp['avg_exp_ln'], ['Income_ln'], 'avg_exp_ln', num=2)
+def studentized_residual(Xtrain, Ytrain, X_names, Y_name='Y', num=3):
+    temp_data = pd.concat([Xtrain, Ytrain], axis=1)
+    formula = Y_name + '~' + '+'.join(X_names)
 
     lm_s = ols(formula, data=temp_data).fit()
     print(lm_s.rsquared, lm_s.aic)
@@ -1831,7 +1832,7 @@ def studentized_residual(Xtrain, Ytrain):
 
     temp_data['resid_t'] = (temp_data['resid'] - temp_data['resid'].mean()) / temp_data['resid'].std()
 
-    temp_data2 = temp_data[abs(temp_data['resid_t']) <= 3].copy()
+    temp_data2 = temp_data[abs(temp_data['resid_t']) <= num]
     lm_s2 = ols(formula, temp_data2).fit()
     print(lm_s2.rsquared, lm_s2.aic)
     temp_data2['Pred'] = lm_s2.predict(temp_data2)
@@ -1839,10 +1840,11 @@ def studentized_residual(Xtrain, Ytrain):
     temp_data2.plot('Pred', 'resid', kind='scatter')
     lm_s2.summary()
 
+    return temp_data[abs(temp_data['resid_t']) > num].index  # 返回强影响点索引
+
 
 # 2.2、强影响点分析 更多指标： statemodels包提供了更多强影响点判断指标 （太耗时，最好不要用了）
 def strong_influence_point(Xtrain, Ytrain):
-    from statsmodels.formula.api import ols
     from statsmodels.stats.outliers_influence import OLSInfluence
 
     temp_Y = Ytrain
@@ -1857,7 +1859,7 @@ def strong_influence_point(Xtrain, Ytrain):
 
 
 # 解释变量X 之间不能强线性相关 （膨胀系数）
-# 3、方差膨胀因子
+# 3、方差膨胀因子： 特征之间 互相进行线性回归预测
 '''
 3.1、两个特征检验：
 ['Income_ln', 'dist_avg_income_ln']，得到：
@@ -1881,24 +1883,40 @@ dist_home_val_ln<10 ~ Income_ln + dist_avg_income_ln < 10  说明dist_home_val_l
 
 
 def vif(df, col_i):
-    from statsmodels.formula.api import ols
-
     cols = list(df.columns)
     cols.remove(col_i)
     cols_noti = cols
     formula = col_i + '~' + '+'.join(cols_noti)
     print(formula)
     r2 = ols(formula, df).fit().rsquared
+    return 1. / (1. - r2), formula  # 结果和Sklearn包计算结果相同
+
+
+# Sklearn版本（结果相同）
+def vif_sklearn(df, col_i):
+    cols = list(df.columns)
+    cols.remove(col_i)
+    cols_noti = cols
+    formula = col_i + '~' + '+'.join(cols_noti)
+    Xtrain = df[cols_noti]
+    Ytrain = df[col_i]
+    reg = LR().fit(Xtrain, Ytrain)
+    yhat = reg.predict(Xtrain)
+    r2 = r2_score_customize(Ytrain, yhat, 1)
     return 1. / (1. - r2), formula
 
 
-def variance_expansion_coefficient(df, cols):
-    temp_df = df[cols].copy()
+# 先求没有取对数的方差膨胀因子，再求取了对数的方差膨胀因子 方便对比
+def variance_expansion_coefficient(df, cols, types=1):
+    temp_df = df[cols]  # DataFrame 即使显示的取所有列，也是新地址（和原DataFrame是不同地址）
     temp_dict = {}
     temp_dict_ln = {}
 
     for i in temp_df.columns:
-        temp_v = vif(df=temp_df, col_i=i)
+        if types == 1:
+            temp_v = vif(df=temp_df, col_i=i)
+        else:
+            temp_v = vif_sklearn(df=temp_df, col_i=i)
         temp_dict[temp_v[1]] = temp_v[0]
         print(i, '\t', temp_v[0])
         print()
@@ -1909,7 +1927,10 @@ def variance_expansion_coefficient(df, cols):
     col_list_ln = [i + "_ln" for i in cols]
     temp_df = temp_df[col_list_ln]
     for i in temp_df.columns:
-        temp_v = vif(df=temp_df, col_i=i)
+        if types == 1:
+            temp_v = vif(df=temp_df, col_i=i)
+        else:
+            temp_v = vif_sklearn(df=temp_df, col_i=i)
         temp_dict_ln[temp_v[1]] = temp_v[0]
         print(i, '\t', temp_v[0])
         print()
@@ -1957,7 +1978,6 @@ def linear_model_residuals(y_train_true, y_train_predict, y_test_true, y_test_pr
 
 # 线性回归模型 泛化能力：
 def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, linear_show=True):
-    from sklearn.linear_model import LinearRegression as LR, Ridge, Lasso
     from sklearn.model_selection import cross_val_score
 
     alpharange = np.arange(start, end, step)
@@ -2048,13 +2068,13 @@ def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, l
 
 
 # In[]:
-# ================================线性回归特征分析==============================
+# ================================线性回归特征分析 结束==============================
 
 
 # In[]:
-# ====================================学习曲线==================================
+# ====================================学习曲线 开始==================================
 # In[]:
-# -----------------------------1、基于样本量-------------------------------
+# -----------------------------1、基于样本量 开始-------------------------------
 # 基于MSE绘制学习曲线（样本量）
 def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
     train_score = []
@@ -2152,10 +2172,10 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
 
 
 # In[]:
-# -----------------------------1、基于样本量-------------------------------
+# -----------------------------1、基于样本量 结束-------------------------------
 
 # In[]:
-# -----------------------------2、基于超参数-------------------------------
+# -----------------------------2、基于超参数 开始-------------------------------
 # SKLearn库的XGBoost：
 def getModel(i, model_name, hparam_name, prev_hparam_value, random_state):
     from xgboost import XGBRegressor as XGBR
@@ -2340,13 +2360,13 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
 
 
 # In[]:
-# -----------------------------2、基于超参数-------------------------------
+# -----------------------------2、基于超参数 结束-------------------------------
 # In[]:
-# ====================================学习曲线==================================
+# ====================================学习曲线 结束==================================
 
 
 # In[]:
-# ====================================交叉验证==================================
+# ====================================交叉验证 开始==================================
 # 线性回归：
 def rmsle_cv(model, train_X, train_y, cv=None, cv_type=1):
     if cv is None:
@@ -2401,7 +2421,7 @@ def stacking_cv_customize(stacking_model, X, y, ss):
 
 
 # In[]:
-# ====================================交叉验证==================================
+# ====================================交叉验证 结束==================================
 
 
 # In[]:
