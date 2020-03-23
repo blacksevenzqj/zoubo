@@ -64,6 +64,9 @@ def set_union(seriers1, seriers2, reverse=False):
 
 
 # In[]:
+# 直接用agg函数求指标
+# dat0.price.agg(['mean','median','std']) # 查看price的均值、中位数和标准差等更多信息
+
 # 二、groupby
 # https://www.jianshu.com/p/a18fa2074ca4
 # https://www.jianshu.com/p/42f1d2909bb6
@@ -103,6 +106,9 @@ agg = {'bankcard_count':lambda x:len(set(x)), 'bank_phone_num':lambda x:x.nuniqu
 agg = lambda x:':'.join(x) 将分组之后的多个统计值 拼接成字符串
 agg = {'sum':np.sum, "mean":np.mean, "len":len}  注意：不要写成 aggs = {'rating_mean' : [np.mean, np.sum]} 列名是混乱的
 data_group = tc.groupby_agg_oneCol(data, ["1_total_fee", "2_total_fee"], "3_total_fee", agg)
+
+agg = {'price_mean1':lambda x: x.mean(), 'price_mean2':np.mean} # 两种方式指定函数，一样效果
+tc.groupby_agg_oneCol(dat0, ['dist'], 'price', agg, as_index=True)
 '''
 
 
@@ -181,7 +187,36 @@ def groupby_apply_sort(data, group_cols, sort_cols, ascendings, group_keys=False
         lambda x: x.sort_values(by=sort_cols, ascending=ascendings))
 
 
+# 源码： dat0.price.groupby(dat0.dist).mean().sort_values(ascending= True).plot(kind = 'barh') # 先 .price 看似不合理，是否能提高性能？
+# tc.groupby_apply_statistics_sort(dat0, ['dist'], 'price')
+'''
+可以使用 def groupby_agg_oneCol(...)方法代替，效率更高： （显示指定 单统计变量 可以不用apply，效率更高）
+agg = {'price_mean1':lambda x: x.mean(), 'price_mean2':np.mean} # 两种方式指定函数，一样效果
+tc.groupby_agg_oneCol(dat0, ['dist'], 'price', agg, as_index=True)
+'''
+
+
+def groupby_apply_statistics_sort(data, group_cols, statistic_col, statistic_type=1, ascending=True,
+                                  group_keys=False):  # group_keys默认True
+    if type(group_cols) != list:
+        raise Exception('group_cols Type is Error, must list')
+
+    if statistic_type == 1:
+        return data.groupby(group_cols, group_keys=group_keys).apply(lambda x: x[statistic_col].mean()).sort_values(
+            ascending=ascending)
+    elif statistic_type == 2:
+        return data.groupby(group_cols, group_keys=group_keys).apply(lambda x: x[statistic_col].min()).sort_values(
+            ascending=ascending)
+    elif statistic_type == 3:
+        return data.groupby(group_cols, group_keys=group_keys).apply(lambda x: x[statistic_col].max()).sort_values(
+            ascending=ascending)
+    elif statistic_type == 4:
+        return data.groupby(group_cols, group_keys=group_keys).apply(lambda x: x[statistic_col].std()).sort_values(
+            ascending=ascending)
+
+
 # tmp3 = tmp.groupby(["user_id"], group_keys=False).apply(lambda x: x["rating"].count() if x["rating"].count() == 2 else 0)
+# tmp_train_order.groupby(by=['id']).apply(lambda x:x['type_pay'][(x['type_pay']=='在线支付').values].count()).reset_index(name = 'type_pay_zaixian')
 # tc.groupby_apply_count(train_order, ["id"], 'type_pay', '在线支付', 'type_pay_zaixian')
 def groupby_apply_conditionCount(data, group_cols, statistics_col, condition, reset_index_name, group_keys=False,
                                  inplace=False):
@@ -241,6 +276,13 @@ def pivot_table_statistical(df, statistical_cols, index=None, columns=None, aggf
 
 
 # 交叉表(crossTab)： 相当于 df.groupby([col1, col2])[X].count() 展开显示
+'''
+sub_sch=pd.crosstab(dat0.subway,dat0.school)
+sub_sch1 = sub_sch.div(sub_sch.sum(axis=1), axis = 0) # sub_sch.sum(axis=1) 以 行索引subway 是否有地铁为分母
+sub_sch2 = sub_sch.div(sub_sch.sum(axis=0), axis = 1) # sub_sch.sum(axis=0) 以 列索引school 是否是学区房为分母
+'''
+
+
 def crossTab_statistical(df, col1, col2, margins=True):
     return pd.crosstab(df[col1], df[col2], margins=margins)
 
@@ -302,6 +344,18 @@ for i in re_list:
 # 2、直接赋值
 for i in re_list:
     train_user1['birthday'] = train_user1['birthday'].map(lambda x: pd.lib.NaT if (re.match(i, str(x))) else x)
+
+# In[]:
+# 显示指定unicode编码
+dict1 = {
+        u'chaoyang' : "朝阳",
+        u'dongcheng' : "东城",
+        u'fengtai' :  "丰台",
+        u'haidian' : "海淀",
+        u'shijingshan' : "石景山",
+        u'xicheng': "西城"
+        }  
+dat0.dist = dat0.dist.map(lambda x : dict1[x])    
 '''
 
 # In[]:

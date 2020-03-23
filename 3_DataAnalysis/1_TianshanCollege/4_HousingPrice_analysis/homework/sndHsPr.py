@@ -18,10 +18,12 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib
 import seaborn as sns
-import statsmodels.api as sm
+# import statsmodels.api as sm
 from numpy import corrcoef, array
 # from IPython.display import HTML, display
 from statsmodels.formula.api import ols
+import FeatureTools as ft
+import Tools_customize as tc
 
 import os
 
@@ -41,6 +43,7 @@ dat0.price = dat0.price / 10000  # 价格单位转换成万元
 
 # In[19]:
 # 将城区的水平由拼音改成中文，以便作图输出美观
+# 显示指定unicode编码
 dict1 = {
     u'chaoyang': "朝阳",
     u'dongcheng': "东城",
@@ -83,6 +86,11 @@ print(dat0.price.quantile([0.25, 0.5, 0.75]))
 # 查看房价最高和最低的两条观测
 pd.concat([(dat0[dat0.price == min(dat0.price)]), (dat0[dat0.price == max(dat0.price)])])
 
+# In[]:
+# 数据分布检测
+f, axes = plt.subplots(1, 2, figsize=(23, 8))
+ft.con_data_distribution(dat0, 'price', axes)
+
 # 1.2 自变量：
 # dist+roomnum+halls+floor+subway+school+AREA
 # In[23]:
@@ -96,6 +104,12 @@ for i in range(7):
         continue
 print('AREA:')
 print(dat0.AREA.agg(['min', 'mean', 'median', 'max', 'std']).T)
+# In[]:
+templist = [i for i in range(7)]
+templist.remove(3)
+ft.category_quantity_statistics_value_counts(dat0, templist, [3])
+# In[]:
+unique_label, counts_label, unique_dict = ft.category_quantity_statistics_all(dat0['subway'])
 
 # 1.2.1 dist
 # In[24]:
@@ -106,18 +120,34 @@ dat0.dist.agg(['value_counts'])
 
 # In[25]:
 # 不同城区的单位房价面积均值情况
+# 源代码：
 dat0.price.groupby(dat0.dist).mean().sort_values(ascending=True).plot(kind='barh')
+# In[]:
+# 封装：
+tc.groupby_apply_statistics_sort(dat0, ['dist'], 'price').plot(kind='barh')
+# In[]:
+# 封装：使用groupby_agg_oneCol效率更高
+agg = {'price_mean1': lambda x: x.mean(), 'price_mean2': np.mean}
+tc.groupby_agg_oneCol(dat0, ['dist'], 'price', agg, as_index=True)
 
 # %%
 dat1 = dat0[['dist', 'price']]
+print(dat1.dtypes)
 dat1.dist = dat1.dist.astype("category")  # 设置为分类变量
 dat1.dist.cat.set_categories(["石景山", "丰台", "朝阳", "海淀", "东城", "西城"], inplace=True)
+print(dat1.dtypes)
 # dat1.sort_values(by=['dist'],inplace=True)
 sns.boxplot(x='dist', y='price', data=dat1)
 # dat1.boxplot(by='dist',patch_artist=True)
 plt.ylabel("单位面积房价(万元/平方米)")
 plt.xlabel("城区")
 plt.title("城区对房价的分组箱线图")
+# In[]:
+# 自己封装的
+print(dat0.dtypes)
+f, axes = plt.subplots(1, 1, figsize=(10, 8))
+ft.box_diagram(dat0, 'dist', 'price', axes, set_category=True, categories_=["石景山", "丰台", "朝阳", "海淀", "东城", "西城"])
+print(dat0.dtypes)
 
 # 1.2.2 roomnum
 # In[27]:
@@ -126,6 +156,16 @@ dat4 = dat0[['roomnum', 'price']]
 # print(type(dat4.price.groupby(dat4.roomnum).mean())) # Series
 dat4.price.groupby(dat4.roomnum).mean().plot(kind='bar')
 dat4.boxplot(by='roomnum', patch_artist=True)
+# In[]:
+# 封装：
+tc.groupby_apply_statistics_sort(dat0, ['roomnum'], 'price').plot(kind='barh')
+# In[]:
+# 封装：使用groupby_agg_oneCol效率更高
+agg = {'price_mean1': lambda x: x.mean(), 'price_mean2': np.mean}
+tc.groupby_agg_oneCol(dat0, ['roomnum'], 'price', agg, as_index=True)
+# In[]:
+f, axes = plt.subplots(1, 1, figsize=(10, 8))
+ft.box_diagram(dat0, 'roomnum', 'price', axes)
 
 # 1.2.3 halls
 # In[28]:
@@ -133,6 +173,13 @@ dat4.boxplot(by='roomnum', patch_artist=True)
 dat5 = dat0[['halls', 'price']]
 dat5.price.groupby(dat5.halls).mean().plot(kind='bar')
 dat5.boxplot(by='halls', patch_artist=True)
+# In[]:
+# 封装：
+tc.groupby_apply_statistics_sort(dat0, ['halls'], 'price').plot(kind='barh')
+# In[]:
+# 自己封装的
+f, axes = plt.subplots(1, 1, figsize=(10, 8))
+ft.box_diagram(dat0, 'halls', 'price', axes)
 
 # 1.2.4 floor
 # In[31]:
@@ -144,15 +191,29 @@ dat6.floor.cat.set_categories(["low", "middle", "high"], inplace=True)
 dat6.sort_values(by=['floor'], inplace=True)
 dat6.boxplot(by='floor', patch_artist=True)
 # dat6.price.groupby(dat6.floor).mean().plot(kind='bar')
+# In[]:
+# 封装：
+tc.groupby_apply_statistics_sort(dat0, ['floor'], 'price').plot(kind='barh')
+# In[]:
+# 自己封装的
+f, axes = plt.subplots(1, 1, figsize=(10, 8))
+ft.box_diagram(dat0, 'floor', 'price', axes)
 
 # 1.2.5 subway+school
 # In[32]:
 # 交叉表是用于统计分组频率的特殊透视表
 sub_sch = pd.crosstab(dat0.subway, dat0.school)
-# print(sub_sch)
-# print(sub_sch.sum(axis=1))
-sub_sch = sub_sch.div(sub_sch.sum(axis=1), axis=0)  # 第一行除以第一行...
-sub_sch
+print(sub_sch)
+
+# sub_sch.sum(axis=1) 以 行索引subway 是否有地铁为分母
+print(sub_sch.sum(axis=1))
+sub_sch1 = sub_sch.div(sub_sch.sum(axis=1), axis=0)
+print(sub_sch1)
+
+# sub_sch.sum(axis=0) 以 列索引school 是否是学区房为分母
+print(sub_sch.sum(axis=0))
+sub_sch2 = sub_sch.div(sub_sch.sum(axis=0), axis=1)
+print(sub_sch2)
 
 
 # In[33]:
@@ -255,6 +316,8 @@ datB = array([data1, data2])
 print(corrcoef(datB))  # 基于numpy的皮尔森相关系数矩阵
 # min_periods : int, optional，指定每列所需的最小观察数，可选，目前只适合用在pearson和spearman方法。
 print(datA.corr(method='pearson', min_periods=1))  # 基于DataFrame的皮尔森相关系数矩阵
+# In[]:
+ft.con_data_scatter(dat0, 'AREA', dat0, 'price')
 
 # In[58]:看到从左至右逐渐稀疏的散点图,第一反应是对Y取对数
 # 房屋面积和单位面积房价（取对数后）的散点图
@@ -291,6 +354,10 @@ datB = array([data1, data2])
 print(corrcoef(datB))  # 基于numpy的皮尔森相关系数矩阵
 # min_periods : int, optional，指定每列所需的最小观察数，可选，目前只适合用在pearson和spearman方法。
 print(datA[['AREA_ln', 'price_ln']].corr(method='pearson', min_periods=1))  # 基于DataFrame的皮尔森相关系数矩阵
+# In[]:
+ft.con_data_scatter(datA, 'AREA_ln', datA, 'price_ln')
+# In[]:
+ft.corrFunction_withY(datA, 'price_ln')
 
 
 #########################################################################################
@@ -406,7 +473,6 @@ n<100 alfa取值[0.05,0.2]之间
 """
 
 import statsmodels.api as sm
-from statsmodels.formula.api import ols
 
 # 连续变量在前，分类变量在后： 因变量Y（连续）~自变量X(分类)
 # PR(>F)

@@ -325,29 +325,6 @@ def set_classif_col(df, feature_name, val_type=1):
         df[feature_name] = df[feature_name].apply(lambda x: astype_customize(x, temp_type))
 
 
-# 统计类别数量： （区分特征） 主要为DataFrame（当为DataFrame时才能使用axis关键字）
-def category_quantity_statistics(df, features, axis=0, dropna=True):
-    if type(features) is list:
-        return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不在计数中包含np.nan。
-    else:
-        return df[features].nunique(dropna=dropna)
-
-
-# 统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
-def category_quantity_statistics_all(df, features=None):
-    # unique_label：非重复值集合列表； counts_label：每个非重复值的数量
-    if features is None:
-        unique_label, counts_label = np.unique(df, return_counts=True)  # df是Seriers
-    else:
-        unique_label, counts_label = np.unique(df[features], return_counts=True)  # df是DataFrame
-    unique_dict = {}
-    for i in range(len(unique_label)):
-        unique_dict[unique_label[i]] = counts_label[i]
-        print(unique_label[i], counts_label[i])
-    return unique_label, counts_label, unique_dict
-    # df[features].value_count().to_dict() 直接就是个dict
-
-
 # In[]:
 # 缺失值：行向（特征缺失值）、列向（数据缺失值）； 1:删特征、 2:删数据
 '''
@@ -754,12 +731,15 @@ def set_diff(set_one, set_two):
     return temp_list
 
 
-# 设置分类变量类型为：category（很不用）
+# 设置分类变量类型为：category
+# 注意： astype()没有inplace关键字
+# dat2.dist=dat1.dist.astype("category")
+# dat2.dist.cat.set_categories(["石景山","丰台","朝阳","海淀","东城","西城"],inplace=True) # 有inplace关键字
 def set_col_category(df, feature_name, categories_=None):
     if categories_ is None:
         df[feature_name] = df[feature_name].astype('category', ordered=True)  # 自动排序： 按首字母顺序
     else:
-        df[feature_name] = df[feature_name].astype('category', ordered=True, categories=categories_)  # 手动排序
+        df[feature_name] = df[feature_name].astype('category', categories=categories_)  # 手动排序
 
 
 # 分类变量编码：
@@ -886,6 +866,58 @@ def customize_one_hot(x, feature_dict):
 
 
 # In[]:
+# 分类变量：统计类别数量： （区分特征） 主要为DataFrame（当为DataFrame时才能使用axis关键字）
+def category_quantity_statistics(df, features, axis=0, dropna=True):
+    if type(features) is list:
+        return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不在计数中包含np.nan。
+    else:
+        return df[features].nunique(dropna=dropna)
+
+
+# 分类变量：统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
+# unique_label, counts_label, unique_dict = ft.category_quantity_statistics_all(Series)
+def category_quantity_statistics_all(df, features=None):
+    # unique_label：非重复值集合列表； counts_label：每个非重复值的数量
+    if type(df) is pd.core.series.Series and features is None:
+        unique_label, counts_label = np.unique(df, return_counts=True)  # df是Seriers
+    elif type(df) is pd.core.frame.DataFrame and features is not None:
+        unique_label, counts_label = np.unique(df[features], return_counts=True)  # df是DataFrame
+    else:
+        raise Exception('Type is Error')
+
+    unique_dict = {}
+    for i in range(len(unique_label)):
+        unique_dict[unique_label[i]] = counts_label[i]
+        print(unique_label[i], counts_label[i])
+
+    return unique_label, counts_label, unique_dict
+    # df[features].value_count().to_dict() 直接就是个dict
+
+
+# 分类变量：类别统计
+def category_quantity_statistics_value_counts(data, category_index, continuous_index=None):
+    if type(category_index) != list:
+        raise Exception('category_index Type is Error, must list')
+    for i in category_index:
+        print(data.columns.values[i], ":")
+        print(data[data.columns.values[i]].agg(['value_counts']).T)
+        print("=======================================================================")
+
+    if continuous_index is not None:
+        print()
+        print("-" * 60)
+        print("Continuous feature:")
+        print("=======================================================================")
+        if type(continuous_index) != list:
+            raise Exception('continuous_index Type is Error, must list')
+        for i in continuous_index:
+            print(data.columns.values[i], ":")
+            print(data[data.columns.values[i]].agg(['min', 'mean', 'median', 'max', 'std']).T)
+            print("=======================================================================")
+
+        # In[]:
+
+
 # ================================基础操作 结束==============================
 
 
@@ -932,10 +964,12 @@ def class_data_with_y_scatter(data, feature_name, y_name):
     sns.FacetGrid(data, hue=y_name, size=5).map(plt.scatter, feature_name, y_name).add_legend()
 
 
+# In[]:
 # --------------------------------连续模型------------------------------
 # 连续模型 连续特征 与 Y 散点分布：
+# （从左至右逐渐稀疏的散点图 → 第一反应是对Y取对数 → 特征取对数）
 '''
-方差齐次性： 测试两个特征的均方差的最佳方法是图形方式。 
+方差齐次性： 测试两个连续特征的均方差的最佳方法是图形方式。 
 通过圆锥（在图形的一侧较小的色散，在相反侧的较大色散）或菱形（在分布中心的大量点）来表示偏离均等色散的形状。
 '''
 
@@ -951,16 +985,24 @@ def con_data_scatter(x_data, featur_name, y_data, y_name):
     sns.regplot(x_data[featur_name], y_data[y_name], ax=axes[1])
 
 
-# 特征多类别 四分位图：
-# 连续模型 分类特征 与 连续因变量Y 四分位图
+# 连续模型 ： 分类特征 与 连续因变量Y 四分位图 （盒须图）
 # 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐特征类别递增，斯皮尔曼相关系数很高，分类特征 对 连续因变量Y 有用
 # 例子： Pedro_Marcelino.py
-def box_diagram(data, x_axis_name, y_axis_name, axes, ymin=None, ymax=None):
+# f, axes = plt.subplots(1,1, figsize=(10, 8))
+# ft.box_diagram(dat0, 'dist', 'price', axes, set_category=True, categories_=["石景山","丰台","朝阳","海淀","东城","西城"])
+def box_diagram(data, x_axis_name, y_axis_name, axes, ymin=None, ymax=None, set_category=False, categories_=None):
     if ymin is not None and ymax is not None:
         axes.axis(ymin=ymin, ymax=ymax)
+
+    # 设置分类变量的字段类型为：category，并指定类别顺序，盒须图中按指定类别顺序显示
+    if set_category and categories_ is not None and type(categories_) == list:
+        data = data[[x_axis_name, y_axis_name]]
+        set_col_category(data, x_axis_name, categories_=categories_)
+
     sns.boxplot(x=x_axis_name, y=y_axis_name, data=data, ax=axes)
 
 
+# In[]:
 # --------------------------------复用------------------------------
 # 连续特征 计算盒须图 区间：
 def box_whisker_diagram_Interval(series):
@@ -980,7 +1022,7 @@ def box_whisker_diagram_Interval(series):
     return val_list
 
 
-# 连续/分类模型 连续 特征/因变量 直方图分布、盒须图： （不能有缺失值）
+# 连续/分类模型 ： 连续 特征/因变量 直方图分布、盒须图： （不能有缺失值）
 '''
 笔记：“5.2、数据清洗”
 5.2.3.1、单变量离群值的发现：
@@ -1007,6 +1049,7 @@ def box_whisker_diagram_Interval(series):
 
 
 # f, axes = plt.subplots(1,2, figsize=(23, 8))
+# feature为连续值（特征/因变量）
 def con_data_distribution(data, feature, axes):
     if type(feature) == list:
         # 盒须图 要求 特征必须为单特征，不能传['x']进来
