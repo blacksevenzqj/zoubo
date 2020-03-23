@@ -1836,6 +1836,7 @@ def heteroscedastic_singe(X, Y, col):
 
 
 # 1.2、扰动项ε 服从正太分布 （QQ检验）
+# 代码在： 8_1_LinearRegression.py → ft.disturbance_term_normal(Xtrain, Ytrain, col_list)
 def disturbance_term_normal(X, Y, col_list):
     temp_X = X[col_list]
     temp_Y = Y
