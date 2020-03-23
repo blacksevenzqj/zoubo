@@ -1665,6 +1665,8 @@ from sklearn.metrics import mean_squared_error as MSE  # 均方误差
 from sklearn.metrics import mean_absolute_error  # 平方绝对误差
 from sklearn.metrics import r2_score  # R square
 
+# 菜菜的 8_1_LinearRegression.py 更详细些
+
 # 拟合优度
 # R^2
 '''
