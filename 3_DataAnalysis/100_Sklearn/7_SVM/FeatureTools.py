@@ -731,7 +731,7 @@ def set_diff(set_one, set_two):
     return temp_list
 
 
-# 设置分类变量类型为：category
+# 设置分类变量类型为：category （在“盒须图”中分类特征临时设置为category变量类型）
 # 注意： astype()没有inplace关键字
 # dat2.dist=dat1.dist.astype("category")
 # dat2.dist.cat.set_categories(["石景山","丰台","朝阳","海淀","东城","西城"],inplace=True) # 有inplace关键字
@@ -1132,7 +1132,7 @@ def barplot(axis_x, axis_y, p=sns.color_palette(), xlabel=u'用户职业', ylabe
 '''
 原假设：样本来自一个正态分布的总体。
 备选假设：样本不来自一个正态分布的总体。
-w和p同向： w值越小； p-值越小、接近于0； 拒绝原假设。
+w和p同向： w值越小； p-值越小、接近于0； 拒绝原假设。 (w值 与 偏度值skew 相反)
 '''
 
 
@@ -1142,16 +1142,20 @@ def normal_distribution_test(data):
     for i in var:
         shapiro_var[i] = scipy.stats.shapiro(data[i])  # 返回 w值 和 p值
 
-    shapiro = pd.DataFrame(shapiro_var).T.sort_values(by=1, ascending=False)
+    # 0列为w值； 1为p值。
+    shapiro = pd.DataFrame(shapiro_var).T.sort_values(by=0, ascending=False)
 
     fig, axe = plt.subplots(1, 1, figsize=(15, 10))
-    axe.bar(shapiro.index, shapiro[0], width=.4)  # 自动按X轴---skew.index索引0-30的顺序排列
+    # bar的X轴顺序问题： https://blog.csdn.net/qq_35318838/article/details/80198307
+    axe.bar(np.arange(len(shapiro.index)), shapiro[0], width=.4)
+    axe.set_xticks(np.arange(len(shapiro.index)))
+    axe.set_xticklabels(shapiro.index)
     axe.set_title("Normal distribution for shapiro")
-
     # 在柱状图上添加数字标签
-    for a, b in zip(shapiro.index, shapiro[0]):
+    for a, b in zip(np.arange(len(shapiro.index)), shapiro[0]):
         # a是X轴的柱状体的索引， b是Y轴柱状体高度， '%.4f' % b 是显示值
-        plt.text(a, b + 0.01, '%.4f' % b, ha='center', va='bottom', fontsize=12)
+        axe.text(a, b + 0.01, '%.4f' % b, ha='center', va='bottom', fontsize=12)
+
     plt.show()
 
 
@@ -1219,6 +1223,7 @@ Kurtosis=E[((x-E(x))/ (\sqrt(D(x))))^4]-3
 '''
 
 
+# 上述两个方法的合并：
 def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
     if type(data) == pd.core.series.Series:
         temp_data = pd.DataFrame(data.copy())
@@ -1248,7 +1253,7 @@ def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
             con_data_distribution(temp_data, var, axes)
 
 
-# Q-Q图检测
+# Q-Q图检测 正太分布 （检测： 1、单特征正太分布； 2、扰动项ε/残差 正态分布）
 def normal_QQ_test(data, feature):
     temp_data = data.copy()
 
@@ -1665,7 +1670,7 @@ from sklearn.metrics import mean_squared_error as MSE  # 均方误差
 from sklearn.metrics import mean_absolute_error  # 平方绝对误差
 from sklearn.metrics import r2_score  # R square
 
-# 菜菜的 8_1_LinearRegression.py 更详细些
+# 菜菜的 8_1_LinearRegression.py 更详细： 1、使用统计学方式； 2、改进线性回归模型 解决 多重共线性（岭回归、Lasso）
 
 # 拟合优度
 # R^2
@@ -1865,7 +1870,7 @@ def disturbance_term_normal(X, Y, col_list):
 '''
 
 
-# ft.studentized_residual(exp['Income_ln'], exp['avg_exp_ln'], ['Income_ln'], 'avg_exp_ln', num=2)
+# temp_index = ft.studentized_residual(exp['Income_ln'], exp['avg_exp_ln'], ['Income_ln'], 'avg_exp_ln', num=2)
 def studentized_residual(Xtrain, Ytrain, X_names, Y_name='Y', num=3):
     temp_data = pd.concat([Xtrain, Ytrain], axis=1)
     formula = Y_name + '~' + '+'.join(X_names)
@@ -1985,6 +1990,7 @@ def variance_expansion_coefficient(df, cols, types=1):
 
 
 # 训练集 与 测试集 拟合：
+# f, axes = plt.subplots(3,1, figsize=(23, 18))
 def fitting_comparison(y_train_true, y_train_predict, y_test_true, y_test_predict, axe):
     x_axis = np.hstack((y_train_predict, y_test_predict))
     y_axis = np.hstack((y_train_true, y_test_true))

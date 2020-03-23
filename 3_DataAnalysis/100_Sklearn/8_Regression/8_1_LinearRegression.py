@@ -59,15 +59,22 @@ f, axes = plt.subplots(1,2, figsize=(23, 8))
 ft.con_data_distribution(Ytrain, "Y", axes)
 
 # In[]:
-# 正太、偏度检测
+# 正太、偏度检测（合并的方法）
 ft.normal_comprehensive(Xtrain)
-
+# In[]:
+# 分解执行
+ft.normal_distribution_test(Xtrain)
+# In[]:
+ft.skew_distribution_test(Xtrain)
+# In[]:
+ft.normal_QQ_test(Xtrain, 'HouseAge')
 
 # In[]:
 # 散点图
 for i in Xtrain.columns:
-    f, axes = plt.subplots(1,1, figsize=(10, 6))
-    ft.con_data_scatter(Xtrain, i, Ytrain, "Y", axes)
+    ft.con_data_scatter(Xtrain, i, Ytrain, "Y")
+# In[]:
+ft.con_data_scatter(Xtrain, 'AveRooms', Ytrain, "Y")
 
 # In[]:
 # 特征的 皮尔森相关度
@@ -140,7 +147,8 @@ ft.disturbance_term_normal(Xtrain, Ytrain, col_list)
 
 # In[]:
 # 3、学生化残差
-ft.studentized_residual(Xtrain, Ytrain)
+temp_index = ft.studentized_residual(Xtrain, Ytrain, col_list, 'Y', num=3)
+temp_data = Xtrain.loc[temp_index]
 # In[]:
 #ft.strong_influence_point(Xtrain, Ytrain) # 太耗时，最好不要用了
 
@@ -164,10 +172,14 @@ Xtest_ = pd.DataFrame(Xtest_, columns=Xtest.columns)
 
 # In[]:
 reg = LR().fit(Xtrain_, Ytrain)
-yhat = reg.predict(Xtest_) #预测我们的yhat
-yhat = pd.DataFrame(yhat, columns=['Pred'])
 
-print(yhat.min(), yhat.max(), yhat.mean())
+yhat_train = reg.predict(Xtrain_) #预测我们的yhat
+yhat_train = pd.DataFrame(yhat_train, columns=['Pred'])
+
+yhat_test = reg.predict(Xtest_) #预测我们的yhat
+yhat_test = pd.DataFrame(yhat_test, columns=['Pred'])
+
+print(yhat_test.min(), yhat_test.max(), yhat_test.mean())
 print(reg.coef_)
 print([*zip(Xtrain.columns,reg.coef_)])
 print(reg.intercept_)
@@ -177,10 +189,10 @@ print(reg.intercept_)
 from sklearn.metrics import mean_squared_error as MSE
 
 print(Ytest.min(), Ytest.max(), Ytest.mean()) # 0.14999 5.00001 2.0819292877906976
-print(MSE(Ytest, yhat)) # 0.5309012639324573
+print(MSE(Ytest, yhat_test)) # 0.5309012639324573
 
-print(MSE(Ytest, yhat) / Ytest.mean()) # 每个样本误差？
-k = np.sum(abs(yhat - Ytest)) / len(Ytest)
+print(MSE(Ytest, yhat_test) / Ytest.mean()) # 每个样本误差？
+k = np.sum(abs(yhat_test - Ytest)) / len(Ytest)
 print(k / Ytest.mean()) # 每个样本误差？
 
 # In[]:
@@ -201,18 +213,23 @@ cross_val_score(reg, Xtest_, Ytest, cv=10, scoring="explained_variance")
 from sklearn.metrics import r2_score # R square
 
 # 第一种方式：
-print(r2_score(Ytest, yhat))
-print(ft.r2_score_customize(Ytest, yhat, 2))
-print(ft.adj_r2_customize(Ytest, yhat, Xtest_.shape[1], 2))
+print(r2_score(Ytest, yhat_test))
+print(ft.r2_score_customize(Ytest, yhat_test, 2))
+print(ft.adj_r2_customize(Ytest, yhat_test, Xtest_.shape[1], 2))
 
 # 第二种方式：
 print(reg.score(Xtest_,Ytest))
 # 第三种方式：
-print(cross_val_score(reg,Xtest_,Ytest,cv=10,scoring="r2").mean())
+print(cross_val_score(reg, Xtest_, Ytest, cv=10, scoring="r2").mean())
 
 # In[]:
 # 线性回归 数据拟合
-ft.fitting_comparison(Ytest["Y"], yhat["Pred"])
+f, axes = plt.subplots(3,1, figsize=(23, 18))
+ft.fitting_comparison(Ytrain["Y"], yhat_train["Pred"], Ytest["Y"], yhat_test["Pred"], axes)
+# In[]:
+# 训练集 与 测试集 残差
+f, axes = plt.subplots(1,1, figsize=(18, 10))
+ft.linear_model_residuals(Ytrain["Y"], yhat_train["Pred"], Ytest["Y"], yhat_test["Pred"], axes)
 
 # In[]:
 # 负的 r2： （数学验证r2可以取到负值）
