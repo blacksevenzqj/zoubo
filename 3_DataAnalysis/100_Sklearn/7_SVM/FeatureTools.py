@@ -90,7 +90,7 @@ na
 注意：能使用 DataFrame.isnull().sum() 检测。
 
 3.1.2、如果 输入中包含 非数字格式字符串：（PD转换数字失败）
-NAN、na
+NAN、na 或 字符串“-” 
 其相关元素类型为<class 'str'>；
 则整个 字段Seriers类型 变为object；
 3.1.2.1、输入字符串 NA、nan、NaN、null、NULL 转换为 np.nan。
@@ -325,6 +325,14 @@ def set_classif_col(df, feature_name, val_type=1):
         df[feature_name] = df[feature_name].apply(lambda x: astype_customize(x, temp_type))
 
 
+def feature_category(data):
+    # 数字特征
+    numeric_features = data.select_dtypes(include=[np.number])
+    # 类型特征
+    categorical_features = data.select_dtypes(include=[np.object])
+    return numeric_features.columns, categorical_features.columns
+
+
 # In[]:
 # 缺失值：行向（特征缺失值）、列向（数据缺失值）； 1:删特征、 2:删数据
 '''
@@ -357,7 +365,7 @@ def missing_values_table(df, customize_axis=0, percent=None, del_type=1):
 
     # Rename the columns
     mis_val_table_ren_columns = mis_val_table.rename(
-        columns={0: 'Missing Values', 1: '% of Total Values'})
+        columns={0: 'Missing_Values', 1: '% of Total Values'})
 
     # Sort the table by percentage of missing descending
     mis_val_table_ren_columns = mis_val_table_ren_columns[
@@ -866,7 +874,7 @@ def customize_one_hot(x, feature_dict):
 
 
 # In[]:
-# 分类变量：统计类别数量： （区分特征） 主要为DataFrame（当为DataFrame时才能使用axis关键字）
+# 分类变量：统计类别数量： （区分特征） 当为DataFrame时才能使用axis关键字，也可为Seriers。优点能去除缺失值
 def category_quantity_statistics(df, features, axis=0, dropna=True):
     if type(features) is list:
         return df[features].nunique(axis=axis, dropna=dropna)  # dropna：bool，默认为True，不在计数中包含np.nan。
@@ -875,49 +883,70 @@ def category_quantity_statistics(df, features, axis=0, dropna=True):
 
 
 # 分类变量：统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
+# 注意： np.unique统计时会包含： np.nan（一个np.nan为一个类别，很麻烦，没有dropna关键字）
 # unique_label, counts_label, unique_dict = ft.category_quantity_statistics_all(Series)
-def category_quantity_statistics_all(df, features=None):
+def category_quantity_statistics_all(df, feature=None):
     # unique_label：非重复值集合列表； counts_label：每个非重复值的数量
-    if type(df) is pd.core.series.Series and features is None:
+    if type(df) is pd.core.series.Series and feature is None:
         unique_label, counts_label = np.unique(df, return_counts=True)  # df是Seriers
-    elif type(df) is pd.core.frame.DataFrame and features is not None:
-        unique_label, counts_label = np.unique(df[features], return_counts=True)  # df是DataFrame
+    elif type(df) is pd.core.frame.DataFrame and feature is not None:
+        unique_label, counts_label = np.unique(df[feature], return_counts=True)  # df是DataFrame
     else:
         raise Exception('Type is Error')
 
     unique_dict = {}
     for i in range(len(unique_label)):
         unique_dict[unique_label[i]] = counts_label[i]
-        print(unique_label[i], counts_label[i])
+    #        print(unique_label[i], counts_label[i])
 
     return unique_label, counts_label, unique_dict
     # df[features].value_count().to_dict() 直接就是个dict
 
 
 # 分类变量：类别统计
-def category_quantity_statistics_value_counts(data, category_index, continuous_index=None):
+def category_quantity_statistics_value_counts(data, category_index, continuous_index=None, index_type=1):
     if type(category_index) != list:
         raise Exception('category_index Type is Error, must list')
-    for i in category_index:
-        print(data.columns.values[i], ":")
-        print(data[data.columns.values[i]].agg(['value_counts']).T)
-        print("=======================================================================")
 
-    if continuous_index is not None:
-        print()
-        print("-" * 60)
-        print("Continuous feature:")
-        print("=======================================================================")
-        if type(continuous_index) != list:
-            raise Exception('continuous_index Type is Error, must list')
-        for i in continuous_index:
-            print(data.columns.values[i], ":")
-            print(data[data.columns.values[i]].agg(['min', 'mean', 'median', 'max', 'std']).T)
+    if index_type == 1:
+        for i in category_index:
+            print("{}特征有个{}不同的值".format(i, category_quantity_statistics(data, i)))
+            print(data[i].agg(['value_counts']).T)
             print("=======================================================================")
 
-        # In[]:
+        if continuous_index is not None:
+            print()
+            print("-" * 60)
+            print("Continuous feature:")
+            print("=======================================================================")
+            if type(continuous_index) != list:
+                raise Exception('continuous_index Type is Error, must list')
+            for i in continuous_index:
+                print(i, ":")
+                print(data[i].agg(['min', 'mean', 'median', 'max', 'std']).T)
+                print("=======================================================================")
+    else:
+        # 列索引数字下标（侬脑子瓦特了）
+        for i in category_index:
+            print("{}特征有个{}不同的值".format(data.columns.values[i],
+                                        category_quantity_statistics(data, data.columns.values[i])))
+            print(data[data.columns.values[i]].agg(['value_counts']).T)
+            print("=======================================================================")
+
+        if continuous_index is not None:
+            print()
+            print("-" * 60)
+            print("Continuous feature:")
+            print("=======================================================================")
+            if type(continuous_index) != list:
+                raise Exception('continuous_index Type is Error, must list')
+            for i in continuous_index:
+                print(data.columns.values[i], ":")
+                print(data[data.columns.values[i]].agg(['min', 'mean', 'median', 'max', 'std']).T)
+                print("=======================================================================")
 
 
+# In[]:
 # ================================基础操作 结束==============================
 
 
@@ -966,7 +995,7 @@ def class_data_with_y_scatter(data, feature_name, y_name):
 
 # In[]:
 # --------------------------------连续模型------------------------------
-# 连续模型 连续特征 与 Y 散点分布：
+# 连续模型 连续特征 与 连续因变量Y 散点分布：
 # （从左至右逐渐稀疏的散点图 → 第一反应是对Y取对数 → 特征取对数）
 '''
 方差齐次性： 测试两个连续特征的均方差的最佳方法是图形方式。 
@@ -975,14 +1004,16 @@ def class_data_with_y_scatter(data, feature_name, y_name):
 
 
 # 例子： Pedro_Marcelino.py
+# fig, ((ax1, ax2), (ax3, ax4), (ax5, ax6), (ax7, ax8), (ax9, ax10)) = plt.subplots(nrows=5, ncols=2, figsize=(24, 20))
 def con_data_scatter(x_data, featur_name, y_data, y_name):
     f, axes = plt.subplots(2, 1, figsize=(15, 15))
 
+    # 两种散点图绘制方式：
     axes[0].scatter(x_data[featur_name], y_data[y_name], c='#0000FF', s=10, cmap="rainbow")  # 蓝色
     axes[0].set_xlabel(featur_name)  # x轴标签
     axes[0].set_ylabel(y_name)  # y轴标签
 
-    sns.regplot(x_data[featur_name], y_data[y_name], ax=axes[1])
+    sns.regplot(x_data[featur_name], y_data[y_name], scatter=True, fit_reg=True, ax=axes[1])  # 加了趋势线
 
 
 # 连续模型 ： 分类特征 与 连续因变量Y 四分位图 （盒须图）
@@ -1050,16 +1081,29 @@ def box_whisker_diagram_Interval(series):
 
 # f, axes = plt.subplots(1,2, figsize=(23, 8))
 # feature为连续值（特征/因变量）
-def con_data_distribution(data, feature, axes):
+def con_data_distribution(data, feature, axes, fit_type=1):
     if type(feature) == list:
         # 盒须图 要求 特征必须为单特征，不能传['x']进来
         raise Exception('feature Type is Error, must not list')
 
     data = get_notMissing_values(data, feature)
 
+    distplot_title = 'norm'
+    if fit_type == 1:
+        fit_function = scipy.stats.norm  # 正太分布
+    elif fit_type == 2:
+        fit_function = scipy.stats.lognorm  # 取log正太分布
+        distplot_title = 'lognorm'
+    else:
+        fit_function = scipy.stats.johnsonsu  # 无界约翰逊分布
+        distplot_title = 'johnsonsu'
+
     sns.set()  # 切换到seaborn的默认运行配置
-    sns.distplot(data[feature], bins=100, fit=scipy.stats.norm, color='green', ax=axes[0])  # rug=True分布观测条显示
+    # sns.distplot直方图（默认带KDE）
+    sns.distplot(data[feature], bins=100, fit=fit_function, color='green', ax=axes[0])  # rug=True分布观测条显示
+
     # Get the fitted parameters used by the function
+    # 现在只能以 norm正太分布方式 计算均值 和 标准差（其他两个分布，暂时没有查询到怎么计算）
     (mu, sigma) = scipy.stats.norm.fit(data[feature])  # mu均值、sigma标准差： 也就是图中黑色线所示标准正太分布
     print('\n mu = {:.2f} and sigma = {:.2f}\n'.format(mu, sigma))
 
@@ -1083,7 +1127,7 @@ def con_data_distribution(data, feature, axes):
     # Now plot the distribution
     axes[0].legend(['Normal dist. ( $\mu=$ {:.2f} and $\sigma=$ {:.2f} )'.format(mu, sigma)],
                    loc='best')
-    axes[0].set_title('feature: ' + str(feature))
+    axes[0].set_title(distplot_title + ' feature: ' + str(feature))
     axes[0].set_xlabel('')
 
     # 盒须图
@@ -1108,10 +1152,38 @@ def con_data_distribution(data, feature, axes):
     axes[1].set_ylabel('')
 
 
-# 多特征线性关系图：
+# 连续/分类模型 ： 连续 特征/因变量 简易 直方图分布（快速查看）
+def simple_con_data_distribution(data, numeric_features):
+    f = pd.melt(data, value_vars=numeric_features)
+    g = sns.FacetGrid(f, col="variable", col_wrap=2, sharex=False, sharey=False)
+    g = g.map(sns.distplot, "value")
+
+
+# 原生 连续特征的直方图，不带KDE
+def con_data_distribution_hist(data, feature=None, axe=None, color='blue'):
+    if axe is None:
+        fig, axe = plt.subplots(1, 1, figsize=(10, 8))
+
+    if type(data) is pd.core.series.Series and feature is None:
+        axe.hist(data, orientation='vertical', histtype='bar', color=color)
+    elif type(data) is pd.core.frame.DataFrame and feature is not None:
+        axe.hist(data[feature], orientation='vertical', histtype='bar', color=color)
+    else:
+        raise Exception('Type is Error')
+
+    # 多连续特征线性关系图： （类似于皮尔森相似度的热力图） 在使用 皮尔森相似度 选择特征时也用到sns.pairplot画图函数
+
+
 # 是 函数class_data_scatter 和 class_data_with_y_scatter的综合
-def multi_feature_linear_diagram(data, y_name, size=2):
-    sns.pairplot(data, hue=y_name, size=size)
+# 很不错的文章： https://www.jianshu.com/p/6e18d21a4cad
+# 1、连续模型： data中 连续特征 且 必须包含 连续因变量Y， hue=连续因变量Y，速度太慢无法运行
+# 2、连续模型/分类模型： data中只包含连续特征（当然也可以包含 连续因变量Y），可以出结果
+def multi_feature_linear_diagram(data, numeric_features, y_name=None, size=2):
+    sns.set()
+    if y_name is not None:
+        sns.pairplot(data[numeric_features], hue=y_name, size=size)
+    else:
+        sns.pairplot(data[numeric_features], size=2, kind='scatter', diag_kind='kde')
 
 
 # 分类特征 与 连续特征 柱状图（这里只是个示例，使用时重新写）
@@ -1133,10 +1205,11 @@ def barplot(axis_x, axis_y, p=sns.color_palette(), xlabel=u'用户职业', ylabe
 原假设：样本来自一个正态分布的总体。
 备选假设：样本不来自一个正态分布的总体。
 w和p同向： w值越小； p-值越小、接近于0； 拒绝原假设。 (w值 与 偏度值skew 相反)
+注意： 特征不能包含np.nan
 '''
 
 
-def normal_distribution_test(data):
+def normal_distribution_test(data, axe=None):
     var = data.columns
     shapiro_var = {}
     for i in var:
@@ -1145,7 +1218,9 @@ def normal_distribution_test(data):
     # 0列为w值； 1为p值。
     shapiro = pd.DataFrame(shapiro_var).T.sort_values(by=0, ascending=False)
 
-    fig, axe = plt.subplots(1, 1, figsize=(15, 10))
+    if axe is None:
+        fig, axe = plt.subplots(1, 1, figsize=(15, 10))
+
     # bar的X轴顺序问题： https://blog.csdn.net/qq_35318838/article/details/80198307
     axe.bar(np.arange(len(shapiro.index)), shapiro[0], width=.4)
     axe.set_xticks(np.arange(len(shapiro.index)))
@@ -1172,7 +1247,7 @@ Skewness=E[((x-E(x))/(\sqrt{D(x)}))^3]
 '''
 
 
-def skew_distribution_test(data):
+def skew_distribution_test(data, axe=None):
     #    var = data.columns
     #    skew_var = {}
     #    for i in var:
@@ -1185,7 +1260,8 @@ def skew_distribution_test(data):
 
     kurt = np.abs(data.kurt()).sort_values(ascending=False)
 
-    fig, axe = plt.subplots(2, 1, figsize=(18, 20))
+    if axe is None:
+        fig, axe = plt.subplots(2, 1, figsize=(18, 20))
 
     # bar的X轴顺序问题： https://blog.csdn.net/qq_35318838/article/details/80198307
     axe[0].bar(np.arange(len(skew.index)), skew, width=.4)
