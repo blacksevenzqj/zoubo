@@ -1674,6 +1674,7 @@ from sklearn.metrics import r2_score  # R square
 
 # 拟合优度
 # R^2
+# 库方式： 1、r2_score(Ytest, yhat_test) 2、reg.score(Xtest_,Ytest) 3、cross_val_score(reg, Xtest_, Ytest, cv=10, scoring="r2").mean()
 '''
 从 真实值的内部差异（方差）为出发点思考 R^2 公式：
 1、mse 代表 回归值与真实值之间的（均方误差MSE）  
@@ -2015,6 +2016,7 @@ def fitting_comparison(y_train_true, y_train_predict, y_test_true, y_test_predic
 
 
 # 训练集 与 测试集 残差
+# f, axes = plt.subplots(1,1, figsize=(18, 10))
 def linear_model_residuals(y_train_true, y_train_predict, y_test_true, y_test_predict, axe):
     x_axis = np.hstack((y_train_predict, y_test_predict))
 
@@ -2044,9 +2046,9 @@ def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, l
         ridge_score = cross_val_score(ridge, X, y, cv=cv_customize, scoring="r2")
 
         # 因 R^2=(-∞,1]， R^2拟合优度： 模型捕获到的信息量 占 真实标签中所带的信息量的比例
-        # 1 - R^2均值 = 偏差， 所以用 R^2均值 代表偏差（R^2均值越小，偏差越大； R^2均值越大，偏差越小）
-        # 偏差：交叉验证 的 R^2均值：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 均值： 不同模型R^2拟合优度的准确性
-        ridge_r2_score = ridge_score.mean()  # R^2均值 代表 偏差
+        # 1 - R^2均值 = 偏差， 所以 简化起见 用 R^2均值 代表偏差（R^2均值越小，偏差越大； R^2均值越大，偏差越小）
+        # 交叉验证 的 R^2均值： 不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 均值： 不同模型R^2拟合优度的准确性
+        ridge_r2_score = ridge_score.mean()  # 简化起见 用 R^2均值 代表 偏差
         linear_r2_score = linear_score.mean()
         title_mean = "R2_Mean"
         ridge_r2_scores.append(ridge_r2_score)
@@ -2066,39 +2068,49 @@ def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, l
     maxR2_Alpha, maxR2 = alpharange[ridge_r2_scores.index(max(ridge_r2_scores))], max(ridge_r2_scores)
     start_Alpha, start_R2 = alpharange[0], ridge_r2_scores[0]
     diff_R2 = maxR2 - start_R2
-    print("R^2起始阈值%f:R^2起始值%f，R^2最大值阈值%f:R^2最大值%f，R^2差值%f" % (start_Alpha, start_R2, maxR2_Alpha, maxR2, diff_R2))
+    print("R^2起始正则化阈值%f:R^2起始值%f，R^2最大值正则化阈值%f:R^2最大值%f，R^2差值%f" % (start_Alpha, start_R2, maxR2_Alpha, maxR2, diff_R2))
 
     # 当R^2最大值时，求 R^2方差Var的最大值，用R^2的变化差值 与 R^2方差的变化差值 再进行比较
     start_R2VaR = ridge_r2var_scores[0]
     R2VarR_Index = alpharange.tolist().index(maxR2_Alpha)
     R2varR = ridge_r2var_scores[R2VarR_Index]
     diff_R2varR = R2varR - start_R2VaR
-    print("R^2方差起始阈值%f:R^2方差起始值%f，R^2方差对应阈值%f:R^2方差对应最大值%f，R^2方差差值%f" % (
+    print("R^2方差起始正则化阈值%f:R^2方差起始值%f，R^2最大值正则化阈值%f:R^2最大值对应方差值%f，R^2方差差值%f" % (
     alpharange[0], start_R2VaR, maxR2_Alpha, R2varR, diff_R2varR))
     print("R^2方差差值/R^2差值 = %f" % (diff_R2varR / diff_R2))
 
-    # 1、打印R2最高所对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
-    print(alpharange[ridge_r2_scores.index(max(ridge_r2_scores))], max(ridge_r2_scores),
-          ridge_r2var_scores[ridge_r2_scores.index(max(ridge_r2_scores))])
-    # 1、打印R2方差最低时对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
-    print(alpharange[ridge_r2var_scores.index(min(ridge_r2var_scores))],
-          ridge_r2_scores[ridge_r2var_scores.index(min(ridge_r2var_scores))], min(ridge_r2var_scores))
-    # 1、打印泛化误差可控部分的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
-    print(alpharange[ridge_ge.index(min(ridge_ge))], ridge_r2_scores[ridge_ge.index(min(ridge_ge))],
-          ridge_r2var_scores[ridge_ge.index(min(ridge_ge))], min(ridge_ge))
+    print('-' * 30)
+
+    # 1、打印R2最大值时对应的正则化参数取值； 2、并打印R2最大值； 3、并打印R^2最大值对应的R^2方差值
+    #    print(alpharange[ridge_r2_scores.index(max(ridge_r2_scores))], max(ridge_r2_scores), ridge_r2var_scores[ridge_r2_scores.index(max(ridge_r2_scores))])
+    print("R2最大值时对应的正则化参数取值:%f； R2最大值:%f； R^2最大值对应的R^2方差值:%f" % (
+    alpharange[ridge_r2_scores.index(max(ridge_r2_scores))], max(ridge_r2_scores),
+    ridge_r2var_scores[ridge_r2_scores.index(max(ridge_r2_scores))]))
+
+    # 2、打印R2方差最小值时对应的正则化参数取值； 2、并打印R2方差最小值对应的R2值； 3、并打印R2方差最小值
+    #    print(alpharange[ridge_r2var_scores.index(min(ridge_r2var_scores))], ridge_r2_scores[ridge_r2var_scores.index(min(ridge_r2var_scores))], min(ridge_r2var_scores))
+    print("R2方差最小值时对应的正则化参数取值:%f； R2方差最小值对应的R2值:%f； R2方差最小值:%f" % (
+    alpharange[ridge_r2var_scores.index(min(ridge_r2var_scores))],
+    ridge_r2_scores[ridge_r2var_scores.index(min(ridge_r2var_scores))], min(ridge_r2var_scores)))
+
+    # 3、打印泛化误差可控部分最小值时对应的正则化参数取值； 2、并打印泛化误差可控部分最小值时对应的R2值； 3、并打印泛化误差可控部分最小值时对应的R2方差值； 4、并打印泛化误差可控部分最小值
+    #    print(alpharange[ridge_ge.index(min(ridge_ge))],ridge_r2_scores[ridge_ge.index(min(ridge_ge))],ridge_r2var_scores[ridge_ge.index(min(ridge_ge))], min(ridge_ge))
+    print("泛化误差可控部分最小值时对应的正则化参数取值:%f； 泛化误差可控部分最小值时对应的R2值:%f； 泛化误差可控部分最小值时对应的R2方差值:%f； 泛化误差可控部分最小值:%f" % (
+    alpharange[ridge_ge.index(min(ridge_ge))], ridge_r2_scores[ridge_ge.index(min(ridge_ge))],
+    ridge_r2var_scores[ridge_ge.index(min(ridge_ge))], min(ridge_ge)))
 
     plt.figure(figsize=(10, 8))
-    plt.plot(alpharange, ridge_r2_scores, color="red", label="Ridge")
+    plt.plot(alpharange, ridge_r2_scores, color="red", label="Ridge R2_Mean")
     if linear_show:
-        plt.plot(alpharange, linear_r2_scores, color="orange", label="LR")
+        plt.plot(alpharange, linear_r2_scores, color="orange", label="LR R2_Mean")
     plt.title(title_mean)
     plt.legend()
     plt.show()
 
     plt.figure(figsize=(10, 8))
-    plt.plot(alpharange, ridge_r2var_scores, color="red", label="Ridge")
+    plt.plot(alpharange, ridge_r2var_scores, color="red", label="Ridge R2_Var")
     if linear_show:
-        plt.plot(alpharange, linear_r2var_scores, color="orange", label="LR")
+        plt.plot(alpharange, linear_r2var_scores, color="orange", label="LR R2_Var")
     plt.title(title_var)
     plt.legend()
     plt.show()
@@ -2109,13 +2121,13 @@ def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, l
     plt.plot(alpharange, ridge_r2_scores + np.array(ridge_r2var_scores), c="red", linestyle="--", label="R2_Var")
     plt.plot(alpharange, ridge_r2_scores - np.array(ridge_r2var_scores), c="red", linestyle="--")
     plt.legend()
-    plt.title("R2_Mean vs R2_Var")
+    plt.title("Ridge R2_Mean vs R2_Var")
     plt.show()
 
     # 绘制 化误差的可控部分
     plt.figure(figsize=(10, 8))
     plt.plot(alpharange, ridge_ge, c="gray", linestyle='-.')
-    plt.title("Generalization error")
+    plt.title("Ridge Generalization error")
     plt.show()
 
 
