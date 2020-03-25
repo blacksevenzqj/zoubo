@@ -453,6 +453,10 @@ def feature_missing_value_analysis(df, feature_name, groupby_col, y_name):
 
 # 特征返回非缺失值部分
 def get_notMissing_values(data_temp, feature):
+    if type(feature) == list:
+        raise Exception('feature Type is Error, must not list')
+    # 注意： 切片操作产生一个新对象了，地址当然不同。 参看 Python笔记： “赋值与地址”
+    # 就算 data_temp = data_temp[data_temp[feature] == data_temp[feature]] data_temp现在也是新对象，地址不同。
     return data_temp[data_temp[feature] == data_temp[feature]]  # 返回全部Data
 
 
@@ -739,15 +743,35 @@ def set_diff(set_one, set_two):
     return temp_list
 
 
-# 设置分类变量类型为：category （在“盒须图”中分类特征临时设置为category变量类型）
-# 注意： astype()没有inplace关键字
-# dat2.dist=dat1.dist.astype("category")
+# 设置分类变量类型为：category （在“盒须图”中分类特征 临时 设置为category变量类型）
+# 注意： 分类特征设置为category类型后，使用其他库时可能会报错，所以category类型转换 只能 临时 在图表显示中使用，不能修改到原数据。
+'''
+注意： astype()没有inplace关键字
+# 1、方式1： 分两步设置
+# 1.1、分类特征类型设置为 category类型
+# dat2.dist=dat1.dist.astype("category") 
+# 1.2、设置分类特征category类型的显示顺序
 # dat2.dist.cat.set_categories(["石景山","丰台","朝阳","海淀","东城","西城"],inplace=True) # 有inplace关键字
+
+# 2、方式2： 使用 .astype('category', categories=categories_) 一步设置
+'''
+
+
 def set_col_category(df, feature_name, categories_=None):
     if categories_ is None:
         df[feature_name] = df[feature_name].astype('category', ordered=True)  # 自动排序： 按首字母顺序
     else:
         df[feature_name] = df[feature_name].astype('category', categories=categories_)  # 手动排序
+
+
+# 分类特征设置为category类型，为np.nan添加一个类别 （在“盒须图”中分类特征 临时 设置为category变量类型）
+def add_col_category(data, categorical_features):
+    for c in categorical_features:
+        data[c] = data[c].astype('category')
+        if data[c].isnull().any():
+            # 为有np.nan的分类特征的category类型 添加一个category类别：missing
+            data[c] = data[c].cat.add_categories(['missing'])
+            data[c] = data[c].fillna('missing')
 
 
 # 分类变量编码：
@@ -903,7 +927,7 @@ def category_quantity_statistics_all(df, feature=None):
     # df[features].value_count().to_dict() 直接就是个dict
 
 
-# 分类变量：类别统计
+# 分类变量：类别统计 (value_counts()会自动剔除np.nan)
 def category_quantity_statistics_value_counts(data, category_index, continuous_index=None, index_type=1):
     if type(category_index) != list:
         raise Exception('category_index Type is Error, must list')
@@ -954,9 +978,12 @@ def category_quantity_statistics_value_counts(data, category_index, continuous_i
 # ================================数据分布 开始==============================
 # In[]:
 # --------------------------------分类模型------------------------------
-# 分类模型 连续特征 数据分布（直方图、盒须图）： （不能有缺失值）
+# 分类模型 ： 连续特征 数据分布（直方图、盒须图）： （不能有缺失值）
 # f, axes = plt.subplots(2,2, figsize=(20, 18))
 def class_data_distribution(data, feature, label, axes):
+    if type(feature) == list:
+        raise Exception('feature Type is Error, must not list')
+
     data = get_notMissing_values(data, feature)
     sns.distplot(data[feature], bins=100, color='green', ax=axes[0][0])
     axes[0][0].set_title('feature: ' + str(feature))
@@ -977,14 +1004,14 @@ def class_data_distribution(data, feature, label, axes):
     axes[1][1].set_ylabel('')
 
 
-# 分类模型 2个连续特征的散点分布（因变量Y作为颜色区分）：
+# 分类模型 ： 2个连续特征的散点分布（因变量Y作为颜色区分）：
 def class_data_scatter(x_data, one_f_name, two_f_name, y_data, axes):
     axes.scatter(x_data.loc[:, one_f_name], x_data.loc[:, two_f_name], c=y_data, s=10, cmap="rainbow")  # 蓝色
     axes.set_xlabel(one_f_name)  # x轴标签
     axes.set_ylabel(two_f_name)  # y轴标签
 
 
-# 分类模型 连续特征 与 因变量Y 散点图： （类似于 盒须图）
+# 分类模型 ： 连续特征 与 因变量Y 散点图： （类似于 盒须图）
 def class_data_with_y_scatter(data, feature_name, y_name):
     import matplotlib as mpl
     mpl.rcParams['font.sans-serif'] = 'SimHei'
@@ -1018,19 +1045,76 @@ def con_data_scatter(x_data, featur_name, y_data, y_name):
 
 # 连续模型 ： 分类特征 与 连续因变量Y 四分位图 （盒须图）
 # 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐特征类别递增，斯皮尔曼相关系数很高，分类特征 对 连续因变量Y 有用
+# 1、设置 分类特征为category类型，并手动设置category类别顺序
 # 例子： Pedro_Marcelino.py
-# f, axes = plt.subplots(1,1, figsize=(10, 8))
 # ft.box_diagram(dat0, 'dist', 'price', axes, set_category=True, categories_=["石景山","丰台","朝阳","海淀","东城","西城"])
-def box_diagram(data, x_axis_name, y_axis_name, axes, ymin=None, ymax=None, set_category=False, categories_=None):
+def box_diagram(data, x_axis_name, y_axis_name, axes=None, ymin=None, ymax=None, set_category=False, categories_=None,
+                is_violin=False):
     if ymin is not None and ymax is not None:
         axes.axis(ymin=ymin, ymax=ymax)
 
     # 设置分类变量的字段类型为：category，并指定类别顺序，盒须图中按指定类别顺序显示
     if set_category and categories_ is not None and type(categories_) == list:
-        data = data[[x_axis_name, y_axis_name]]
+        # 参看 Python笔记： “赋值与地址”
+        # 入参data → 调用变量train  改变指向  入参data → 新变量
+        # 操作 入参data → 操作 新变量（不会影响 调用变量train）
+        data = data[[x_axis_name, y_axis_name]]  # 即使显示的取所有列，也是新地址
         set_col_category(data, x_axis_name, categories_=categories_)
 
-    sns.boxplot(x=x_axis_name, y=y_axis_name, data=data, ax=axes)
+    if axes is None:
+        f, axes = plt.subplots(1, 1, figsize=(10, 8))
+
+    if is_violin:  # 小提琴图
+        sns.violinplot(x=x_axis_name, y=y_axis_name, data=data, ax=axes)
+    else:
+        sns.boxplot(x=x_axis_name, y=y_axis_name, data=data, ax=axes)
+
+
+# 2、自动将 分类特征的类型设置为category类型， 如果分类特征有np.nan值，则为分类特征的category类型添加一个category类别：missing
+# 没有设置category类型顺序，后面再修改吧
+def box_diagram_auto_col_category(data, categorical_features, y_name, function_type=1, is_violin=False):
+    if type(categorical_features) is not list:
+        raise Exception('categorical_features Type is Error, must list')
+
+    all_feature = categorical_features.copy()
+    all_feature.append(y_name)
+    # 参看 Python笔记： “赋值与地址”
+    # 入参data → 调用变量train  改变指向  入参data → 新变量
+    # 操作 入参data → 操作 新变量（不会影响 调用变量train）
+    data = data[all_feature]  # 即使显示的取所有列，也是新地址
+    add_col_category(data, categorical_features)
+
+    # 1、类别特征 盒须图/小提琴图 可视化
+    # 确定这样传参？ 外层入参 直接传递给 内层函数？ 不经过内层函数的调用传参给内层函数？
+    def boxplot(x, y, is_violin=is_violin, **kwargs):
+        if is_violin:  # 小提琴图
+            sns.violinplot(x=x, y=y)
+        else:
+            sns.boxplot(x=x, y=y)
+        x = plt.xticks(rotation=90)
+
+    # 2、类别特征的柱形图可视化
+    def bar_plot(x, y, **kwargs):
+        sns.barplot(x=x, y=y)
+        x = plt.xticks(rotation=90)
+
+    # 3、类别特征的每个类别频数可视化
+    def count_plot(x, y, **kwargs):  # 这个 入参y 是参数占位符的意思，暂时不知道怎么修改
+        sns.countplot(x=x)
+        x = plt.xticks(rotation=90)
+
+    if function_type == 1:
+        statistics_function = boxplot
+    elif function_type == 2:
+        statistics_function = bar_plot
+    elif function_type == 3:
+        statistics_function = count_plot
+    else:
+        raise Exception('function_type Type is Error')
+
+    f = pd.melt(data, id_vars=[y_name], value_vars=categorical_features)
+    g = sns.FacetGrid(f, col="variable", col_wrap=2, sharex=False, sharey=False, size=5)
+    g = g.map(statistics_function, "value", y_name)
 
 
 # In[]:
@@ -1213,6 +1297,10 @@ def normal_distribution_test(data, axe=None):
     var = data.columns
     shapiro_var = {}
     for i in var:
+        # 参看 Python笔记： “赋值与地址”
+        # 入参data → 调用变量train  改变指向  入参data → 新变量
+        # 操作 入参data → 操作 新变量（不会影响 调用变量train）
+        data = get_notMissing_values(data, i)
         shapiro_var[i] = scipy.stats.shapiro(data[i])  # 返回 w值 和 p值
 
     # 0列为w值； 1为p值。
@@ -1244,6 +1332,7 @@ Skewness:偏度是描述数据分布形态的统计量，其描述的是某总�
 （4）数值的绝对值越大，表明数据分布越不对称，偏斜程度大。
 计算公式：
 Skewness=E[((x-E(x))/(\sqrt{D(x)}))^3]
+skew、kurt说明参考 https://www.cnblogs.com/wyy1480/p/10474046.html
 '''
 
 
@@ -1677,10 +1766,58 @@ def corrFunction_all(data, y_name, f_importance_num=20, f_collinear_num=0.7):
     return f_all_no_f1_merged, result_final  # 两者维度相同； 数据结构不同
 
 
+# 3.1 改进版本：
+# 1、连续特征之间的 皮尔森相似度从大到小排序；  2、连续特征 与 连续因变量Y之间的 皮尔森相似度从大到小排序。
+def feature_select_corr_withY(data, numeric_features, y_name, threshold=0.8):
+    if type(numeric_features) != list:
+        # 盒须图 要求 特征必须为单特征，不能传['x']进来
+        raise Exception('numeric_features Type is Error, must list')
+
+    temp_corr_abs_withY, temp_corr_withY = corrFunction_withY(data[numeric_features], y_name)
+    temp_corr_abs, temp_corr = corrFunction(data[numeric_features])
+
+    # 连续特征之间的 皮尔森相似度 >= 0.8 要做筛选： 留下 一对连续特征之中 对 连续因变量Y 皮尔森相似度贡献大的连续特征
+    temp_corr_abs = temp_corr_abs[temp_corr_abs['Correlation_Coefficient'] >= threshold]
+    recovery_index(temp_corr_abs)
+    del_list = list()
+    equal_list = list()
+
+    # 循环 连续特征之间的 皮尔森相似度 >= 0.8 的DataFrame
+    for i in range(len(temp_corr_abs)):
+        temp = temp_corr_abs.loc[i]
+        # 如果 连续特征已经在 删除列表del_list 或 相等列表equal_list中， 则跳过
+        if (temp['Feature_1'] in del_list) or (temp['Feature_2'] in del_list):
+            continue;
+        elif (temp['Feature_1'] in equal_list) or (temp['Feature_2'] in equal_list):
+            continue;
+
+        # 取出 该 连续特征 对 连续因变量Y 皮尔森相似度
+        temp_withY1 = temp_corr_abs_withY[temp_corr_abs_withY['Feature_1'] == temp['Feature_1']]
+        temp_withY2 = temp_corr_abs_withY[temp_corr_abs_withY['Feature_1'] == temp['Feature_2']]
+
+        # 看 该对 连续特征当中， 哪个连续特征 对 连续因变量Y 皮尔森相似度 贡献小， 放入删除列表del_list
+        if temp_withY1.iloc[0]['Correlation_Coefficient'] > temp_withY2.iloc[0]['Correlation_Coefficient']:
+            if temp_withY2.iloc[0]['Feature_1'] not in del_list:
+                del_list.append(temp_withY2.iloc[0]['Feature_1'])
+        elif temp_withY1.iloc[0]['Correlation_Coefficient'] < temp_withY2.iloc[0]['Correlation_Coefficient']:
+            if temp_withY1.iloc[0]['Feature_1'] not in del_list:
+                del_list.append(temp_withY1.iloc[0]['Feature_1'])
+        else:
+            # 如果 该对 连续特征 对 连续因变量Y 皮尔森相似度 贡献相等， 相等列表equal_list中
+            equal_list.append(temp_withY1.iloc[0]['Feature_1'] + '=' + temp_withY2.iloc[0]['Feature_1'])
+
+    return del_list, equal_list
+
+
 # 4、最后再对 选出的特征 与 Y 做pairplot图 （入参data中带Y）
+# 4.1、连续特征之间 皮尔森相似度越大 则越趋近于 一条斜直线： 肯定要删除其中一个特征（哪个连续特征 对 连续因变量Y 皮尔森相似度小 删除）
+# 4.2、连续特征 与 连续因变量Y 的皮尔森相似度 越大越好（趋近于一条斜直线）
 def feature_scatterplotWith_y(data, cols):
+    if type(cols) != list:
+        # 盒须图 要求 特征必须为单特征，不能传['x']进来
+        raise Exception('cols Type is Error, must list')
     sns.set()
-    sns.pairplot(data[cols], size=2.5)  # scatterplot
+    sns.pairplot(data[cols], size=2, kind='scatter', diag_kind='kde')
     plt.show();
 
 
