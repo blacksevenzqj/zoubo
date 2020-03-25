@@ -455,7 +455,7 @@ def feature_missing_value_analysis(df, feature_name, groupby_col, y_name):
 def get_notMissing_values(data_temp, feature):
     if type(feature) == list:
         raise Exception('feature Type is Error, must not list')
-    # 注意： 切片操作产生一个新对象了，地址当然不同。 参看 Python笔记： “赋值与地址”
+    # 注意： 切片操作产生一个新对象了，地址当然不同（即使显示的取所有列，也是新地址）。 参看 Python笔记： “赋值与地址”
     # 就算 data_temp = data_temp[data_temp[feature] == data_temp[feature]] data_temp现在也是新对象，地址不同。
     return data_temp[data_temp[feature] == data_temp[feature]]  # 返回全部Data
 
@@ -600,6 +600,38 @@ def missValue_datatime_match(df, col):
     return df[col].map(lambda x: x if (re.match("^(19|20)\d{2}-\d{1,2}-\d{1,2}", str(x))) else pd.lib.NaT)
 
 
+# 自定义时间转换pd.Timestamp：
+# 代码在： 1_Used_car_transaction_price_prediction/2_Feature_Engineering.py
+def custom_time_conversion(data, time_col_before, time_col_after):
+    # 参看 Python笔记： “赋值与地址”
+    # 注意： 增加新特征 同样是在入参data上进行操作， 就和 调用变量train 有关系， 不会产生新对象
+    # 1、按特征列 忽略时间格式错误 转换为pd.Timestamp： 错误时间格式，如：19910001，将被置为 pd.lib.NaT
+    data[time_col_before + "1"] = pd.to_datetime(data[time_col_before], format='%Y%m%d', errors='coerce')
+
+    # 2、自定义转换：
+    # 将 月为00 的错误时间格式，截取到年。
+    data[time_col_before + "2"] = data[time_col_before].map(lambda x: x[0:4] if x[4:6] == '00' else x)
+    # 并转换为pd.Timestamp
+    data[time_col_before + "3"] = data[time_col_before + "2"].map(
+        lambda x: pd.to_datetime(x, format="%Y") if (len(x) == 4) else pd.to_datetime(x, format="%Y%m%d"))
+
+    # 3、计算时间差
+    # 3.1、方式1： DataFrame.apply()。 差值.days
+    data['diff_day2'] = data.apply(lambda x: (x[time_col_after] - x[time_col_before + "3"]).days, axis=1)
+
+    # 3.2、方式2： Seriers直接相减。 注意： 差值.dt.days
+    data['diff_day3'] = (data[time_col_after] - data[time_col_before + "3"]).dt.days
+
+    # 3.2.1、注意： 如果 pd.Timestamp - pd.lib.NaT = np.nan
+    data['diff_day1'] = (data[time_col_after] - data[time_col_before + "1"]).dt.days
+    # 截止到这里都是在 入参data上进行操作， 就和 调用变量train 有关系， 不会产生新对象。
+
+    # 注意： 而 切片操作产生一个新对象了，地址当然不同（即使显示的取所有列，也是新地址）。 所以返回的是新对象。
+    return data[
+        [time_col_before, time_col_before + "1", time_col_before + "2", time_col_before + "3", 'diff_day1', 'diff_day2',
+         'diff_day3']]
+
+
 # In[:]
 # 重复值处理（按行统计）
 def duplicate_value(data, subset=None, keep='first', inplace=False):
@@ -645,7 +677,7 @@ def standardScaler_outlier(df, name):
 
 
 # 离群值检测： 使用 箱型图、散点趋势图 观测离群值
-def outlier_detection(X, feature, y, y_name):
+def outlier_detection(X, feature, y, y_name, box_scale=1.5):
     if type(feature) == list:
         # 盒须图 要求 特征必须为单特征，不能传['x']进来
         raise Exception('feature Type is Error, must not list')
@@ -653,23 +685,14 @@ def outlier_detection(X, feature, y, y_name):
     ntrain = y[y_name].notnull().sum()
     X = X[0:ntrain]
 
-    iqr = X[feature].quantile(0.75) - X[feature].quantile(0.25)
-
     # 利用 众数 减去 中位数 的差值  除以  四分位距来 查找是否有可能存在异常值
-    temp_outlier = abs((X[feature].mode().iloc[0,] - X[feature].median()) / iqr)
-    print(temp_outlier)
-
     # 如果值很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析
     f, axes = plt.subplots(1, 2, figsize=(23, 8))
-    con_data_distribution(X, feature, axes)
+    point, more = con_data_distribution(X, feature, axes, box_scale=box_scale)
     # 从直方图中可以看出： 如果数据有最大峰值，属于正常数据，不用清洗。
 
-    upper_point = X[feature].quantile(0.75) + 1.5 * iqr
-    down_point = X[feature].quantile(0.25) - 1.5 * iqr
-
-    upper_more_index = X[X[feature] >= upper_point].index
-    down_more_index = X[X[feature] <= down_point].index
-
+    upper_more_index = more[0].index
+    down_more_index = more[1].index
     #    print(X.iloc[upper_more_index].shape)
     #    print(y.iloc[upper_more_index].shape)
 
@@ -1165,7 +1188,7 @@ def box_whisker_diagram_Interval(series):
 
 # f, axes = plt.subplots(1,2, figsize=(23, 8))
 # feature为连续值（特征/因变量）
-def con_data_distribution(data, feature, axes, fit_type=1):
+def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
     if type(feature) == list:
         # 盒须图 要求 特征必须为单特征，不能传['x']进来
         raise Exception('feature Type is Error, must not list')
@@ -1217,23 +1240,30 @@ def con_data_distribution(data, feature, axes, fit_type=1):
     # 盒须图
     sns.boxplot(y=feature, data=data, ax=axes[1])
     iqr = data[feature].quantile(0.75) - data[feature].quantile(0.25)
-    # 利用 众数 减去 中位数 的差值  除以  四分位距来 查找是否有可能存在异常值
-    temp_outlier = abs((data[feature].mode().iloc[0,] - data[feature].median()) / iqr)
-    print(temp_outlier)
 
-    upper_point = data[feature].quantile(0.75) + 1.5 * iqr
-    down_point = data[feature].quantile(0.25) - 1.5 * iqr
-    upper_more = data[data[feature] >= upper_point]
-    down_more = data[data[feature] <= down_point]
+    # 利用 众数 减去 中位数 的差值  除以  四分位距 来 查找是否有可能存在异常值
+    temp_outlier = abs((data[feature].mode().iloc[0,] - data[feature].median()) / iqr)
+    print("如果 众数 减去 中位数 的差值 除以 四分位距 的值 %s 很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析" % temp_outlier)
+
+    upper_point = data[feature].quantile(0.75) + box_scale * iqr
+    down_point = data[feature].quantile(0.25) - box_scale * iqr
+    upper_more = data[data[feature] >= upper_point][feature]
+    down_more = data[data[feature] <= down_point][feature]
     #    print(len(upper_more))
     #    print(len(down_more))
 
     if len(upper_more) != 0:
         axes[1].plot((-1, 1), (upper_point, upper_point), c='r', lw=1.5, ls='--', alpha=0.3)  # 99%
+        print("Description of data larger than the upper bound is:")
+        print(upper_more.describe())
     elif len(down_more) != 0:
         axes[1].plot((-1, 1), (down_point, down_point), c='b', lw=1.5, ls='--', alpha=0.3)  # 99%
+        print("Description of data less than the lower bound is:")
+        print(down_more.describe())
     axes[1].set_title('feature: ' + str(feature))
     axes[1].set_ylabel('')
+
+    return (upper_point, down_point), (upper_more, down_more)
 
 
 # 连续/分类模型 ： 连续 特征/因变量 简易 直方图分布（快速查看）
@@ -2173,7 +2203,7 @@ def vif_sklearn(df, col_i):
 
 # 先求没有取对数的方差膨胀因子，再求取了对数的方差膨胀因子 方便对比
 def variance_expansion_coefficient(df, cols, types=1):
-    temp_df = df[cols]  # DataFrame 即使显示的取所有列，也是新地址（和原DataFrame是不同地址）
+    temp_df = df[cols]  # DataFrame 即使显示的取所有列，也是新地址
     temp_dict = {}
     temp_dict_ln = {}
 
