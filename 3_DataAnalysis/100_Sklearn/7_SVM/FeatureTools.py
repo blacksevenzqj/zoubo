@@ -733,7 +733,7 @@ def sample_category(ytest, ytrain):
     print("测试集类别%s，数量%s，占比%s" % (test_unique_label, test_counts_label, (test_counts_label / len(ytest))))
 
 
-# 分类模型 数据类别 样本不均衡（单一数据集测试）
+# 分类模型 数据类别 样本不均衡可视化（单一数据集测试）
 def Sample_imbalance(data, y_name):
     print(data.shape)
     print(data.info())
@@ -1067,7 +1067,7 @@ def con_data_scatter(x_data, featur_name, y_data, y_name):
 
 
 # 连续模型 ： 分类特征 与 连续因变量Y 四分位图 （盒须图）
-# 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐特征类别递增，斯皮尔曼相关系数很高，分类特征 对 连续因变量Y 有用
+# x轴为分类变量X，y轴为连续因变量Y 的盒须图 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐 分类特征类别（序数） 递增，斯皮尔曼相关系数很高，分类特征X 对 连续因变量Y 有用
 # 1、设置 分类特征为category类型，并手动设置category类别顺序
 # 例子： Pedro_Marcelino.py
 # ft.box_diagram(dat0, 'dist', 'price', axes, set_category=True, categories_=["石景山","丰台","朝阳","海淀","东城","西城"])
@@ -1195,15 +1195,15 @@ def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
 
     data = get_notMissing_values(data, feature)
 
-    distplot_title = 'norm'
+    distplot_title = 'Normal'
     if fit_type == 1:
         fit_function = scipy.stats.norm  # 正太分布
     elif fit_type == 2:
         fit_function = scipy.stats.lognorm  # 取log正太分布
-        distplot_title = 'lognorm'
+        distplot_title = 'Log Normal'
     else:
         fit_function = scipy.stats.johnsonsu  # 无界约翰逊分布
-        distplot_title = 'johnsonsu'
+        distplot_title = 'Johnson SU'
 
     sns.set()  # 切换到seaborn的默认运行配置
     # sns.distplot直方图（默认带KDE）
@@ -1860,7 +1860,27 @@ def feature_corrWith_y(X, y_series, top_num=20):
 
 # 相似度计算2
 # 斯皮尔曼相似度：
-# 特征选择：（特征 与 因变量Y） 斯皮尔曼
+'''
+Spearman 秩次相关
+Spearman 相关评估 两个连续或顺序变量 之间的单调关系。在单调关系中，变量倾向于同时变化，但不一定以恒定的速率变化。Spearman 相关系数基于每个变量的秩值（而非原始数据）。
+Spearman 相关通常用于评估与顺序变量相关的关系。例如，您可能会使用 Spearman 相关来评估员工完成检验练习的顺序是否与他们工作的月数相关。
+最好始终用散点图来检查变量之间的关系。相关系数仅度量线性 (Pearson) 或单调 (Spearman) 关系。也有可能存在其他关系。
+
+理解： 
+1、Spearman更多的应该是用于 顺序变量（分类变量中的 序数：类别有大小区分，如：矿石等级1,2,3）。 而连续变量的判断应该使用皮尔森相似度更准确。
+
+2、Spearman运用于分箱：
+2.1、连续变量X进行分箱 → 分类变量 → 每个小分箱求均值 → Spearman根据每个小分箱的均值计算得到pi： 顺序变量（分类变量中的 序数） → di = pi-qi
+2.2、二分类变量Y → 每个小分箱求均值 → Spearman根据每个小分箱的均值（Y的1类别均值）计算得到qi： 顺序变量（分类变量中的 序数） → di = pi-qi
+原始代码在： 3_Scorecard_model_case_1480.py
+
+3、Spearman运用于检测 分类特征X（序数） 对 连续因变量Y 贡献度：
+x轴为分类变量X，y轴为连续因变量Y 的盒须图 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐 分类特征类别（序数） 递增，斯皮尔曼相关系数很高，分类特征X 对 连续因变量Y 有用
+3.1、分类变量X 需是 整数格式的 顺序变量（分类变量中的 序数：类别有大小区分），不能是普通的分类变量（分类变量中的 标称）
+3.2、连续因变量Y
+'''
+
+
 def feature_spearmanrWith_y(X_series, y_series):
     r, p = scipy.stats.spearmanr(X_series, y_series)
     return r, p

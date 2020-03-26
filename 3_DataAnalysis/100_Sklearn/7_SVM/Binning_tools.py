@@ -290,7 +290,7 @@ def chi_test_merge_boxes_IV_curve(num_bins, data, x_name, y_name, min_bins=2, pv
 # 1、自动分箱可视化（画IV曲线：选择最优分箱个数）； 2、根据给定最优分箱个数，得到分箱区间、整个箱体IV值
 def graphforbestbin(data, x_name, y_name, min_bins=2, q_num=20, qcut_name="qcut", pv_limit=0.00001, is_spearmanr=False,
                     spearmanr_limit=1, graph=True):
-    df = data[[x_name, y_name]].copy()
+    df = data[[x_name, y_name]]
 
     df[qcut_name], updown = qcut(df, x_name, q_num, retbins=True)
 

@@ -328,21 +328,29 @@ def fill_missing_rf(X, y, to_fill):
     """
 
     # 构建我们的新特征矩阵和新标签
-    df = X.copy()
+    df = X
+    # 缺失值特征： 待填充列
     fill = df.loc[:, to_fill]
+    # 将除 缺失值特征： 待填充列 之外的其他特征 与 因变量Y 按列拼接组成 临时特征集合
     df = pd.concat([df.loc[:, df.columns != to_fill], pd.DataFrame(y)], axis=1)
 
-    # 找出我们的训练集和测试集
+    # 找出训练集和测试集
+    # 缺失值特征： 待填充列 非空值为 训练集Y
     Ytrain = fill[fill.notnull()]
+    # 缺失值特征： 待填充列 空值为 测试集Y
     Ytest = fill[fill.isnull()]
+
+    # 注意： 数据集是做过索引恢复重置的，所以能使用DataFrame.iloc[index]， 如果数据集索引是乱的，只能使用DataFrame.loc[index]
+    # 按 缺失值特征： 待填充列 非空值 的索引 取出 训练集X
     Xtrain = df.iloc[Ytrain.index, :]
+    # 按 缺失值特征： 待填充列 空值 的索引 取出 测试集X
     Xtest = df.iloc[Ytest.index, :]
 
     # 用随机森林回归来填补缺失值
     from sklearn.ensemble import RandomForestRegressor as rfr
     rfr = rfr(n_estimators=100)  # random_state=0,n_estimators=200,max_depth=3,n_jobs=-1
     rfr = rfr.fit(Xtrain, Ytrain)
-    Ypredict = rfr.predict(Xtest)
+    Ypredict = rfr.predict(Xtest)  # <class 'numpy.ndarray'> 索引自动重排了： [0:29140]
 
     return Ypredict
 
@@ -353,13 +361,20 @@ y = data["SeriousDlqin2yrs"]  # y = data.iloc[:,0]
 X.shape  # (149391, 10)
 y_pred = fill_missing_rf(X, y, "MonthlyIncome")
 
+# In[]:
 # 通过以下代码检验数据是否数量相同
+# data.loc[data.loc[:,"MonthlyIncome"].isnull(),"MonthlyIncome"] 的行维度 和 Xtest 和 Ytest 的行维度相同（缺失值特征： 待填充列 的行维度）
 temp_b = (y_pred.shape == data.loc[data.loc[:, "MonthlyIncome"].isnull(), "MonthlyIncome"].shape)
 # 确认我们的结果合理之后，我们就可以将数据覆盖了
 if temp_b:
+    # 1、data.loc[data.loc[:,"MonthlyIncome"].isnull(),"MonthlyIncome"] 的索引 和 Xtest 和 Ytest 的索引相同
+    # 2、y_pred 是 <class 'numpy.ndarray'> 类型， 索引自动重排了： [0:29140]
+    # 3、直接 按行的顺序 赋值， 没有管索引
     data.loc[data.loc[:, "MonthlyIncome"].isnull(), "MonthlyIncome"] = y_pred
 
 data.info()
+# In[]:
+missing_values = missing_values_table(data)
 
 # In[]:
 # 1.5、为什么不统一量纲，也不标准化数据分布？
@@ -461,10 +476,10 @@ model_data.drop('Unnamed: 0', inplace=True, axis=1)
 vali_data.drop('Unnamed: 0', inplace=True, axis=1)
 print(model_data.shape)  # (195008, 11)
 print(vali_data.shape)  # (83576, 11)
-
+# In[]:
 Sample_imbalance(model_data)
-# Sample_imbalance(vali_data)
-
+# In[]:
+Sample_imbalance(vali_data)
 
 # In[]
 # 1.7、分箱：
