@@ -72,7 +72,7 @@ def set_union(seriers1, seriers2, reverse=False):
 # https://www.jianshu.com/p/42f1d2909bb6
 # https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
 
-# groupby() 之后直接 sum()： 得到分组后数据矩阵，可数据是非标准的DataFrame，必须进行reset_index()变为标准的DataFrame
+# groupby() 之后直接 sum()： 得到分组后各特征求和的数据矩阵（sum只是一个示例），可数据是非标准的DataFrame，必须进行reset_index()变为标准的DataFrame
 def groupby_sum(data, group_cols, as_index=True):
     if type(group_cols) != list:
         raise Exception('group_cols Type is Error, must list')
@@ -122,6 +122,32 @@ def groupby_agg_oneCol(data, group_cols, statistical_col, agg, as_index=True):
 
     data_group = data.groupby(group_cols, as_index=as_index)[statistical_col].agg(agg)
     return data_group
+
+
+'''
+最原始、简单 的统计方式：
+train_gb = train_data_1.groupby("brand")
+all_info = {}
+for kind, kind_data in train_gb:
+    info = {}
+    kind_data = kind_data[kind_data['price'] > 0]
+    info['brand_amount'] = len(kind_data)
+    info['brand_price_max'] = kind_data.price.max()
+    info['brand_price_median'] = kind_data.price.median()
+    info['brand_price_min'] = kind_data.price.min()
+    info['brand_price_sum'] = kind_data.price.sum()
+    info['brand_price_std'] = kind_data.price.std()
+    info['brand_price_average'] = round(kind_data.price.sum() / (len(kind_data) + 1), 2)
+    all_info[kind] = info
+# all_info字典 转 DataFrame： 字典的key就是DataFrame的行索引index，所以要 .T置转 → .reset_index()重置行索引 → .rename(columns={"index": "brand"})跟换列名： 将all_info的key的原行索引名index（置转后现在列名）更新名称
+brand_fe = pd.DataFrame(all_info).T.reset_index().rename(columns={"index": "brand"})
+
+相当于
+
+temp_data = train_data_1[train_data_1['price'] > 0] # 数据 条件 提前做好
+agg = {'brand_amount':len, "brand_price_max":np.max, "brand_price_median":np.median, "brand_price_min":np.min, "brand_price_sum":np.sum, "brand_price_std":np.std, "brand_price_average":np.mean}
+brand_fe2 = tc.groupby_agg_oneCol(temp_data, ['brand'], 'price', agg, as_index=False)
+'''
 
 
 # groupby的value_counts结果使用unstack()来将树状结构变成表状结构（相当于statistical_col=1或0时做两次groupby）

@@ -605,7 +605,7 @@ def missValue_datatime_match(df, col):
 def custom_time_conversion(data, time_col_before, time_col_after):
     # 参看 Python笔记： “赋值与地址”
     # 注意： 增加新特征 同样是在入参data上进行操作， 就和 调用变量train 有关系， 不会产生新对象
-    # 1、按特征列 忽略时间格式错误 转换为pd.Timestamp： 错误时间格式，如：19910001，将被置为 pd.lib.NaT
+    # 1、向量API 按特征列 忽略时间格式错误 转换为pd.Timestamp： 错误时间格式，如：19910001，将被置为 pd.lib.NaT
     data[time_col_before + "1"] = pd.to_datetime(data[time_col_before], format='%Y%m%d', errors='coerce')
 
     # 2、自定义转换：
@@ -677,13 +677,14 @@ def standardScaler_outlier(df, name):
 
 
 # 离群值检测： 使用 箱型图、散点趋势图 观测离群值
-def outlier_detection(X, feature, y, y_name, box_scale=1.5):
+def outlier_detection(X, feature, y=None, y_name=None, box_scale=1.5):
     if type(feature) == list:
         # 盒须图 要求 特征必须为单特征，不能传['x']进来
         raise Exception('feature Type is Error, must not list')
 
-    ntrain = y[y_name].notnull().sum()
-    X = X[0:ntrain]
+    if y is not None and y_name is not None:
+        ntrain = y[y_name].notnull().sum()
+        X = X[0:ntrain]
 
     # 利用 众数 减去 中位数 的差值  除以  四分位距来 查找是否有可能存在异常值
     # 如果值很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析
@@ -696,12 +697,15 @@ def outlier_detection(X, feature, y, y_name, box_scale=1.5):
     #    print(X.iloc[upper_more_index].shape)
     #    print(y.iloc[upper_more_index].shape)
 
-    f, axes = plt.subplots(1, 1, figsize=(23, 8))
-    sns.regplot(X[feature], y[y_name], ax=axes)
+    if y is not None and y_name is not None:
+        f, axes = plt.subplots(1, 1, figsize=(23, 8))
+        sns.regplot(X[feature], y[y_name], ax=axes)
 
-    f, axes = plt.subplots(1, 2, figsize=(23, 8))
-    sns.regplot(X.loc[upper_more_index][feature], y.loc[upper_more_index][y_name], ax=axes[0])
-    sns.regplot(X.loc[down_more_index][feature], y.loc[down_more_index][y_name], ax=axes[1])
+        f, axes = plt.subplots(1, 2, figsize=(23, 8))
+        sns.regplot(X.loc[upper_more_index][feature], y.loc[upper_more_index][y_name], ax=axes[0])
+        sns.regplot(X.loc[down_more_index][feature], y.loc[down_more_index][y_name], ax=axes[1])
+
+    return upper_more_index, down_more_index
 
 
 # 删除离群值
@@ -1882,7 +1886,11 @@ x轴为分类变量X，y轴为连续因变量Y 的盒须图 可以作为 斯皮�
 
 
 def feature_spearmanrWith_y(X_series, y_series):
-    r, p = scipy.stats.spearmanr(X_series, y_series)
+    # 方式一： X_series 和 y_series 必须没有缺失值np.nan，否则即使失败
+    r, p = scipy.stats.spearmanr(X_series, y_series)  # 返回两个值： r是斯皮尔曼值， p是概率值
+
+    # 方式二： 允许X_series 或 y_series有缺失值np.nan，会自动剔除np.nan再进行计算
+    #    r = X_series.corr(y_series, method='spearman') # 只返回： r是斯皮尔曼值
     return r, p
 
 
