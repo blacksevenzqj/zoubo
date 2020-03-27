@@ -236,11 +236,7 @@ def chi_test_merge_boxes_IV_curve(num_bins, data, x_name, y_name, min_bins=2, pv
 
         # 通过 卡方p值 进行处理。 合并 卡方p值 最大的两组
         '''
-         2、独立性检验
-         可以看成：一个特征中的多个类别/分桶  与  另一个特征中多个类别/分桶  的一个条件（类别数量）观测值 与 期望值 的计算。
-         原假设： X与Y不相关   特征（两个箱子/类别） 与 因变量Y 不相关， 箱子需要合并
-         备选假设： X与Y相关   特征（两个箱子/类别） 与 因变量Y 相关， 箱子不需要合并
-         理论上应该这样做，但这里不是
+         2、独立性检验： 详细解释在代码： 2_Scorecard_model_case_My.py 和 笔记“1、卡方分布” 中
         '''
         if max(pvs) < pv_limit and pv_state:
             # pv最大值都 < 0.00001， 拒绝原假设，接受备选假设： 特征（两个箱子/类别） 与 因变量Y 相关， 箱子不需要合并
@@ -278,7 +274,7 @@ def chi_test_merge_boxes_IV_curve(num_bins, data, x_name, y_name, min_bins=2, pv
         plt.plot(axisx, IV)
         # plt.plot(axisx,PV)
         plt.xticks(axisx)
-        plt.xlabel("number of box")
+        plt.xlabel(x_name + " number of box")
         plt.ylabel("IV")
         plt.show()
         # 选择转折点处，也就是下坠最快的折线点，6→5折线点最陡峭，所以这里对于age来说选择箱数为6
@@ -336,7 +332,7 @@ hand_bins = {"NumberOfTime30-59DaysPastDueNotWorse":[0,1,2,13]
 def automatic_hand_binning_all(df, y_name, auto_col_bins, hand_bins, q_num=20):
     bins_of_col = {}
 
-    # 1、自动分箱的分箱区间和分箱后的 IV 值
+    # 1、自动分箱的分箱区间和分箱后的 IV值
     for col in auto_col_bins:
         afterbins, bins_woe, bins_iv, bins_pv, bins_woe_pv, bins_iv_pv, \
         bins_spearmanr, bins_woe_spearmanr, bins_iv_spearmanr = graphforbestbin(
@@ -349,7 +345,7 @@ def automatic_hand_binning_all(df, y_name, auto_col_bins, hand_bins, q_num=20):
         bins_list[0], bins_list[-1] = -np.inf, np.inf
         bins_of_col[col] = [bins_list, bins_iv]
 
-    # 2、手动分箱的分箱区间和分箱后的 IV 值
+    # 2、手动分箱的分箱区间和分箱后的 IV值
     hand_bins = hand_bins_customize(hand_bins)  # 首位分箱界线换为：-np.inf、np.inf
     for col in hand_bins:
         # 手动分箱区间已给定，使用cut函数指定分箱后，求WOE及其IV值。
