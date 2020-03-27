@@ -73,6 +73,7 @@ print(zdatamy, np.mean(zdatamy, axis=0), np.std(zdatamy, axis=0))
 '''
 from sklearn.preprocessing import MinMaxScaler
 #区间缩放，返回值为缩放到[0, 1]区间的数据
+# 注意：fit_transform(aaa)函数，入参aaa必须为二维矩阵：（使用Padans：必须是DataFrame，不能是Seriers）
 mdata = MinMaxScaler().fit_transform(aaa) # iris.data
 # print(mdata[0:10])
 mdatamy = np.zeros((3,3))
@@ -81,7 +82,12 @@ for i in range(3):
     mdatamy[1,i] = (aaa[1][i] - np.min(aaa[:,i], axis=0)) / (np.max(aaa[:,i], axis=0) - np.min(aaa[:,i], axis=0))
     mdatamy[2,i] = (aaa[2][i] - np.min(aaa[:,i], axis=0)) / (np.max(aaa[:,i], axis=0) - np.min(aaa[:,i], axis=0))
 # print(mdatamy)
-
+'''
+# 手动：
+data['power1'] = ((data['power1'] - np.min(data['power1'])) / (np.max(data['power1']) - np.min(data['power1'])))
+# 调MinMaxScaler函数：
+data['power2'] = MinMaxScaler().fit_transform(data[['power2']]) # 注意：入参必须是二维矩阵，必须是DataFrame。
+'''
 
 # 2.1.1.3、MaxAbscaler归一化
 '''
