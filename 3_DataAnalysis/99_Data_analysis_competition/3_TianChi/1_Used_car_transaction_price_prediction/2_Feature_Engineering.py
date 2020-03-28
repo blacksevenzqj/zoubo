@@ -402,7 +402,6 @@ than_one_columns = var_x_ln.tolist()
 fig, axe = plt.subplots(2, 1, figsize=(100, 16))
 skew, kurt, var_x_ln = ft.skew_distribution_test(train_data_3[than_one_columns], axe)
 # In[]:
-than_one_columns
 '''
 ['fuelType_price_max',
  'brand_price_min',
@@ -442,6 +441,8 @@ than_one_columns
  'diff_day_cut_bin_price_sum',
  'diff_day_cut_bin_price_std']
 '''
+than_one_columns
+
 # In[]:
 f, axes = plt.subplots(1, 2, figsize=(23, 8))
 ft.con_data_distribution(train_data_3, 'fuelType_price_max', axes, fit_type=1, box_scale=3)
@@ -477,14 +478,14 @@ temp_list = ft.set_diff(than_one_columns, del_skew_columns)
 stay_columns = temp_list[1]  # 差集
 
 # In[]:
-# 导出保存：
-# ft.writeFile_outData(train_data_3, "train_data_3.csv")
-# ft.writeFile_outData(test_data_3, "test_data_3.csv")
-# train_data_3 = ft.readFile_inputData('train_data_3.csv')
-# test_data_3 = ft.readFile_inputData('test_data_3.csv')
-# In[]:
 train_data_4 = train_data_3.copy()
 test_data_4 = test_data_3.copy()
+# In[]:
+# 导出保存：
+# ft.writeFile_outData(train_data_4, "train_data_4.csv")
+# ft.writeFile_outData(test_data_4, "test_data_4.csv")
+train_data_4 = ft.readFile_inputData('train_data_4.csv')
+test_data_4 = ft.readFile_inputData('test_data_4.csv')
 
 # In[]:
 # log转换： 只能转一次哦
@@ -495,14 +496,14 @@ fig, axe = plt.subplots(2, 1, figsize=(120, 16))
 skew, kurt, var_x_ln = ft.skew_distribution_test(train_data_4[stay_columns], axe)
 # In[]:
 f, axes = plt.subplots(1, 2, figsize=(23, 8))
-ft.con_data_distribution(train_data_4, 'price', axes, fit_type=1, box_scale=3)
+ft.con_data_distribution(train_data_4, 'gearbox_price_median', axes, fit_type=1, box_scale=3)
 
 # In[]:
 # 4、标准化：
 # 经过偏度处理剩下的连续特征
 numeric_skew_stay_cols = ft.set_diff(numeric_features, del_skew_columns)[1]  # 差集
 # In[]:
-# 所有连续特征 标准化， 包括 因变量Y
+# 经过偏度处理剩下的 所有连续特征 标准化， 包括 因变量Y
 ss = StandardScaler()
 train_data_4[numeric_skew_stay_cols] = ss.fit_transform(train_data_4[numeric_skew_stay_cols])
 
@@ -531,7 +532,6 @@ del_list.append('gearbox_price_median')
 temp_data = train_data_4[numeric_skew_stay_cols_not_y].drop(del_list, axis=1)
 # In[]:
 # 皮尔森相似度 连续特征选择后 预留的连续特征
-reserve_columns = temp_data.columns.tolist()
 '''
 ['v_7',
  'diff_day_cut_bin_price_max',
@@ -560,17 +560,24 @@ reserve_columns = temp_data.columns.tolist()
  'v_14',
  'power_cut_bin_amount']
 '''
+reserve_columns = temp_data.columns.tolist()
+reserve_columns
 
 # In[]:
 temp_data_miss = ft.missing_values_table(temp_data)
+# 这几个特征是有np.nan的
+temp_data_miss_col = temp_data_miss.index.tolist()  # 有7个特征有np.nan，所以要排除掉
+reserve_columns_not_miss = ft.set_diff(reserve_columns, temp_data_miss_col)[1]  # 差集： 27-7=20
 
 # In[]:
 # 5.1.2、方差选择： （不能有np.nan）
 from sklearn.feature_selection import VarianceThreshold
 
-selector = VarianceThreshold()  # 实例化，不填参数默认方差为0
-X_var0 = selector.fit_transform(temp_data)  # 获取删除不合格特征之后的新特征矩阵
-X_var0.shape  # (42000, 708)
+# 实例化，不填参数默认方差为0
+selector = VarianceThreshold()
+# 获取删除不合格特征之后的新特征矩阵
+X_var0 = selector.fit_transform(temp_data[reserve_columns_not_miss])  # 20
+X_var0.shape  # (149168, 20) # 都保留了，没有方差为0的特征
 
 # In[]:
 # 5.1.3、互信息： （消耗大， 就不弄了）
@@ -588,7 +595,7 @@ cross_val_score(RFC(n_estimators=10,random_state=0), X_fsmic, train_data_4['pric
 '''
 
 # In[]:
-
+temp_data_miss_col
 
 # In[]:
 
