@@ -355,6 +355,8 @@ def feature_category(data):
 
 def missing_values_table(df, customize_axis=0, percent=None, del_type=1):
     # Total missing values
+    # customize_axis=0： 按行向统计： 一列有多少缺失值
+    # customize_axis=1： 按列向统计： 一行有多少缺失值
     mis_val = df.isnull().sum(axis=customize_axis)
 
     # Percentage of missing values
@@ -368,6 +370,7 @@ def missing_values_table(df, customize_axis=0, percent=None, del_type=1):
         columns={0: 'Missing_Values', 1: '% of Total Values'})
 
     # Sort the table by percentage of missing descending
+    # index索引 就是 特征名称
     mis_val_table_ren_columns = mis_val_table_ren_columns[
         mis_val_table_ren_columns.iloc[:, 1] != 0].sort_values(
         '% of Total Values', ascending=False).round(1)
@@ -689,13 +692,18 @@ def outlier_detection(X, feature, y=None, y_name=None, box_scale=1.5):
     # 利用 众数 减去 中位数 的差值  除以  四分位距来 查找是否有可能存在异常值
     # 如果值很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析
     f, axes = plt.subplots(1, 2, figsize=(23, 8))
-    point, more = con_data_distribution(X, feature, axes, box_scale=box_scale)
+    box_more_index, hist_more_index = con_data_distribution(X, feature, axes, box_scale=box_scale)
     # 从直方图中可以看出： 如果数据有最大峰值，属于正常数据，不用清洗。
 
-    upper_more_index = more[0].index
-    down_more_index = more[1].index
+    # 盒须图的上下限
+    upper_more_index = box_more_index[0]
+    down_more_index = box_more_index[1]
     #    print(X.iloc[upper_more_index].shape)
     #    print(y.iloc[upper_more_index].shape)
+
+    # 直方图的左右限
+    hist_left_more_index = hist_more_index[0]
+    hist_right_more_index = hist_more_index[1]
 
     if y is not None and y_name is not None:
         f, axes = plt.subplots(1, 1, figsize=(23, 8))
@@ -705,7 +713,8 @@ def outlier_detection(X, feature, y=None, y_name=None, box_scale=1.5):
         sns.regplot(X.loc[upper_more_index][feature], y.loc[upper_more_index][y_name], ax=axes[0])
         sns.regplot(X.loc[down_more_index][feature], y.loc[down_more_index][y_name], ax=axes[1])
 
-    return upper_more_index, down_more_index
+    # 上下限， 左右限
+    return box_more_index, hist_more_index
 
 
 # 删除离群值
@@ -934,7 +943,7 @@ def category_quantity_statistics(df, features, axis=0, dropna=True):
 
 
 # 分类变量：统计类别数量： （不区分特征：当为多特征时，不按特征区分，综合统计。（没有axis参数）） 主要为Seriers
-# 注意： np.unique统计时会包含： np.nan（一个np.nan为一个类别，很麻烦，没有dropna关键字）
+# 注意： np.unique统计时会包含： np.nan（一个np.nan为一个类别，很麻烦，没有dropna关键字）； 有np.nan不要使用。
 # unique_label, counts_label, unique_dict = ft.category_quantity_statistics_all(Series)
 def category_quantity_statistics_all(df, feature=None):
     # unique_label：非重复值集合列表； counts_label：每个非重复值的数量
@@ -1071,7 +1080,7 @@ def con_data_scatter(x_data, featur_name, y_data, y_name):
 
 
 # 连续模型 ： 分类特征 与 连续因变量Y 四分位图 （盒须图）
-# x轴为分类变量X，y轴为连续因变量Y 的盒须图 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐 分类特征类别（序数） 递增，斯皮尔曼相关系数很高，分类特征X 对 连续因变量Y 有用
+# x轴为分类变量X， y轴为连续因变量Y 的盒须图 可以作为 斯皮尔曼相关系数 辅助可视化分析： 呈现逐 分类特征类别（序数） 递增，斯皮尔曼相关系数很高，分类特征X 对 连续因变量Y 有用
 # 1、设置 分类特征为category类型，并手动设置category类别顺序
 # 例子： Pedro_Marcelino.py
 # ft.box_diagram(dat0, 'dist', 'price', axes, set_category=True, categories_=["石景山","丰台","朝阳","海淀","东城","西城"])
@@ -1098,7 +1107,7 @@ def box_diagram(data, x_axis_name, y_axis_name, axes=None, ymin=None, ymax=None,
 
 
 # 2、自动将 分类特征的类型设置为category类型， 如果分类特征有np.nan值，则为分类特征的category类型添加一个category类别：missing
-# 没有设置category类型顺序，后面再修改吧
+# 没有设置category类型顺序，后面再修改吧。 代码在： 1_EDA.py
 def box_diagram_auto_col_category(data, categorical_features, y_name, function_type=1, is_violin=False):
     if type(categorical_features) is not list:
         raise Exception('categorical_features Type is Error, must list')
@@ -1147,7 +1156,7 @@ def box_diagram_auto_col_category(data, categorical_features, y_name, function_t
 # In[]:
 # --------------------------------复用------------------------------
 # 连续特征 计算盒须图 区间：
-def box_whisker_diagram_Interval(series):
+def box_whisker_diagram_Interval(series, box_scale=1.5):
     if type(series) is not pd.Series:
         raise Exception('series Type is Error, must Series')
 
@@ -1158,8 +1167,8 @@ def box_whisker_diagram_Interval(series):
     twenty_five_percent = series.quantile(0.25)
     five_percent = series.quantile(0.50)
     seventy_five_percent = series.quantile(0.75)
-    upper_point = series.quantile(0.75) + 1.5 * iqr
-    down_point = series.quantile(0.25) - 1.5 * iqr
+    upper_point = series.quantile(0.75) + box_scale * iqr
+    down_point = series.quantile(0.25) - box_scale * iqr
     val_list = [min_val, down_point, twenty_five_percent, five_percent, seventy_five_percent, upper_point, max_val]
     return val_list
 
@@ -1231,9 +1240,12 @@ def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
     axes[0].plot((mu + 3 * sigma, mu + 3 * sigma), (0, 1), c='b', lw=1.5, ls='--', alpha=0.3)
 
     # mu - 5sigma  →  mu + 5sigma = 5倍标准差之外的数据
-    if len(data.loc[data[feature] < mu - 5 * sigma, feature].index) > 0:
+    hist_left_more_index = data.loc[data[feature] < mu - 5 * sigma, feature].index
+    hist_right_more_index = data.loc[data[feature] > mu + 5 * sigma, feature].index
+
+    if len(hist_left_more_index) > 0:
         axes[0].plot((mu - 5 * sigma, mu - 5 * sigma), (0, 1), c='y', lw=1.5, ls='--', alpha=0.3)  # 5倍标准差之外的数据
-    if len(data.loc[data[feature] > mu + 5 * sigma, feature].index) > 0:
+    if len(hist_right_more_index) > 0:
         axes[0].plot((mu + 5 * sigma, mu + 5 * sigma), (0, 1), c='y', lw=1.5, ls='--', alpha=0.3)
     # Now plot the distribution
     axes[0].legend(['Normal dist. ( $\mu=$ {:.2f} and $\sigma=$ {:.2f} )'.format(mu, sigma)],
@@ -1267,7 +1279,7 @@ def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
     axes[1].set_title('feature: ' + str(feature))
     axes[1].set_ylabel('')
 
-    return (upper_point, down_point), (upper_more, down_more)
+    return (upper_more.index, down_more.index), (hist_left_more_index, hist_right_more_index)
 
 
 # 连续/分类模型 ： 连续 特征/因变量 简易 直方图分布（快速查看）
@@ -1370,7 +1382,7 @@ skew、kurt说明参考 https://www.cnblogs.com/wyy1480/p/10474046.html
 '''
 
 
-def skew_distribution_test(data, axe=None):
+def skew_distribution_test(data, axe=None, skew_limit=1):
     #    var = data.columns
     #    skew_var = {}
     #    for i in var:
@@ -1380,6 +1392,7 @@ def skew_distribution_test(data, axe=None):
     skew = np.abs(data.skew()).sort_values(ascending=False)
     # 下面这种计算方式 在无缺失值情况下 和 上述2种计算方式 有小数点后两位的 差异。 有缺失值情况 待进一步验证。
     #    skew = data.apply(lambda x: np.abs(skew(x.dropna()))).sort_values(ascending=False)
+    var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
 
     kurt = np.abs(data.kurt()).sort_values(ascending=False)
 
@@ -1407,7 +1420,7 @@ def skew_distribution_test(data, axe=None):
 
     plt.show()
 
-    return skew, kurt
+    return skew, kurt, var_x_ln
 
 
 '''
@@ -1430,9 +1443,8 @@ def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
         temp_data = data.copy()
 
     normal_distribution_test(temp_data)
-    skew, kurt = skew_distribution_test(temp_data)
+    skew, kurt, var_x_ln = skew_distribution_test(temp_data, skew_limit)
 
-    var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
     print(var_x_ln, len(var_x_ln))
     for i, var in enumerate(var_x_ln):
         f, axes = plt.subplots(1, 2, figsize=(23, 8))
@@ -1443,7 +1455,7 @@ def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
         logarithm_nagative(temp_data, var_x_ln, 2)
 
         normal_distribution_test(temp_data)
-        skew, kurt = skew_distribution_test(temp_data)
+        skew, kurt = skew_distribution_test(temp_data, skew_limit)
 
         var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
         print(var_x_ln, len(var_x_ln))
@@ -1800,14 +1812,19 @@ def corrFunction_all(data, y_name, f_importance_num=20, f_collinear_num=0.7):
     return f_all_no_f1_merged, result_final  # 两者维度相同； 数据结构不同
 
 
-# 3.1 改进版本：
+# 3.1 改进版本： （1、data带 因变量Y； 2、numeric_features不包含 因变量Y名称）
 # 1、连续特征之间的 皮尔森相似度从大到小排序；  2、连续特征 与 连续因变量Y之间的 皮尔森相似度从大到小排序。
 def feature_select_corr_withY(data, numeric_features, y_name, threshold=0.8):
     if type(numeric_features) != list:
         # 盒须图 要求 特征必须为单特征，不能传['x']进来
         raise Exception('numeric_features Type is Error, must list')
+    if y_name in numeric_features:
+        raise Exception("y_name can't in numeric_features")
 
+    numeric_features = numeric_features.copy()
+    numeric_features.append(y_name)
     temp_corr_abs_withY, temp_corr_withY = corrFunction_withY(data[numeric_features], y_name)
+    numeric_features.remove(y_name)
     temp_corr_abs, temp_corr = corrFunction(data[numeric_features])
 
     # 连续特征之间的 皮尔森相似度 >= 0.8 要做筛选： 留下 一对连续特征之中 对 连续因变量Y 皮尔森相似度贡献大的连续特征

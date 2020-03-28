@@ -137,6 +137,21 @@ def spearmanr_bins(df, col, y_name, bin_list):
     return r, p
 
 
+# 斯皮尔曼分箱： 连续自变量X 与 因变量Y（二分类因变量Y 或 连续因变量Y） 之间的相似度
+def spearmanr_auto_bins(X, Y, n=10):
+    r = 0  # 设定斯皮尔曼 初始值
+    r_list = list()
+    while np.abs(r) < 1 and n > 1:
+        # 用pd.qcut实现最优分箱，Bucket：将X分为n段，n由斯皮尔曼系数决定
+        temp_cut_data, updown = pd.qcut(X, n, retbins=True, duplicates="drop")
+        d1 = pd.DataFrame({X.name: X, Y.name: Y, "Bucket": temp_cut_data})
+        d2 = d1.groupby('Bucket', as_index=True)  # 按照分箱结果进行分组聚合
+        r, p = scipy.stats.spearmanr(d2.mean()[X.name], d2.mean()[Y.name])  # 以斯皮尔曼系数作为分箱终止条件
+        r_list.append(r)
+        n = n - 1
+    return d1, updown, n + 1, r_list
+
+
 # 确保每个箱中都有0和1
 def makeSure_zero_one_in_eachBox(num_bins, q_num=20):
     for i in range(q_num):  # 20个箱子
