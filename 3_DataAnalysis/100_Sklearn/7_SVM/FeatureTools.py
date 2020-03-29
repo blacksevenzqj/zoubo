@@ -2434,49 +2434,9 @@ def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, l
 
 # In[]:
 # ====================================学习曲线 开始==================================
+
 # In[]:
-# -----------------------------1、基于样本量 开始-------------------------------
-# 基于MSE绘制学习曲线（样本量）
-def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
-    train_score = []
-    test_score = []
-    for i in range(1, len(X_train) + 1):
-        algo.fit(X_train[:i], y_train[:i])
-
-        y_train_predict = algo.predict(X_train[:i])
-        train_score.append(MSE(y_train[:i], y_train_predict))
-
-        y_test_predict = algo.predict(X_test)
-        test_score.append(MSE(y_test, y_test_predict))
-
-    plt.plot([i for i in range(1, len(X_train) + 1)],
-             np.sqrt(train_score), label="train")
-    plt.plot([i for i in range(1, len(X_train) + 1)],
-             np.sqrt(test_score), label="test")
-    plt.legend()
-    plt.show()
-
-
-# 基于R^2值绘制学习曲线（样本量）
-def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
-    train_score = []
-    test_score = []
-    for i in range(1, len(X_train) + 1):
-        algo.fit(X_train[:i], y_train[:i])
-
-        y_train_predict = algo.predict(X_train[:i])
-        train_score.append(r2_score(y_train[:i], y_train_predict))
-
-        y_test_predict = algo.predict(X_test)
-        test_score.append(r2_score(y_test, y_test_predict))
-
-    plt.plot([i for i in range(1, len(X_train) + 1)], train_score, label="train")
-    plt.plot([i for i in range(1, len(X_train) + 1)], test_score, label="test")
-    plt.legend()
-    plt.axis([0, len(X_train) + 1, -0.1, 1.1])
-    plt.show()
-
-
+# -----------------------------1、通用 开始-------------------------------
 # 基于learning_curve函数：
 def plot_learning_curve(estimator, title, X, y, scoring=None,
                         ax=None,  # 选择子图
@@ -2530,11 +2490,55 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
     return ax
 
 
-# In[]:
-# -----------------------------1、基于样本量 结束-------------------------------
+# -----------------------------1、通用 结束-------------------------------
 
 # In[]:
-# -----------------------------2、基于超参数 开始-------------------------------
+# -----------------------------2、基于样本量 开始-------------------------------
+# 基于MSE绘制学习曲线（样本量）
+def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
+    train_score = []
+    test_score = []
+    for i in range(1, len(X_train) + 1):
+        algo.fit(X_train[:i], y_train[:i])
+
+        y_train_predict = algo.predict(X_train[:i])
+        train_score.append(MSE(y_train[:i], y_train_predict))
+
+        y_test_predict = algo.predict(X_test)
+        test_score.append(MSE(y_test, y_test_predict))
+
+    plt.plot([i for i in range(1, len(X_train) + 1)],
+             np.sqrt(train_score), label="train")
+    plt.plot([i for i in range(1, len(X_train) + 1)],
+             np.sqrt(test_score), label="test")
+    plt.legend()
+    plt.show()
+
+
+# 基于R^2值绘制学习曲线（样本量）
+def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
+    train_score = []
+    test_score = []
+    for i in range(1, len(X_train) + 1):
+        algo.fit(X_train[:i], y_train[:i])
+
+        y_train_predict = algo.predict(X_train[:i])
+        train_score.append(r2_score(y_train[:i], y_train_predict))
+
+        y_test_predict = algo.predict(X_test)
+        test_score.append(r2_score(y_test, y_test_predict))
+
+    plt.plot([i for i in range(1, len(X_train) + 1)], train_score, label="train")
+    plt.plot([i for i in range(1, len(X_train) + 1)], test_score, label="test")
+    plt.legend()
+    plt.axis([0, len(X_train) + 1, -0.1, 1.1])
+    plt.show()
+
+
+# -----------------------------2、基于样本量 结束-------------------------------
+
+# In[]:
+# -----------------------------3、基于超参数 开始-------------------------------
 # SKLearn库的XGBoost：
 def getModel(i, model_name, hparam_name, prev_hparam_value, random_state):
     from xgboost import XGBRegressor as XGBR
@@ -2718,8 +2722,8 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
     plt.show()
 
 
-# In[]:
-# -----------------------------2、基于超参数 结束-------------------------------
+# -----------------------------3、基于超参数 结束-------------------------------
+
 # In[]:
 # ====================================学习曲线 结束==================================
 
