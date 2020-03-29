@@ -29,7 +29,7 @@ import pandas as pd
 import datetime
 import sys
 import numpy as np
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, MinMaxScaler
 import xgboost as xgb
 import re
 from sklearn.metrics import roc_auc_score
@@ -57,6 +57,7 @@ train_data = ft.readFile_inputData('used_car_train_20200313.csv', parse_dates=['
 test_data = ft.readFile_inputData('used_car_testA_20200313.csv', parse_dates=['regDate', 'creatDate'], sep=' ')
 # In[]:
 print(train_data.shape, test_data.shape)  # (150000, 31) (50000, 30)
+print(train_data[train_data['price'] <= 0].shape)
 
 # In[]
 # 1、缺失值
@@ -361,9 +362,8 @@ test_data_3.columns
 # 导出保存：
 # ft.writeFile_outData(train_data_3, "train_data_3.csv")
 # ft.writeFile_outData(test_data_3, "test_data_3.csv")
-train_data_3 = ft.readFile_inputData('train_data_3.csv')
-test_data_3 = ft.readFile_inputData('test_data_3.csv')
-
+train_data_3 = ft.readFile_inputData('train_data_3.csv', index_col=0)  # price是大于0的
+test_data_3 = ft.readFile_inputData('test_data_3.csv', index_col=0)
 # In[]:
 numeric_features = [
     'kilometer', 'price', 'v_0', 'v_1', 'v_2', 'v_3',
@@ -402,46 +402,43 @@ than_one_columns = var_x_ln.tolist()
 fig, axe = plt.subplots(2, 1, figsize=(100, 16))
 skew, kurt, var_x_ln = ft.skew_distribution_test(train_data_3[than_one_columns], axe)
 # In[]:
-'''
-['fuelType_price_max',
- 'brand_price_min',
- 'fuelType_price_min',
- 'fuelType_price_sum',
- 'v_7',
- 'v_2',
- 'v_5',
- 'kilometer_price_min',
- 'kilometer_price_max',
- 'v_11',
- 'brand_price_median',
- 'bodyType_price_min',
- 'price',
- 'brand_price_max',
- 'bodyType_price_median',
- 'kilometer_price_median',
- 'kilometer_price_average',
- 'diff_day_cut_bin_price_min',
- 'kilometer',
- 'power_cut_bin_price_max',
- 'v_0',
- 'gearbox_price_median',
- 'gearbox_price_average',
- 'gearbox_price_max',
- 'gearbox_price_sum',
- 'gearbox_amount',
- 'gearbox_price_std',
- 'brand_price_average',
- 'kilometer_price_std',
- 'v_14',
- 'bodyType_price_max',
- 'power_cut_bin_price_median',
- 'diff_day_cut_bin_price_median',
- 'diff_day_cut_bin_price_max',
- 'diff_day_cut_bin_price_average',
- 'diff_day_cut_bin_price_sum',
- 'diff_day_cut_bin_price_std']
-'''
-than_one_columns
+than_one_columns = ['fuelType_price_max',
+                    'brand_price_min',
+                    'fuelType_price_min',
+                    'fuelType_price_sum',
+                    'v_7',
+                    'v_2',
+                    'v_5',
+                    'kilometer_price_min',
+                    'kilometer_price_max',
+                    'v_11',
+                    'brand_price_median',
+                    'bodyType_price_min',
+                    'price',
+                    'brand_price_max',
+                    'bodyType_price_median',
+                    'kilometer_price_median',
+                    'kilometer_price_average',
+                    'diff_day_cut_bin_price_min',
+                    'kilometer',
+                    'power_cut_bin_price_max',
+                    'v_0',
+                    'gearbox_price_median',
+                    'gearbox_price_average',
+                    'gearbox_price_max',
+                    'gearbox_price_sum',
+                    'gearbox_amount',
+                    'gearbox_price_std',
+                    'brand_price_average',
+                    'kilometer_price_std',
+                    'v_14',
+                    'bodyType_price_max',
+                    'power_cut_bin_price_median',
+                    'diff_day_cut_bin_price_median',
+                    'diff_day_cut_bin_price_max',
+                    'diff_day_cut_bin_price_average',
+                    'diff_day_cut_bin_price_sum',
+                    'diff_day_cut_bin_price_std']
 
 # In[]:
 f, axes = plt.subplots(1, 2, figsize=(23, 8))
@@ -453,9 +450,10 @@ ft.logarithm(train_data_3, ['fuelType_price_max'], f_type=1)
 f, axes = plt.subplots(1, 2, figsize=(23, 8))
 ft.con_data_distribution(train_data_3, 'fuelType_price_max_ln', axes, fit_type=1, box_scale=3)
 # In[]:
-ss = StandardScaler()
+# ss = StandardScaler() # 理论取值范围是(-∞,+∞)，但经验上看大多数取值范围在[-4,4]之间
+mm = MinMaxScaler()  # 数据会完全落入[0,1]区间内（z-score没有类似区间）
 # 标准化再看：
-train_data_3['fuelType_price_max_1'] = ss.fit_transform(train_data_3[['fuelType_price_max_ln']])  # iris.data
+train_data_3['fuelType_price_max_1'] = mm.fit_transform(train_data_3[['fuelType_price_max_ln']])  # iris.data
 # In[]:
 f, axes = plt.subplots(1, 2, figsize=(23, 8))
 ft.con_data_distribution(train_data_3, 'fuelType_price_max_1', axes, fit_type=1, box_scale=3)
@@ -474,8 +472,41 @@ del_skew_columns = ['fuelType_price_max', 'brand_price_min', 'fuelType_price_min
 train_data_3.drop(del_skew_columns, axis=1, inplace=True)
 
 # In[]:
+# 偏度>1的连续特征  -  手动需删除的偏度>1的连续特征  =  剩下的偏度>1的连续特征
 temp_list = ft.set_diff(than_one_columns, del_skew_columns)
 stay_columns = temp_list[1]  # 差集
+# In[]:
+stay_columns = ['gearbox_price_median',
+                'gearbox_price_average',
+                'brand_price_max',
+                'v_14',
+                'gearbox_price_std',
+                'diff_day_cut_bin_price_average',
+                'v_7',
+                'power_cut_bin_price_median',
+                'gearbox_amount',
+                'kilometer_price_average',
+                'kilometer_price_std',
+                'price',
+                'diff_day_cut_bin_price_max',
+                'brand_price_median',
+                'power_cut_bin_price_max',
+                'bodyType_price_max',
+                'gearbox_price_sum',
+                'bodyType_price_median',
+                'kilometer',
+                'gearbox_price_max',
+                'diff_day_cut_bin_price_min',
+                'v_11',
+                'bodyType_price_min',
+                'diff_day_cut_bin_price_sum',
+                'v_0',
+                'diff_day_cut_bin_price_median',
+                'v_2',
+                'brand_price_average',
+                'v_5',
+                'kilometer_price_median',
+                'diff_day_cut_bin_price_std']
 
 # In[]:
 train_data_4 = train_data_3.copy()
@@ -484,12 +515,14 @@ test_data_4 = test_data_3.copy()
 # 导出保存：
 # ft.writeFile_outData(train_data_4, "train_data_4.csv")
 # ft.writeFile_outData(test_data_4, "test_data_4.csv")
-train_data_4 = ft.readFile_inputData('train_data_4.csv')
-test_data_4 = ft.readFile_inputData('test_data_4.csv')
-
+train_data_4 = ft.readFile_inputData('train_data_4.csv', index_col=0)
+test_data_4 = ft.readFile_inputData('test_data_4.csv', index_col=0)
+print(train_data_4[train_data_4['price'] <= 0].shape)
 # In[]:
 # log转换： 只能转一次哦
+# stay_columns为： 偏度>1的连续特征 - 手动需删除的偏度>1的连续特征 = 剩下的偏度>1的连续特征。 所以才取log：
 ft.logarithm(train_data_4, stay_columns, f_type=2)
+print(train_data_4[train_data_4['price'] <= 0].shape)
 # In[]:
 # 再看偏度
 fig, axe = plt.subplots(2, 1, figsize=(120, 16))
@@ -499,13 +532,18 @@ f, axes = plt.subplots(1, 2, figsize=(23, 8))
 ft.con_data_distribution(train_data_4, 'gearbox_price_median', axes, fit_type=1, box_scale=3)
 
 # In[]:
-# 4、标准化：
-# 经过偏度处理剩下的连续特征
+# 4、归一化：
+# 经过 偏度筛选（偏度>1的都取log） 剩下的 所有连续特征
 numeric_skew_stay_cols = ft.set_diff(numeric_features, del_skew_columns)[1]  # 差集
 # In[]:
 # 经过偏度处理剩下的 所有连续特征 标准化， 包括 因变量Y
-ss = StandardScaler()
-train_data_4[numeric_skew_stay_cols] = ss.fit_transform(train_data_4[numeric_skew_stay_cols])
+# ss = StandardScaler() # 理论取值范围是(-∞,+∞)，但经验上看大多数取值范围在[-4,4]之间
+mm = MinMaxScaler()  # 数据会完全落入[0,1]区间内（z-score没有类似区间）
+train_data_4[numeric_skew_stay_cols] = mm.fit_transform(train_data_4[numeric_skew_stay_cols])
+print(train_data_4[train_data_4['price'] <= 0].shape)  # 需要删除的
+# In[]:
+ft.simple_drop_data(train_data_4, train_data_4[train_data_4['price'] <= 0].index)
+print(train_data_4[train_data_4['price'] <= 0].shape)  # 需要删除的
 
 # In[]:
 # 5、特征选择
@@ -515,6 +553,7 @@ temp_corr_abs_withY, temp_corr_withY = ft.corrFunction_withY(train_data_4[numeri
 
 # In[]:
 numeric_skew_stay_cols_not_y = ft.set_diff(numeric_skew_stay_cols, ['price'])[1]  # 差集
+# In[]:
 temp_corr_abs, temp_corr = ft.corrFunction(train_data_4[numeric_skew_stay_cols_not_y])
 # In[]:
 temp_corr_abs = temp_corr_abs[temp_corr_abs['Correlation_Coefficient'] >= 0.8]
@@ -595,13 +634,33 @@ cross_val_score(RFC(n_estimators=10,random_state=0), X_fsmic, train_data_4['pric
 '''
 
 # In[]:
-temp_data_miss_col
-
-# In[]:
 
 
 # In[]:
+# 5.2、Embedded嵌入法：（还暂时没调通。。。）
+from sklearn.feature_selection import SelectFromModel
+from sklearn.ensemble import RandomForestClassifier as RFC
+import numpy as np
+import matplotlib.pyplot as plt
 
+# 经过 偏度筛选 → 皮尔森相似度筛选 → 方差筛选： 剩下的 连续特征
+temp_X = temp_data[reserve_columns_not_miss]  # 差不多剩下26个特征（每次运行都会有不同）
+y = train_data_4['price']
+# In[]:
+# 随机森林实例化： （不能有np.nan： 是随机森林 还是 模型选择 的要求？）
+RFC_ = RFC(n_estimators=10, random_state=0)
+# 筛选特征（数据）： 针对 树模型的 feature_importances_ 属性删选
+X_embedded_1 = SelectFromModel(RFC_, threshold=0.04).fit_transform(temp_X, y)
+# In[]:
+sfmf = SelectFromModel(RFC_, threshold=0.005).fit(temp_X, y)
+X_embedded_2_index = sfmf.get_support(indices=True)  # 特征选择后 特征的 原列位置索引
+X_embedded_2 = sfmf.transform(temp_X)
+print(temp_X.columns[X_embedded_2_index])  # 特征选择后 特征的 原列名称索引
+# 在这里我只想取出来有限的特征。0.005这个阈值对于有780个特征的数据来说，是非常高的阈值，因为平均每个特征
+# 只能够分到大约0.001 = 1/780 的feature_importances_
+# 模型的维度明显被降低了
+
+# In[]:
 
 # In[]:
 

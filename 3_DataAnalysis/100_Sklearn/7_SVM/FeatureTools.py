@@ -262,6 +262,15 @@ def df_change_colname(df, columns, inplace=True):
     df.rename(columns=columns, inplace=inplace)
 
 
+# train_data.drop(train_data[train_data['price'] <= 0].index, axis=0, inplace=True)
+def simple_drop_data(data, condition=None, cols_name=None, axis=0, inplace=True):
+    if axis == 0 and condition is not None:
+        data.drop(condition, axis=0, inplace=inplace)  # condition应是行索引
+        recovery_index(data)
+    elif axis == 1 and condition is None and cols_name is not None:
+        data.drop(cols_name, axis=1, inplace=inplace)
+
+
 # 恢复索引（删除数据后：如果X集恢复了索引，那么Y集也必须恢复索引）
 def recovery_index(data_list):
     if type(data_list) == list:
@@ -2461,10 +2470,8 @@ def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
         y_test_predict = algo.predict(X_test)
         test_score.append(r2_score(y_test, y_test_predict))
 
-    plt.plot([i for i in range(1, len(X_train) + 1)],
-             train_score, label="train")
-    plt.plot([i for i in range(1, len(X_train) + 1)],
-             test_score, label="test")
+    plt.plot([i for i in range(1, len(X_train) + 1)], train_score, label="train")
+    plt.plot([i for i in range(1, len(X_train) + 1)], test_score, label="test")
     plt.legend()
     plt.axis([0, len(X_train) + 1, -0.1, 1.1])
     plt.show()
