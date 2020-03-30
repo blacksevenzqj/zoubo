@@ -2556,7 +2556,7 @@ def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
 # In[]:
 # -----------------------------2、基于超参数 开始-------------------------------
 '''
-L1、基于超参数学习曲线顺序： 确定n_estimators → 确定subsample → 确定learning_rate → 确定gamma （主要是体现 梯度提升树的超参数原理）
+L1、基于超参数学习曲线顺序： 确定n_estimators → 确定subsample → 确定learning_rate → 确定gamma （主要是理解 梯度提升树中这些超参数原理）
 代码： 10_1_XGBoost.py 中 二、基于超参数（按顺序 依次确定 超参数）  
 
 XGB中与梯度提升树的过程相关的四个参数：n_estimators，learning_rate ，silent，subsample。这四个参数的主要目的，其实并不是提升模型表现，更多是了解梯度提升树的原理。

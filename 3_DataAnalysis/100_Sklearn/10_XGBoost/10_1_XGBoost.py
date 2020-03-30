@@ -98,7 +98,7 @@ plt.show()
 # In[]:
 # 二、基于超参数（按顺序 依次确定 超参数）
 
-# L1、基于超参数学习曲线顺序： 确定n_estimators → 确定subsample → 确定learning_rate → 确定gamma
+# L1、基于超参数学习曲线顺序： 确定n_estimators → 确定subsample → 确定learning_rate → 确定gamma （主要是理解 梯度提升树中这些超参数原理）
 
 # 1、n_estimators：
 #'''
@@ -302,8 +302,8 @@ reg = XGBR(random_state=420)
 grid_search = GridSearchCV(estimator=reg, param_grid=param_grid, verbose=1, cv=cv, scoring='r2') # neg_mean_squared_error
 grid_search.fit(Xtrain, Ytrain)
 '''
-reg:linear is now deprecated in favor of reg:squarederror. → XGB的目标函数： 现在不推荐使用reg：linear， 而推荐使用reg：squarederror。
-XGB的目标函数： XGBoost的重要超参数objective损失函数选项： reg：linear → reg：squarederror
+reg:linear is now deprecated in favor of reg:squarederror. → XGB的目标函数的第一部分：l(yi,yi')，也就是衡量损失的部分： 现在不推荐使用reg：linear， 而推荐使用reg：squarederror。
+XGB的目标函数的第一部分：l(yi,yi')，也就是衡量损失的部分： XGBoost的重要超参数objective来确定 目标函数的第一部分：l(yi,yi')，也就是衡量损失的部分 选项： reg：linear → reg：squarederror
 '''
 
 print(grid_search.best_score_) # 0.870023216964111
