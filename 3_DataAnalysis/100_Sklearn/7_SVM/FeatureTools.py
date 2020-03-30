@@ -21,6 +21,11 @@ import Tools_customize as tc
 
 # In[]:
 # ================================基础操作 开始==============================
+def get_sk_metrics():
+    import sklearn.metrics.SCORERS as metrics_name
+    return sorted(metrics_name.keys())
+
+
 # In[]:
 # 路径设置
 def set_file_path(path):
@@ -2327,7 +2332,14 @@ def linear_model_residuals(y_train_true, y_train_predict, y_test_true, y_test_pr
     plt.show()
 
 
-# 线性回归模型 泛化能力：
+# 线性回归模型（线性回归、岭回归）： 方差与泛化误差 学习曲线：
+'''
+一个集成模型(f)在未知数据集(D)上的泛化误差 ，由方差(var)，偏差(bais)和噪声(ε)共同决定。其中偏差就是训练集上的拟合程度决定，方差是模型的稳定性决定，噪音(ε)是不可控的。而泛化误差越小，模型就越理想。
+E(f; D) = bias^2 + var + ε^2
+其中可控部分： bias^2 + var； 不可控部分： 噪音(ε)
+'''
+
+
 def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, linear_show=True):
     from sklearn.model_selection import cross_val_score
 
@@ -2434,10 +2446,17 @@ def linear_model_comparison(X, y, cv_customize=5, start=1, end=1001, step=100, l
 
 # In[]:
 # ====================================学习曲线 开始==================================
+'''
+L、学习曲线顺序： 基于样本量：如果过拟合（训练集、测试集相差过远） →  基于超参数：比较现实的 目标 是将训练集效果降低，从而避免过拟合 →  基于样本量：再次检测过拟合情况    
+代码： 10_1_XGBoost.py 中 一、基于样本量(交叉验证学习曲线函数) → 二、基于超参数（按顺序 依次确定 超参数）     
+'''
+
 
 # In[]:
-# -----------------------------1、通用 开始-------------------------------
-# 基于learning_curve函数：
+# -----------------------------1、基于样本量 开始-------------------------------
+
+# 1、基于learning_curve样本量绘图函数（通用）： Sklearn模型通用的基于样本量的学习曲线（X轴： 训练集样本量； Y轴：训练集、测试集得分）
+# estimator可以为： 1、LinearR()； 2、XGBR(n_estimators=100,random_state=420)
 def plot_learning_curve(estimator, title, X, y, scoring=None,
                         ax=None,  # 选择子图
                         ylim=None,  # 设置纵坐标的取值范围
@@ -2490,11 +2509,7 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
     return ax
 
 
-# -----------------------------1、通用 结束-------------------------------
-
-# In[]:
-# -----------------------------2、基于样本量 开始-------------------------------
-# 基于MSE绘制学习曲线（样本量）
+# 2、于MSE绘制学习曲线（样本量）
 def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
     train_score = []
     test_score = []
@@ -2515,7 +2530,7 @@ def plot_learning_curve_mse_customize(algo, X_train, X_test, y_train, y_test):
     plt.show()
 
 
-# 基于R^2值绘制学习曲线（样本量）
+# 3、基于R^2值绘制学习曲线（样本量）
 def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
     train_score = []
     test_score = []
@@ -2535,28 +2550,54 @@ def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
     plt.show()
 
 
-# -----------------------------2、基于样本量 结束-------------------------------
+# -----------------------------1、基于样本量 结束-------------------------------
+
 
 # In[]:
-# -----------------------------3、基于超参数 开始-------------------------------
-# SKLearn库的XGBoost：
-def getModel(i, model_name, hparam_name, prev_hparam_value, random_state):
+# -----------------------------2、基于超参数 开始-------------------------------
+'''
+L1、基于超参数学习曲线顺序： 确定n_estimators → 确定subsample → 确定learning_rate → 确定gamma （主要是体现 梯度提升树的超参数原理）
+代码： 10_1_XGBoost.py 中 二、基于超参数（按顺序 依次确定 超参数）  
+
+XGB中与梯度提升树的过程相关的四个参数：n_estimators，learning_rate ，silent，subsample。这四个参数的主要目的，其实并不是提升模型表现，更多是了解梯度提升树的原理。
+现在来看，我们的梯度提升树可是说是由三个重要的部分组成：
+1. 一个能够衡量集成算法效果的，能够被最优化的损失函数Obj。
+2. 一个能够实现预测的弱评估器fk(x)
+3. 一种能够让弱评估器集成的手段，包括我们讲解的：迭代方法，抽样手段，样本加权等等过程
+
+XGBoost是在梯度提升树的这三个核心要素上运行，它重新定义了损失函数和弱评估器，并且对提升算法的集成手段进行了改进，实现了运算速度和模型效果的高度平衡。
+并且，XGBoost将原本的梯度提升树拓展开来，让XGBoost不再是单纯的树的集成模型，也不只是单单的回归模型。
+只要我们调节参数，我们可以选择任何我们希望集成的算法，以及任何我们希望实现的功能。
+'''
+
+
+# 1.1、SKLearn库的XGBoost：
+def getModel(i, model_name, hparam_name, prev_hparam_value, random_state, silent=True):
     from xgboost import XGBRegressor as XGBR
 
     if model_name == "XGBR":
         if hparam_name == "n_estimators":
-            reg = XGBR(n_estimators=i, random_state=random_state)
+            reg = XGBR(n_estimators=i, random_state=random_state, silent=silent)  # 不打印训练过程记录
         elif hparam_name == "subsample" and prev_hparam_value is not None:
-            reg = XGBR(n_estimators=prev_hparam_value[0], subsample=i, random_state=random_state)
+            reg = XGBR(n_estimators=prev_hparam_value[0], subsample=i, random_state=random_state, silent=silent)
         elif hparam_name == "learning_rate" and prev_hparam_value is not None:
             reg = XGBR(n_estimators=prev_hparam_value[0], subsample=prev_hparam_value[1], learning_rate=i,
-                       random_state=random_state)
+                       random_state=random_state, silent=silent)
         elif hparam_name == "gamma" and prev_hparam_value is not None:
             reg = XGBR(n_estimators=prev_hparam_value[0], subsample=prev_hparam_value[1],
-                       learning_rate=prev_hparam_value[2], gamma=i, random_state=random_state)
+                       learning_rate=prev_hparam_value[2], gamma=i, random_state=random_state, silent=silent)
         else:
             raise RuntimeError('Hparam Error')
     return reg
+
+
+# 1.2、方差与泛化误差 学习曲线： （参考 “线性回归模型（线性回归、岭回归）： 方差与泛化误差 学习曲线： linear_model_comparison”）
+# 暂时只支持 SKLearn库的XGBoost。要支持其他模型，等待再开发 getModel函数。
+'''
+一个集成模型(f)在未知数据集(D)上的泛化误差 ，由方差(var)，偏差(bais)和噪声(ε)共同决定。其中偏差就是训练集上的拟合程度决定，方差是模型的稳定性决定，噪音(ε)是不可控的。而泛化误差越小，模型就越理想。
+E(f; D) = bias^2 + var + ε^2
+其中可控部分： bias^2 + var； 不可控部分： 噪音(ε)
+'''
 
 
 def learning_curve_r2_customize(axisx, Xtrain, Ytrain, cv, model_name="XGBR", hparam_name="n_estimators",
@@ -2567,18 +2608,29 @@ def learning_curve_r2_customize(axisx, Xtrain, Ytrain, cv, model_name="XGBR", hp
     for i in axisx:
         reg = getModel(i, model_name, hparam_name, prev_hparam_value, random_state)
         cvresult = CVS(reg, Xtrain, Ytrain, cv=cv)
-        # 记录1-偏差
-        rs.append(cvresult.mean())
-        # 记录方差
-        var.append(cvresult.var())
+        # 因 R^2=(-∞,1]， R^2拟合优度： 模型捕获到的信息量 占 真实标签中所带的信息量的比例
+        # 1 - R^2均值 = 偏差， 所以 简化起见 用 R^2均值 代表偏差（R^2均值越小，偏差越大； R^2均值越大，偏差越小）
+        # 交叉验证 的 R^2均值： 不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 均值： 不同模型R^2拟合优度的准确性
+        rs.append(cvresult.mean())  # 简化起见 用 R^2均值 代表 偏差
+        # 方差：交叉验证 的 R^2方差：不同训练集训练出多个模型 分别预测不同测试集得到多个预测值集合 --- 多个R^2拟合优度， 多个R^2拟合优度 的 方差： 不同模型R^2拟合优度的离散程度
+        var.append(cvresult.var())  # R^2 方差
         # 计算泛化误差的可控部分
         ge.append((1 - cvresult.mean()) ** 2 + cvresult.var())
-    # 1、打印R2最高所对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
-    print(axisx[rs.index(max(rs))], max(rs), var[rs.index(max(rs))])
-    # 1、打印R2方差最低时对应的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
-    print(axisx[var.index(min(var))], rs[var.index(min(var))], min(var))
-    # 1、打印泛化误差可控部分的参数取值； 2、并打印这个参数下的R2； 3、并打印这个参数下的R2方差
-    print(axisx[ge.index(min(ge))], rs[ge.index(min(ge))], var[ge.index(min(ge))], min(ge))
+
+    # 1、打印R2最大值时对应的 n_estimators/subsample/learning_rate/gamma 参数取值； 2、并打印R2最大值； 3、并打印R^2最大值对应的R^2方差值
+    # print(axisx[rs.index(max(rs))], max(rs), var[rs.index(max(rs))])
+    print("R2最大值时对应的%s参数取值:%f； R2最大值:%f； R^2最大值对应的R^2方差值:%f" % (
+    hparam_name, axisx[rs.index(max(rs))], max(rs), var[rs.index(max(rs))]))
+
+    # 2、打印R2方差最小值时对应的 n_estimators/subsample/learning_rate/gamma 参数取值； 2、并打印R2方差最小值对应的R2值； 3、并打印R2方差最小值
+    # print(axisx[var.index(min(var))], rs[var.index(min(var))], min(var))
+    print("R2方差最小值时对应的%s参数取值:%f； R2方差最小值对应的R2值:%f； R2方差最小值:%f" % (
+    hparam_name, axisx[var.index(min(var))], rs[var.index(min(var))], min(var)))
+
+    # 3、打印泛化误差可控部分最小值时对应的 n_estimators/subsample/learning_rate/gamma 参数取值； 2、并打印泛化误差可控部分最小值时对应的R2值； 3、并打印泛化误差可控部分最小值时对应的R2方差值； 4、并打印泛化误差可控部分最小值
+    #    print(axisx[ge.index(min(ge))],rs[ge.index(min(ge))],var[ge.index(min(ge))],min(ge))
+    print("泛化误差可控部分最小值时对应的%s参数取值:%f； 泛化误差可控部分最小值时对应的R2值:%f； 泛化误差可控部分最小值时对应的R2方差值:%f； 泛化误差可控部分最小值:%f" % (
+    hparam_name, axisx[ge.index(min(ge))], rs[ge.index(min(ge))], var[ge.index(min(ge))], min(ge)))
 
     rs = np.array(rs)
     var = np.array(var)
@@ -2596,7 +2648,43 @@ def learning_curve_r2_customize(axisx, Xtrain, Ytrain, cv, model_name="XGBR", hp
     plt.show()
 
 
+# SKLearn库的XGBoost： 由于 eta迭代次数 和 n_estimators 超参数密切相关，需要一起搜索，所以使用GridSearchCV
+# 代码： 10_1_XGBoost.py 中 二、基于超参数（按顺序 依次确定 超参数） → 3、eta（迭代决策树）
+def eta_and_n_estimators(Xtrain, Ytrain, Xtest, Ytest, cv=None):
+    from xgboost import XGBRegressor as XGBR
+    from sklearn.model_selection import GridSearchCV
+
+    if cv is None:
+        cv = ShuffleSplit(n_splits=5, test_size=.2, random_state=0)
+
+    # 运行时间2分多钟
+    param_grid = {
+        'n_estimators': np.arange(100, 300, 10),
+        'learning_rate': np.arange(0.05, 1, 0.05)
+    }
+    reg = XGBR(random_state=420)
+    grid_search = GridSearchCV(estimator=reg, param_grid=param_grid, verbose=1, cv=cv,
+                               scoring='r2')  # neg_mean_squared_error
+    grid_search.fit(Xtrain, Ytrain)
+    '''
+    reg:linear is now deprecated in favor of reg:squarederror.
+    现在不推荐使用reg：linear，而推荐使用reg：squarederror。
+    XGBoost的重要超参数objective损失函数选项： reg：linear → reg：squarederror
+    '''
+
+    print(grid_search.best_score_)  # 0.870023216964111
+    print(grid_search.best_params_)  # {'learning_rate': 0.25, 'n_estimators': 260}
+    best_reg = grid_search.best_estimator_  # 最佳分类器
+    print(best_reg)
+    testScore = best_reg.score(Xtest, Ytest)
+    print("GridSearchCV测试结果：", testScore)  # 0.8996310370746 分数比 学习曲线的低。。。
+    # [Parallel(n_jobs=1)]: Done 1900 out of 1900 | elapsed:  2.1min finished
+
+    # 后使用neg_mean_squared_error评价指标，和R^2结果相同。
+
+
 # ---------------------------------------------------------------------------
+
 
 # 自定义交叉验证（XGBoost原生库）
 # 入参 X、y 都是矩阵格式
@@ -2722,7 +2810,7 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
     plt.show()
 
 
-# -----------------------------3、基于超参数 结束-------------------------------
+# -----------------------------2、基于超参数 结束-------------------------------
 
 # In[]:
 # ====================================学习曲线 结束==================================
