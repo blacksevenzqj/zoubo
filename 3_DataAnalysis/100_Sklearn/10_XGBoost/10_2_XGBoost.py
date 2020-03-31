@@ -67,6 +67,10 @@ print(MSE(Ytest, bst.predict(dtest)))
 
 # In[]:
 # 6、正则化参数1： alpha，lambda（回归模型）
+'''
+注意： 在实际应用中，正则化参数往往不是我们调参的最优选择，如果真的希望控制模型复杂度，
+我们会调整γ而不是调整这两个正则化参数，因此大家不必过于在意这两个参数最终如何影响了我们的模型效果。
+'''
 # 使用网格搜索来查找最佳的参数组合（运行20分钟，了解即可）
 # cv = KFold(n_splits=5, shuffle = True, random_state=42)
 cv = ShuffleSplit(n_splits=5, test_size=.2, random_state=0)
@@ -88,7 +92,7 @@ MSE(Ytest,preds)
 '''
 
 # In[]:
-# 7、正则化参数2： gamma
+# 7、正则化参数2： gamma（必调超参数）
 # 7.1、SkLearn库XGBoost模型
 '''
 axisx = np.arange(0,5,0.05)
@@ -118,7 +122,8 @@ gamma是如何控制过拟合？
 3、gamma主要是用来 降低模型复杂度、提高模型泛化能力的（防止过拟合）；不是用来提高模型准确性的（降低欠拟合）。
 '''
 # 回归例子：
-param1 = {'silent': True, 'obj': 'reg:linear', "gamma": 0}  # 默认rmse
+# 1、评估指标要么在param的map中指定（非xgboost.cv函数）； 2、要么直接在xgb.cv函数中指定，不能一起指定。
+param1 = {'silent': True, 'obj': 'reg:linear', "gamma": 0}  # "eval_metric":"rmse"，默认rmse
 param2 = {'silent': True, 'obj': 'reg:linear', "gamma": 20}
 num_round = 270
 n_fold = 5
@@ -133,12 +138,13 @@ data2 = load_breast_cancer()
 x2 = data2.data
 y2 = data2.target
 
-param1 = {'silent': True, 'obj': 'binary:logistic', "gamma": 0}
+# 1、评估指标要么在param的map中指定（非xgboost.cv函数）； 2、要么直接在xgb.cv函数中指定，不能一起指定。
+param1 = {'silent': True, 'obj': 'binary:logistic', "gamma": 0}  # "eval_metric":"auc"，默认error
 param2 = {'silent': True, 'obj': 'binary:logistic', "gamma": 0.8}
 num_round = 100
 n_fold = 5
-# 分类模型： 默认错误率
-ft.learning_curve_xgboost(x2, y2, param1, param2, num_round, "error", n_fold)  # 默认error
+# 分类模型评估指标： 默认error：错误率（1-准确率）
+ft.learning_curve_xgboost(x2, y2, param1, param2, num_round, "error", n_fold)
 
 
 

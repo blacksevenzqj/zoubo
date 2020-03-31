@@ -2555,6 +2555,9 @@ def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
 
 # In[]:
 # -----------------------------2、基于超参数 开始-------------------------------
+
+# XGBoost必调超参数： 1、n_estimators； 2、gamma/γ复杂度惩罚项
+
 '''
 L1、基于超参数学习曲线顺序： 确定n_estimators → 确定subsample → 确定learning_rate → 确定gamma （主要是理解 梯度提升树中这些超参数原理）
 代码： 10_1_XGBoost.py 中 二、基于超参数（按顺序 依次确定 超参数）  
@@ -2597,6 +2600,8 @@ def getModel(i, model_name, hparam_name, prev_hparam_value, random_state, silent
 一个集成模型(f)在未知数据集(D)上的泛化误差 ，由方差(var)，偏差(bais)和噪声(ε)共同决定。其中偏差就是训练集上的拟合程度决定，方差是模型的稳定性决定，噪音(ε)是不可控的。而泛化误差越小，模型就越理想。
 E(f; D) = bias^2 + var + ε^2
 其中可控部分： bias^2 + var； 不可控部分： 噪音(ε)
+
+注意： SKLearn库的XGBoost的gamma超参数在小范围区间容易波动，应使用xgb原生库。 但在稍大范围区间和xgb原生库差不多（实际中还是使用xgb原生库）
 '''
 
 
@@ -2648,8 +2653,14 @@ def learning_curve_r2_customize(axisx, Xtrain, Ytrain, cv, model_name="XGBR", hp
     plt.show()
 
 
-# SKLearn库的XGBoost： 由于 eta迭代次数 和 n_estimators 超参数密切相关，需要一起搜索，所以使用GridSearchCV
+# SKLearn库的XGBoost： 由于 eta迭代次数（𝜂/步长/learning_rate） 和 n_estimators 超参数密切相关，需要一起搜索，所以使用GridSearchCV
 # 代码： 10_1_XGBoost.py 中 二、基于超参数（按顺序 依次确定 超参数） → 3、eta（迭代决策树）
+'''
+注意： 所以通常，我们不调整eta： 𝜂/步长/learning_rate，即便调整，一般它也会在[0.01,0.2]之间变动。
+如果我们希望模型的效果更好，更多的可能是从树本身的角度来说，对树进行剪枝，而不会寄希望于调整𝜂。（𝜂通常是用来调整运行时间的）
+'''
+
+
 def eta_and_n_estimators(Xtrain, Ytrain, Xtest, Ytest, cv=None):
     from xgboost import XGBRegressor as XGBR
     from sklearn.model_selection import GridSearchCV
@@ -2686,7 +2697,8 @@ def eta_and_n_estimators(Xtrain, Ytrain, Xtest, Ytest, cv=None):
 # ---------------------------------------------------------------------------
 
 
-# 自定义交叉验证（XGBoost原生库）
+# XGB原生库： 单纯的 方差与泛化误差 学习曲线： gamma/γ： 自定义交叉验证（XGBoost原生库） 自己写的
+# num_round/n_estimators已固定
 # 入参 X、y 都是矩阵格式
 def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_name, num_round):
     import xgboost as xgb
@@ -2709,8 +2721,9 @@ def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_n
         rs_test = []
         mse_test = []
         param_fixed[param_cycle_name] = i
-        print(param_fixed)
+        print(param_fixed)  # {'silent': True, 'obj': 'reg:linear', 'eval_metric': 'rmse', 'gamma': 10}
 
+        # 虽然传进来的 评估指标是：rmse， 但并没有使用API得到rmse值，而是predict得到预测结果后，用r2和MSE得到评估结果。
         for train_index, test_index in ss.split(X, y):
             #        print("Train Index:", train_index, ",Test Index:", test_index)
             X_train, X_test = X[train_index], X[test_index]
@@ -2741,12 +2754,22 @@ def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_n
         ge_all_test.append((1 - rs_mean_test) ** 2 + rs_var_test)
         mse_all_test.append(np.mean(mse_test))
 
-    print(axisx[rs_all_test.index(max(rs_all_test))], max(rs_all_test),
-          var_all_test[rs_all_test.index(max(rs_all_test))])
-    print(axisx[var_all_test.index(min(var_all_test))], rs_all_test[var_all_test.index(min(var_all_test))],
-          min(var_all_test))
-    print(axisx[ge_all_test.index(min(ge_all_test))], rs_all_test[ge_all_test.index(min(ge_all_test))],
-          var_all_test[ge_all_test.index(min(ge_all_test))], min(ge_all_test))
+    # 1、打印R2最大值时对应的 n_estimators/subsample/learning_rate/gamma 参数取值； 2、并打印R2最大值； 3、并打印R^2最大值对应的R^2方差值
+    # print(axisx[rs_all_test.index(max(rs_all_test))], max(rs_all_test), var_all_test[rs_all_test.index(max(rs_all_test))])
+    print("R2最大值时对应的%s参数取值:%f； R2最大值:%f； R^2最大值对应的R^2方差值:%f" % (
+    axisx[rs_all_test.index(max(rs_all_test))], max(rs_all_test), var_all_test[rs_all_test.index(max(rs_all_test))]))
+
+    # 2、打印R2方差最小值时对应的 n_estimators/subsample/learning_rate/gamma 参数取值； 2、并打印R2方差最小值对应的R2值； 3、并打印R2方差最小值
+    # print(axisx[var_all_test.index(min(var_all_test))], rs_all_test[var_all_test.index(min(var_all_test))], min(var_all_test))
+    print("R2方差最小值时对应的%s参数取值:%f； R2方差最小值对应的R2值:%f； R2方差最小值:%f" % (
+    axisx[var_all_test.index(min(var_all_test))], rs_all_test[var_all_test.index(min(var_all_test))],
+    min(var_all_test)))
+
+    # 3、打印泛化误差可控部分最小值时对应的 n_estimators/subsample/learning_rate/gamma 参数取值； 2、并打印泛化误差可控部分最小值时对应的R2值； 3、并打印泛化误差可控部分最小值时对应的R2方差值； 4、并打印泛化误差可控部分最小值
+    # print(axisx[ge_all_test.index(min(ge_all_test))],rs_all_test[ge_all_test.index(min(ge_all_test))], var_all_test[ge_all_test.index(min(ge_all_test))], min(ge_all_test))
+    print("泛化误差可控部分最小值时对应的%s参数取值:%f； 泛化误差可控部分最小值时对应的R2值:%f； 泛化误差可控部分最小值时对应的R2方差值:%f； 泛化误差可控部分最小值:%f" % (
+    axisx[ge_all_test.index(min(ge_all_test))], rs_all_test[ge_all_test.index(min(ge_all_test))],
+    var_all_test[ge_all_test.index(min(ge_all_test))], min(ge_all_test)))
 
     # R2均值、R2方差
     plt.figure(figsize=(20, 5))
@@ -2784,7 +2807,30 @@ def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_n
     plt.show()
 
 
-# xgboost原生交叉验证类： xgboost.cv
+'''
+gamma是如何控制过拟合？（gamma/γ复杂度惩罚项： 必调超参数）
+1、gamma/γ复杂度惩罚项作用： 控制训练集上的训练：即，降低训练集上的表现（R^2降低、MSE升高），从而使训练集表现 和 测试集的表现 逐步趋近。
+2、gamma不断增大，训练集R^2降低、MSE升高，训练集表现 和 测试集的表现 逐步趋近；但随着gamma不断增大，测试集也会出现R^2降低、MSE升高 的 欠拟合情况。所以，需要找到gamma的平衡点。
+3、gamma主要是用来 降低模型复杂度、提高模型泛化能力的（防止过拟合）；不是用来提高模型准确性的（降低欠拟合）。
+'''
+# num_round/n_estimators 与 gamma/γ复杂度惩罚项 学习曲线： （xgboost原生交叉验证类： xgboost.cv）
+# 多个gamma/γ复杂度惩罚项参数  分别对  训练集/测试集 X轴随着num_round/n_estimators（树的数量）增加，Y轴评估指标曲线趋势（类似于learning_curve基于样本量的学习曲线）
+# 代码在： 10_2_XGBoost.py 中 7.3、xgboost原生交叉验证类： xgboost.cv
+'''
+gamma/γ复杂度惩罚项 学习曲线 使用：
+1、将gamma/γ = 0： 使用之前经过“方差与泛化误差学习曲线”初步确定的超参数num_round/n_estimators（树的数量），看随着X轴（树数量的增加），评估指标曲线（默认RMSE）趋势。
+如果 Y轴的评估指标曲线（默认RMSE）趋势 提前在 X轴达到num_round/n_estimators（树的数量）值之前就趋于平稳了，则可以从新选择 小于 num_round/n_estimators（树的数量）超参数的值（这步从新选择num_round/n_estimators数量的操作是可选的）
+2、gamma/γ = 20（例如），看 train和test的评估指标曲线之间的距离 是否较 gamma/γ = 0 时的距离缩短了（抑止过拟合）？ 正常情况下应该是缩短了，证明 gamma/γ复杂度惩罚项 生效了。
+3、但需注意的是： gamma/γ = 20时的test的评估指标曲线 必须最少 与 gamma/γ = 0时的test的评估指标曲线 重合（非常接近），意思就是测试集效果不能降低（如果测试集效果能更好当然更好了）。
+
+4、gamma/γ复杂度惩罚项作用： （其实就是上面“gamma是如何控制过拟合？”中所述）
+4.1、控制训练集上的训练：即，降低训练集上的表现（R^2降低、MSE升高），从而使训练集表现 和 测试集的表现 逐步趋近。
+4.2、降低模型复杂度、提高模型泛化能力的（防止过拟合）；不是用来提高模型准确性的（降低欠拟合）。
+也就是之前说的： 基于超参数：比较现实的 目标 是将训练集效果降低，从而避免过拟合
+4.3、但需注意的是： gamma不断增大，训练集R^2降低、MSE升高，训练集表现 和 测试集的表现 逐步趋近；但随着gamma不断增大，测试集也会出现R^2降低、MSE升高 的 欠拟合情况。所以，需要找到gamma的平衡点。
+'''
+
+
 def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
     import xgboost as xgb
 
@@ -2798,6 +2844,14 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
     time0 = time()
     cvresult2 = xgb.cv(param2, dfull, num_boost_round=num_round, metrics=(metric), nfold=n_fold)
     # print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+
+    #    print(cvresult1)
+    '''
+    cvresult1[0]： 测试集rmse均值
+    cvresult1[1]： 测试集rmse标准差
+    cvresult1[2]： 训练集rmse均值
+    cvresult1[3]： 训练集rmse标准差
+    '''
 
     plt.figure(figsize=(20, 5))
     plt.grid()
