@@ -17,35 +17,35 @@ data = load_boston()
 X = data.data
 y = data.target
 
-Xtrain,Xtest,Ytrain,Ytest = TTS(X,y,test_size=0.3,random_state=420)
+Xtrain, Xtest, Ytrain, Ytest = TTS(X, y, test_size=0.3, random_state=420)
 
 # In[]:
 # B、弱评估器超参数：
 # 一、观测默认超参数：
-dfull = xgb.DMatrix(X,y)
+dfull = xgb.DMatrix(X, y)
 
-param1 = {'silent':True # 默认False： 打印
-          ,'obj':'reg:linear' # 默认分类： binary:logistic
-          ,"subsample":1 # 默认1
-          ,"max_depth":6 # 默认6
-          ,"eta":0.3 # 默认0.3
-          ,"gamma":0 # 默认0
-          ,"lambda":1 # 默认1，L2正则
-          ,"alpha":0 # 默认0，L1正则
-          ,"colsample_bytree":1
-          ,"colsample_bylevel":1
-          ,"colsample_bynode":1
+param1 = {'silent': True  # 默认False： 打印
+    , 'obj': 'reg:linear'  # 默认分类： binary:logistic
+    , "subsample": 1  # 默认1
+    , "max_depth": 6  # 默认6
+    , "eta": 0.3  # 默认0.3
+    , "gamma": 0  # 默认0
+    , "lambda": 1  # 默认1，L2正则
+    , "alpha": 0  # 默认0，L1正则
+    , "colsample_bytree": 1
+    , "colsample_bylevel": 1
+    , "colsample_bynode": 1
           }
 num_round = 200
 
 time0 = time()
 cvresult1 = xgb.cv(param1, dfull, num_boost_round=num_round, metrics=("rmse"), nfold=5)
-#print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+# print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
 
-fig,ax = plt.subplots(1,figsize=(15,8))
-ax.plot(range(1,201),cvresult1.iloc[:,2],c="red",label="train,original")
-ax.plot(range(1,201),cvresult1.iloc[:,0],c="orange",label="test,original")
-ax.set_ylim(top=5) # 截取Y轴最大值 进行显示
+fig, ax = plt.subplots(1, figsize=(15, 8))
+ax.plot(range(1, 201), cvresult1.iloc[:, 2], c="red", label="train,original")
+ax.plot(range(1, 201), cvresult1.iloc[:, 0], c="orange", label="test,original")
+ax.set_ylim(top=5)  # 截取Y轴最大值 进行显示
 ax.grid()
 ax.legend(fontsize="xx-large")
 plt.show()
@@ -53,9 +53,11 @@ plt.show()
 从曲线上可以看出，模型现在处于过拟合的状态。我们决定要进行剪枝。我们的目标是：训练集和测试集的结果尽量
 接近，如果测试集上的结果不能上升，那训练集上的结果降下来也是不错的选择（让模型不那么具体到训练数据，增加泛化能力）。
 '''
+# In[]:
+ft.learning_curve_xgboost(X, y, param1, num_round=num_round, metric="rmse", n_fold=5, set_ylim_top=5)  # 默认rmse
 
 # In[]:
-# 二、学习曲线调参：
+# 二、学习曲线调参： （重点：调参方式）
 '''
 一、调参要求：
 1、测试集上的模型指标（MSE） 较默认超参数模型 要降低（最少持平）；
@@ -63,30 +65,30 @@ plt.show()
 3、多个模型在都满足1、2条件的情况下，选择 训练集与测试集 MSE距离近的模型（泛化误差小）
 '''
 # 默认超参数：
-param1 = {'silent':True # 默认False： 打印
-          ,'obj':'reg:linear' # 默认分类： binary:logistic
-          ,"subsample":1 # 默认1
-          ,"max_depth":6 # 默认6
-          ,"eta":0.3 # 默认0.3
-          ,"gamma":0 # 默认0
-          ,"lambda":1 # 默认1，L2正则
-          ,"alpha":0 # 默认0，L1正则
-          ,"colsample_bytree":1
-          ,"colsample_bylevel":1
-          ,"colsample_bynode":1
+param1 = {'silent': True  # 默认False： 打印
+    , 'obj': 'reg:linear'  # 默认分类： binary:logistic
+    , "subsample": 1  # 默认1
+    , "max_depth": 6  # 默认6
+    , "eta": 0.3  # 默认0.3
+    , "gamma": 0  # 默认0
+    , "lambda": 1  # 默认1，L2正则
+    , "alpha": 0  # 默认0，L1正则
+    , "colsample_bytree": 1
+    , "colsample_bylevel": 1
+    , "colsample_bynode": 1
           }
 num_round = 300
 
 time0 = time()
 cvresult1 = xgb.cv(param1, dfull, num_boost_round=num_round, metrics=("rmse"), nfold=5)
-#print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
-print(time()-time0)
+# print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+print(time() - time0)
 
-fig,ax = plt.subplots(1,figsize=(15,8))
+fig, ax = plt.subplots(1, figsize=(15, 8))
 ax.set_ylim(top=5)
 ax.grid()
-ax.plot(range(1,num_round+1),cvresult1.iloc[:,2],c="red",label="train,original")
-ax.plot(range(1,num_round+1),cvresult1.iloc[:,0],c="orangered",label="test,original")
+ax.plot(range(1, num_round + 1), cvresult1.iloc[:, 2], c="red", label="train,original")
+ax.plot(range(1, num_round + 1), cvresult1.iloc[:, 0], c="orangered", label="test,original")
 
 '''
 二、调参方式：
@@ -100,7 +102,7 @@ ax.plot(range(1,num_round+1),cvresult1.iloc[:,0],c="orangered",label="test,origi
 2.3、添加新的超参数进param3中进行调整，和param2中已确定的超参数进行对比。
 
 三、调参顺序：
-1、练习的顺序：  先确定max_depth
+1、练习时的顺序：  先确定max_depth
 max_depth → eta → gamma → lambda → alpha → colsample_bytree → colsample_bylevel → colsample_bynode
 
 2、建议的顺序：
@@ -112,18 +114,18 @@ max_depth → eta → gamma → lambda → alpha → colsample_bytree → colsam
 num_boost_round与eta同调 → max_depth/gamma → colsample_bytree → colsample_bylevel → colsample_bynode → subsample → lambda → alpha                        
 '''
 
-param2 = {'silent':True
-          ,'obj':'reg:linear'
-          ,"max_depth":2
-          ,"eta":0.07
-          ,"gamma":0 # 在已经设置了 max_depth 情况下，gamma默认
-          ,"lambda":1.5
-          ,"alpha":3
-          ,"colsample_bytree":1 # 经过前面的主要超参数，本参数已不能起效，保持默认1
-          ,"colsample_bylevel":0.4
-          ,"colsample_bynode":0.8
+param2 = {'silent': True
+    , 'obj': 'reg:linear'
+    , "max_depth": 2
+    , "eta": 0.07
+    , "gamma": 0  # 在已经设置了 max_depth 情况下，gamma默认
+    , "lambda": 1.5
+    , "alpha": 3
+    , "colsample_bytree": 1  # 经过前面的主要超参数，本参数已不能起效，保持默认1
+    , "colsample_bylevel": 0.4
+    , "colsample_bynode": 0.8
           }
-#param3 = {'silent':True
+# param3 = {'silent':True
 #          ,'obj':'reg:linear'
 #          ,"max_depth":2
 #          ,"eta":0.07
@@ -136,34 +138,34 @@ param2 = {'silent':True
 #          }
 
 # 她最后给出的 先调整gamma的结果，和之前自己调的超参数 做一个对比（貌似不行）
-param3 = {'silent':True
-          ,'obj':'reg:linear'
-          ,"subsample":1
-          ,"eta":0.05
-          ,"gamma":20
-          ,"lambda":3.5
-          ,"alpha":0.2
-          ,"max_depth":4
-          ,"colsample_bytree":0.4
-          ,"colsample_bylevel":0.6
-          ,"colsample_bynode":1
+param3 = {'silent': True
+    , 'obj': 'reg:linear'
+    , "subsample": 1
+    , "eta": 0.05
+    , "gamma": 20
+    , "lambda": 3.5
+    , "alpha": 0.2
+    , "max_depth": 4
+    , "colsample_bytree": 0.4
+    , "colsample_bylevel": 0.6
+    , "colsample_bynode": 1
           }
 
 time0 = time()
 cvresult2 = xgb.cv(param2, dfull, num_boost_round=num_round, metrics=("rmse"), nfold=5)
-#print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
-print(time()-time0)
+# print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+print(time() - time0)
 
 time0 = time()
 cvresult3 = xgb.cv(param3, dfull, num_boost_round=num_round, metrics=("rmse"), nfold=5)
-#print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
-print(time()-time0)
+# print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+print(time() - time0)
 
-ax.plot(range(1,num_round+1),cvresult2.iloc[:,2],c="blue",label="train,last")
-ax.plot(range(1,num_round+1),cvresult2.iloc[:,0],c="dodgerblue",label="test,last")
+ax.plot(range(1, num_round + 1), cvresult2.iloc[:, 2], c="blue", label="train,last")
+ax.plot(range(1, num_round + 1), cvresult2.iloc[:, 0], c="dodgerblue", label="test,last")
 
-ax.plot(range(1,num_round+1),cvresult3.iloc[:,2],c="m",label="train,this")
-ax.plot(range(1,num_round+1),cvresult3.iloc[:,0],c="magenta",label="test,this")
+ax.plot(range(1, num_round + 1), cvresult3.iloc[:, 2], c="m", label="train,this")
+ax.plot(range(1, num_round + 1), cvresult3.iloc[:, 0], c="magenta", label="test,this")
 
 ax.legend(fontsize="xx-large")
 plt.show()

@@ -2556,7 +2556,7 @@ def plot_learning_curve_r2_customize(algo, X_train, X_test, y_train, y_test):
 # In[]:
 # -----------------------------2、基于超参数 开始-------------------------------
 
-# XGBoost必调超参数： 1、n_estimators； 2、gamma/γ复杂度惩罚项
+# XGBoost必调超参数： 1、n_estimators； 2、gamma/γ复杂度惩罚项 或 max_depth树深度（选其一）
 
 '''
 L1、基于超参数学习曲线顺序： 确定n_estimators → 确定subsample → 确定learning_rate → 确定gamma （主要是理解 梯度提升树中这些超参数原理）
@@ -2697,8 +2697,8 @@ def eta_and_n_estimators(Xtrain, Ytrain, Xtest, Ytest, cv=None):
 # ---------------------------------------------------------------------------
 
 
-# XGB原生库： 单纯的 方差与泛化误差 学习曲线： gamma/γ： 自定义交叉验证（XGBoost原生库） 自己写的
-# num_round/n_estimators已固定
+# XGB原生库： 方差与泛化误差 学习曲线： 自定义交叉验证（XGBoost原生库） 自己写的
+# 现为 num_round/n_estimators已固定，画gamma/γ （循环其他超参数也行的， 和上面Sklearn库的 learning_curve_r2_customize 方差与泛化误差学习曲线是一样的意思）
 # 入参 X、y 都是矩阵格式
 def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_name, num_round):
     import xgboost as xgb
@@ -2815,7 +2815,8 @@ gamma是如何控制过拟合？（gamma/γ复杂度惩罚项： 必调超参数
 '''
 # num_round/n_estimators 与 gamma/γ复杂度惩罚项 学习曲线： （xgboost原生交叉验证类： xgboost.cv）
 # 多个gamma/γ复杂度惩罚项参数  分别对  训练集/测试集 X轴随着num_round/n_estimators（树的数量）增加，Y轴评估指标曲线趋势（类似于learning_curve基于样本量的学习曲线）
-# 代码在： 10_2_XGBoost.py 中 7.3、xgboost原生交叉验证类： xgboost.cv
+# 代码在： 1、10_2_XGBoost.py 中 “7.3、xgboost原生交叉验证类： xgboost.cv”； 2、10_3_XGBoost.py
+# 建议优先使用这种学习曲线的调参方式
 '''
 gamma/γ复杂度惩罚项 学习曲线 使用：
 1、将gamma/γ = 0： 使用之前经过“方差与泛化误差学习曲线”初步确定的超参数num_round/n_estimators（树的数量），看随着X轴（树数量的增加），评估指标曲线（默认RMSE）趋势。
@@ -2831,7 +2832,8 @@ gamma/γ复杂度惩罚项 学习曲线 使用：
 '''
 
 
-def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
+def learning_curve_xgboost(X, y, param1, param2=None, num_round=300, metric="rmse", n_fold=5, axe=None,
+                           set_ylim_top=None):
     import xgboost as xgb
 
     dfull = xgb.DMatrix(X, y)  # 为了便捷，使用全数据
@@ -2839,11 +2841,12 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
     # X轴一定是num_round：树的数量。 Y轴：回归默认均方误差；分类默认error
     time0 = time()
     cvresult1 = xgb.cv(param1, dfull, num_boost_round=num_round, metrics=(metric), nfold=n_fold)
-    # print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+    print(time() - time0)
 
-    time0 = time()
-    cvresult2 = xgb.cv(param2, dfull, num_boost_round=num_round, metrics=(metric), nfold=n_fold)
-    # print(datetime.datetime.fromtimestamp(time()-time0).strftime("%M:%S:%f"))
+    if param2 is not None:
+        time0 = time()
+        cvresult2 = xgb.cv(param2, dfull, num_boost_round=num_round, metrics=(metric), nfold=n_fold)
+        print(time() - time0)
 
     #    print(cvresult1)
     '''
@@ -2853,15 +2856,41 @@ def learning_curve_xgboost(X, y, param1, param2, num_round, metric, n_fold):
     cvresult1[3]： 训练集rmse标准差
     '''
 
-    plt.figure(figsize=(20, 5))
-    plt.grid()
-    end_temp = num_round + 1
-    plt.plot(range(1, end_temp), cvresult1.iloc[:, 2], c="red", label="train,gamma=0")
-    plt.plot(range(1, end_temp), cvresult1.iloc[:, 0], c="orange", label="test,gamma=0")
-    plt.plot(range(1, end_temp), cvresult2.iloc[:, 2], c="green", label="train,gamma=20")
-    plt.plot(range(1, end_temp), cvresult2.iloc[:, 0], c="blue", label="test,gamma=20")
-    plt.legend()
+    end_temp = num_round + 1  # X轴显示： num_round/n_estimators（树的数量）
+
+    if axe is None:
+        fig, axe = plt.subplots(1, figsize=(15, 8))
+    axe.grid()
+
+    temp_label1 = ""
+    if "max_depth" in param1.keys() and param1['max_depth'] > 0:
+        temp_label1 = ", max_depth=" + str(param1['max_depth'])
+    elif "gamma" in param1.keys() and param1['gamma'] >= 0:
+        temp_label1 = ", gamma=" + str(param1['gamma'])
+
+    axe.plot(range(1, end_temp), cvresult1.iloc[:, 2], c="red", label="train" + temp_label1)
+    axe.plot(range(1, end_temp), cvresult1.iloc[:, 0], c="orange", label="test" + temp_label1)
+
+    if param2 is not None:
+        temp_label2 = ""
+        if "max_depth" in param1.keys() and param1['max_depth'] > 0:
+            temp_label2 = ", max_depth=" + str(param1['max_depth'])
+        elif "gamma" in param1.keys() and param1['gamma'] >= 0:
+            temp_label2 = ", gamma=" + str(param1['gamma'])
+
+        axe.plot(range(1, end_temp), cvresult2.iloc[:, 2], c="green", label="train" + temp_label2)
+        axe.plot(range(1, end_temp), cvresult2.iloc[:, 0], c="blue", label="test" + temp_label2)
+
+    if set_ylim_top is not None:
+        axe.set_ylim(top=set_ylim_top)  # 截取Y轴最大值 进行显示
+
+    axe.legend(fontsize="xx-large")
+
     plt.show()
+
+
+# XGBoost调参方式： 非常重要（需必会） 建议优先使用这种学习曲线的调参方式
+# 代码在 10_3_XGBoost.py 中 “二、学习曲线调参： （重点：调参方式）”
 
 
 # -----------------------------2、基于超参数 结束-------------------------------
