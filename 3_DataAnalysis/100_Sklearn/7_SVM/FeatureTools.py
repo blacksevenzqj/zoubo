@@ -86,7 +86,7 @@ na
 如果Execl中值为20160217.0，则导入后转换为 <class 'numpy.float64'>类型 20160217.0
 ===================================================================
 3、数字类型 导入：
-3.1、dtype = {"tail_num":np.float64} 以 np.float64 数据格式导入（默认），才能接受 “空表示字符串”
+3.1、显示指定 dtype = {"tail_num":np.float64} 以 np.float64 数据格式导入，才能接受 “空表示字符串”
 3.1.1、自动转换为 numpy.float64类型nan 的输入字符串：
 空单元格、NA、nan、NaN、null、NULL
 则整个 字段Seriers类型 为float64； 数字元素类型为<class 'numpy.float64'>；
@@ -101,8 +101,18 @@ NAN、na 或 字符串“-”
 3.1.2.1、输入字符串 NA、nan、NaN、null、NULL 转换为 np.nan。
 3.1.2.2、剩下的所有元素类型为str，包括：NAN、na、9753（字符串类型数字）
 -------------------------------------------------------------------
-3.2、dtype = {"tail_num":np.int64} 以 np.intXX 数据格式导入，不能接受 “空表示字符串”
+3.2、显示指定 dtype = {"tail_num":np.int64} 以 np.intXX 数据格式导入，不能接受 “空表示字符串”
 空单元格、NA、nan、null、NULL等 直接报异常。
+-------------------------------------------------------------------
+3.3、不显示指定 dtype = {"tail_num":np.float64} 或 dtype = {"tail_num":np.int64} 导入格式， Pandas自动选择导入格式：
+3.3.1、如果 特征值为：0,1,2,3... 
+3.3.1.1、如果 特征中没有空单元格，导入后特征类型为 np.int64
+3.3.1.2、如果 特征中有空单元格，导入后特征类型为 np.float64 （因为Pandas自动选择以 np.float64 数据格式导入，才能接受 “空表示字符串”）
+
+3.3.2、如果 特征值为：12.5,12,15...
+特征中 有 或 没有 空单元格，导入后特征类型都为 np.float64 （因为Pandas自动选择以 np.float64 数据格式导入，才能接受 “空表示字符串”）
+
+3.3.3、np.float64 和 np.int64 的情况遵循： 3.1 和 3.2 中的描述。
 ===================================================================
 '''
 
@@ -321,7 +331,7 @@ def astype_customize(x, t):
         return np.nan
 
 
-# 设置特征类型： （所有的 分类类别 都使用str，而不使用 categorical类型（有的库抱异常））
+# 设置特征类型： （所有的 分类类别 都使用str，而不使用 categorical类型（有的库报异常））
 def set_classif_col(df, feature_name, val_type=1):
     if val_type == 1:
         temp_type = int
@@ -336,7 +346,14 @@ def set_classif_col(df, feature_name, val_type=1):
     try:
         df[feature_name] = df[feature_name].astype(temp_type)
     except:
-        df[feature_name] = df[feature_name].apply(lambda x: astype_customize(x, temp_type))
+        df[feature_name] = df[feature_name].map(lambda x: astype_customize(x, temp_type))
+
+
+# float16/float32/float64： 其中有空值 <class 'numpy.float64'>也就是numpy.float64类型nan； 但不是np.nan（<class 'float'>）
+# 如果直接str(x)转换，则nan会转换为： 字符串'nan'，所以只能如下操作。 int类型暂时还不知道是什么情况。
+def num_to_char(df, feature_name):
+    from math import isnan
+    df[feature_name] = df[feature_name].map(lambda x: np.nan if isnan(x) else str(x))
 
 
 def feature_category(data):
@@ -345,6 +362,45 @@ def feature_category(data):
     # 类型特征
     categorical_features = data.select_dtypes(include=[np.object])
     return numeric_features.columns, categorical_features.columns
+
+
+# 特征类型转换 以 减少内存消耗： （相传是祖传代码 (⊙o⊙)）
+def reduce_mem_usage(df, is_set_category=False):
+    """ iterate through all the columns of a dataframe and modify the data type
+        to reduce memory usage.
+    """
+    start_mem = df.memory_usage().sum()
+    print('Memory usage of dataframe is {:.2f} MB'.format(start_mem))
+
+    for col in df.columns:
+        col_type = df[col].dtype
+
+        if col_type != object:
+            c_min = df[col].min()
+            c_max = df[col].max()
+            if str(col_type)[:3] == 'int':
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df[col] = df[col].astype(np.int8)
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df[col] = df[col].astype(np.int16)
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df[col] = df[col].astype(np.int32)
+                elif c_min > np.iinfo(np.int64).min and c_max < np.iinfo(np.int64).max:
+                    df[col] = df[col].astype(np.int64)
+            else:
+                if c_min > np.finfo(np.float16).min and c_max < np.finfo(np.float16).max:
+                    df[col] = df[col].astype(np.float16)
+                elif c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df[col] = df[col].astype(np.float32)
+                else:
+                    df[col] = df[col].astype(np.float64)
+        elif is_set_category:
+            df[col] = df[col].astype('category')
+
+    end_mem = df.memory_usage().sum()
+    print('Memory usage after optimization is: {:.2f} MB'.format(end_mem))
+    print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
+    return df
 
 
 # In[]:
@@ -1853,8 +1909,6 @@ def feature_select_corr_withY(data, numeric_features, y_name, threshold=0.8):
         # 如果 连续特征已经在 删除列表del_list 或 相等列表equal_list中， 则跳过
         if (temp['Feature_1'] in del_list) or (temp['Feature_2'] in del_list):
             continue;
-        elif (temp['Feature_1'] in equal_list) or (temp['Feature_2'] in equal_list):
-            continue;
 
         # 取出 该 连续特征 对 连续因变量Y 皮尔森相似度
         temp_withY1 = temp_corr_abs_withY[temp_corr_abs_withY['Feature_1'] == temp['Feature_1']]
@@ -1862,12 +1916,14 @@ def feature_select_corr_withY(data, numeric_features, y_name, threshold=0.8):
 
         # 看 该对 连续特征当中， 哪个连续特征 对 连续因变量Y 皮尔森相似度 贡献小， 放入删除列表del_list
         if temp_withY1.iloc[0]['Correlation_Coefficient'] > temp_withY2.iloc[0]['Correlation_Coefficient']:
-            if temp_withY2.iloc[0]['Feature_1'] not in del_list:
-                del_list.append(temp_withY2.iloc[0]['Feature_1'])
+            del_list.append(temp_withY2.iloc[0]['Feature_1'])
         elif temp_withY1.iloc[0]['Correlation_Coefficient'] < temp_withY2.iloc[0]['Correlation_Coefficient']:
-            if temp_withY1.iloc[0]['Feature_1'] not in del_list:
-                del_list.append(temp_withY1.iloc[0]['Feature_1'])
+            del_list.append(temp_withY1.iloc[0]['Feature_1'])
         else:
+            if i % 2:
+                del_list.append(temp_withY1.iloc[0]['Feature_1'])
+            else:
+                del_list.append(temp_withY2.iloc[0]['Feature_1'])
             # 如果 该对 连续特征 对 连续因变量Y 皮尔森相似度 贡献相等， 相等列表equal_list中
             equal_list.append(temp_withY1.iloc[0]['Feature_1'] + '=' + temp_withY2.iloc[0]['Feature_1'])
 
@@ -2103,9 +2159,10 @@ def heteroscedastic(X, Y, col_list):  # Y的列名必须为：'Y'
     return r_sq
 
 
-def heteroscedastic_singe(X, Y, col):
+def heteroscedastic_singe(X, Y, col, y_name='Y', is_auto=True):
     temp_X = X[col]
-    temp_Y = pd.DataFrame(Y, columns=['Y'])
+    temp_Y = pd.DataFrame(Y)
+    df_change_colname(temp_Y, {y_name: 'Y'})
     temp_data = pd.concat([temp_X, temp_Y], axis=1)
 
     formula = "Y" + '~' + '+' + col
@@ -2119,29 +2176,33 @@ def heteroscedastic_singe(X, Y, col):
 
     print("-" * 30)
 
-    temp_data["Y_ln"] = np.log(temp_data["Y"])
-    formula = "Y_ln" + '~' + '+' + col
-    print(formula)
-    lm_s2 = ols(formula, data=temp_data).fit()
-    print(lm_s2.rsquared, lm_s2.aic)
-    temp_data['Pred'] = lm_s2.predict(temp_data)
-    temp_data['resid'] = lm_s2.resid  # 残差随着x的增大呈现 喇叭口形状，出现异方差
-    temp_data.plot(col, 'resid', kind='scatter')  # Pred = β*Income，随着预测值的增大，残差resid呈现 喇叭口形状
-    print(lm_s2.summary())
+    if is_auto:
+        temp_data["Y_ln"] = np.log(temp_data["Y"])
+        formula = "Y_ln" + '~' + '+' + col
+        print(formula)
+        lm_s2 = ols(formula, data=temp_data).fit()
+        print(lm_s2.rsquared, lm_s2.aic)
+        temp_data['Pred'] = lm_s2.predict(temp_data)
+        temp_data['resid'] = lm_s2.resid  # 残差随着x的增大呈现 喇叭口形状，出现异方差
+        temp_data.plot(col, 'resid', kind='scatter')  # Pred = β*Income，随着预测值的增大，残差resid呈现 喇叭口形状
+        print(lm_s2.summary())
 
-    print("-" * 30)
+        print("-" * 30)
 
-    temp_data[col + "_ln"] = np.log(temp_data[col])
-    formula = "Y_ln" + '~' + '+' + col + "_ln"
-    print(formula)
-    lm_s3 = ols(formula, data=temp_data).fit()
-    print(lm_s3.rsquared, lm_s3.aic)
-    temp_data['Pred'] = lm_s3.predict(temp_data)
-    temp_data['resid'] = lm_s3.resid  # 残差随着x的增大呈现 喇叭口形状，出现异方差
-    temp_data.plot(col + "_ln", 'resid', kind='scatter')  # Pred = β*Income，随着预测值的增大，残差resid呈现 喇叭口形状
-    print(lm_s3.summary())
+        temp_data[col + "_ln"] = np.log(temp_data[col])
+        formula = "Y_ln" + '~' + '+' + col + "_ln"
+        print(formula)
+        lm_s3 = ols(formula, data=temp_data).fit()
+        print(lm_s3.rsquared, lm_s3.aic)
+        temp_data['Pred'] = lm_s3.predict(temp_data)
+        temp_data['resid'] = lm_s3.resid  # 残差随着x的增大呈现 喇叭口形状，出现异方差
+        temp_data.plot(col + "_ln", 'resid', kind='scatter')  # Pred = β*Income，随着预测值的增大，残差resid呈现 喇叭口形状
+        print(lm_s3.summary())
 
-    r_sq = {'Y~' + col: lm_s1.rsquared, 'ln(Y)~' + col: lm_s2.rsquared, 'ln(Y)~ln(' + col + ')': lm_s3.rsquared}
+        r_sq = {'Y~' + col: lm_s1.rsquared, 'ln(Y)~' + col: lm_s2.rsquared, 'ln(Y)~ln(' + col + ')': lm_s3.rsquared}
+    else:
+        r_sq = {'Y~' + col: lm_s1.rsquared}
+
     return r_sq
 
 
@@ -2329,6 +2390,24 @@ def linear_model_residuals(y_train_true, y_train_predict, y_test_true, y_test_pr
     axe.set_ylabel("Residuals")
     axe.legend(loc="upper left")
     axe.hlines(y=0, xmin=np.min(x_axis).round(2), xmax=np.max(x_axis).round(2), color="red")
+    plt.show()
+
+
+# 线性回归模型： 预测值 与 真实值 的 散点分布： X轴为连续特征， Y轴为预测值/真实值
+def feature_predic_actual_scatter(X, y, feature_name, y_name, model):
+    f, axes = plt.subplots(3, 1, figsize=(15, 15))
+    subsample_index = tc.get_randint(low=0, high=len(y), size=50)
+
+    axes[0].scatter(X[feature_name][subsample_index], y[subsample_index], color='black')
+    axes[0].scatter(X[feature_name][subsample_index], model.predict(X.loc[subsample_index]), color='blue')
+    axes[0].set_xlabel(feature_name)
+    axes[0].set_ylabel(y_name)
+    axes[0].legend(['True ' + y_name, 'Predicted ' + y_name], loc='upper right')
+    print("The predicted " + y_name + " is obvious different from true " + y_name)
+
+    # 连续特征 与 连续因变量Y（真实值） 散点分布：
+    sns.regplot(X[feature_name], y, scatter=True, fit_reg=True, ax=axes[1])  # 加了趋势线
+
     plt.show()
 
 

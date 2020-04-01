@@ -399,6 +399,13 @@ sum(recom_result["1"][cate], [])
 '''
 
 
+def list_expand_tuple(list1, list2):
+    return sorted([*zip(list1, list2)], key=lambda x: x[1], reverse=True)
+
+
+#    return sorted(dict(zip(list1, list2)).items(), key=lambda x:x[1], reverse=True)
+
+
 # In[]:
 # 字典排序
 def dict_sorted(dict_data, position=1, reverse=True):
@@ -478,5 +485,12 @@ dateframe3 = dateframe1.drop(labels=dateframe2.axes[0])
 resid = pd.DataFrame((y['avg_exp'] - predict["Pred"]), columns=['resid'])
 resid = pd.DataFrame(y['avg_exp'].sub(predict["Pred"]), columns=['resid'])
 '''
+
+
+# In[]:
+# 随机数
+def get_randint(low=0, high=10, size=50):
+    return np.random.randint(low=low, high=high, size=size)  # ndarray
+
 
 
