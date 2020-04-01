@@ -22,8 +22,8 @@ import Tools_customize as tc
 # In[]:
 # ================================基础操作 开始==============================
 def get_sk_metrics():
-    import sklearn.metrics.SCORERS as metrics_name
-    return sorted(metrics_name.keys())
+    import sklearn.metrics as metrics_name
+    return sorted(metrics_name.SCORERS.keys())
 
 
 # In[]:
@@ -2395,7 +2395,8 @@ def linear_model_residuals(y_train_true, y_train_predict, y_test_true, y_test_pr
 
 # 线性回归模型： 预测值 与 真实值 的 散点分布： X轴为连续特征， Y轴为预测值/真实值
 def feature_predic_actual_scatter(X, y, feature_name, y_name, model):
-    f, axes = plt.subplots(3, 1, figsize=(15, 15))
+    f, axes = plt.subplots(2, 1, figsize=(15, 15))
+
     subsample_index = tc.get_randint(low=0, high=len(y), size=50)
 
     axes[0].scatter(X[feature_name][subsample_index], y[subsample_index], color='black')
@@ -2406,6 +2407,7 @@ def feature_predic_actual_scatter(X, y, feature_name, y_name, model):
     print("The predicted " + y_name + " is obvious different from true " + y_name)
 
     # 连续特征 与 连续因变量Y（真实值） 散点分布：
+    # （从左至右逐渐稀疏的散点图 → 第一反应是对Y取对数 → 特征取对数）
     sns.regplot(X[feature_name], y, scatter=True, fit_reg=True, ax=axes[1])  # 加了趋势线
 
     plt.show()
@@ -2562,7 +2564,7 @@ def plot_learning_curve(estimator, title, X, y, scoring=None,
     test_scores_mean = np.mean(test_scores, axis=1)  # 按列（折数）取均值
     test_scores_std = np.std(test_scores, axis=1)
     print("样本量阈值%s" % train_sizes)
-    print("交叉验证训练集阈值%d,最大分数%f" % (
+    print("验证集最大分数 对应于 交叉验证训练集阈值%d, 验证集最大分数%f" % (
     train_sizes[test_scores_mean.tolist().index(np.max(test_scores_mean))], np.max(test_scores_mean)))
 
     if ax == None:
@@ -2992,6 +2994,37 @@ def rmsle_cv(model, train_X, train_y, cv=None, cv_type=1):
 
     rmse = np.sqrt(-CVS(model, train_X, train_y, scoring="neg_mean_squared_error", cv=cv))
     return (rmse)
+
+
+# 动态设置评估指标： （主要为了展示make_scorer用法： 装饰器函数）
+def make_scorer_metrics_cv(model, train_X, train_y, is_log_transfer=False, cv=None, cv_type=1):
+    from sklearn.metrics import mean_absolute_error, make_scorer
+
+    if cv is None:
+        if cv_type == 1:
+            cv = KFold(n_splits=5, shuffle=True, random_state=42)  # 交叉验证模式
+        elif cv_type == 2:
+            cv = ShuffleSplit(n_splits=5, test_size=.2, random_state=0)
+        else:
+            raise Exception('CV Type is Error')
+
+    # 装饰器函数： 将 真实y值 和 预测y值 都取log
+    def log_transfer(func):
+        def wrapper(y, yhat):
+            result = func(np.log(y), np.nan_to_num(np.log(yhat)))
+            return result
+
+        return wrapper
+
+    # 它的意思是不是 非log的y 进来后，cv交叉验证的训练时就将y取log？ 否则只在评估时将y取log怕是没意义。
+
+    # 使用make_scorer关键字，则评分函数需为动态评分函数（也就是直接导入的，不能是字符串名称形式）
+    if is_log_transfer:
+        temp_fun = log_transfer(mean_absolute_error)
+    else:
+        temp_fun = mean_absolute_error
+
+    return CVS(model, train_X, train_y, verbose=1, cv=cv, scoring=make_scorer(temp_fun))
 
 
 # 入参 X、y 都是矩阵格式

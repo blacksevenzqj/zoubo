@@ -325,7 +325,6 @@ train_data_3 = train_data_3.merge(diff_day_cut_bin_fe, how='left', on='diff_day_
 train_data_3.drop('diff_day3', axis=1, inplace=True)
 
 # In[]:
-train_data_3.columns
 '''
 ['SaleID', 'name', 'model', 'brand', 'bodyType', 'fuelType', 'gearbox',
        'kilometer', 'notRepairedDamage', 'price', 'v_0', 'v_1', 'v_2', 'v_3',
@@ -351,45 +350,52 @@ train_data_3.columns
        'diff_day_cut_bin_price_min', 'diff_day_cut_bin_price_sum',
        'diff_day_cut_bin_price_std', 'diff_day_cut_bin_price_average']
 '''
-test_data_3.columns
+train_data_3.columns
+# In[]:
 '''
 ['SaleID', 'name', 'model', 'brand', 'bodyType', 'fuelType', 'gearbox',
        'power', 'kilometer', 'notRepairedDamage', 'v_0', 'v_1', 'v_2', 'v_3',
        'v_4', 'v_5', 'v_6', 'v_7', 'v_8', 'v_9', 'v_10', 'v_11', 'v_12',
        'v_13', 'v_14', 'diff_day3', 'city']
 '''
+test_data_3.columns
 # In[]:
 # 导出保存：
 # ft.writeFile_outData(train_data_3, "train_data_3.csv")
 # ft.writeFile_outData(test_data_3, "test_data_3.csv")
-train_data_3 = ft.readFile_inputData('train_data_3.csv', index_col=0)  # price是大于0的
-test_data_3 = ft.readFile_inputData('test_data_3.csv', index_col=0)
+# train_data_3 = ft.readFile_inputData('train_data_3.csv', index_col=0) # price是大于0的
+# test_data_3 = ft.readFile_inputData('test_data_3.csv', index_col=0)
 # In[]:
 numeric_features = [
-    'kilometer', 'price', 'v_0', 'v_1', 'v_2', 'v_3',
-    'v_4', 'v_5', 'v_6', 'v_7', 'v_8', 'v_9', 'v_10', 'v_11', 'v_12',
-    'v_13', 'v_14', 'power_cut_bin', 'diff_day_cut_bin',
-    'brand_amount', 'brand_price_average', 'brand_price_max',
-    'brand_price_median', 'brand_price_min', 'brand_price_std',
-    'brand_price_sum', 'bodyType_amount', 'bodyType_price_max',
-    'bodyType_price_median', 'bodyType_price_min', 'bodyType_price_sum',
-    'bodyType_price_std', 'bodyType_price_average', 'fuelType_amount',
-    'fuelType_price_max', 'fuelType_price_median', 'fuelType_price_min',
-    'fuelType_price_sum', 'fuelType_price_std', 'fuelType_price_average',
-    'gearbox_amount', 'gearbox_price_max', 'gearbox_price_median',
-    'gearbox_price_min', 'gearbox_price_sum', 'gearbox_price_std',
-    'gearbox_price_average', 'kilometer_amount', 'kilometer_price_max',
-    'kilometer_price_median', 'kilometer_price_min', 'kilometer_price_sum',
-    'kilometer_price_std', 'kilometer_price_average',
-    'power_cut_bin_amount', 'power_cut_bin_price_max',
-    'power_cut_bin_price_median', 'power_cut_bin_price_min',
-    'power_cut_bin_price_sum', 'power_cut_bin_price_std',
-    'power_cut_bin_price_average', 'diff_day_cut_bin_amount',
-    'diff_day_cut_bin_price_max', 'diff_day_cut_bin_price_median',
-    'diff_day_cut_bin_price_min', 'diff_day_cut_bin_price_sum',
-    'diff_day_cut_bin_price_std', 'diff_day_cut_bin_price_average']
+    'price',
 
-categorical_features = ['name', 'model', 'brand', 'bodyType', 'fuelType', 'gearbox', 'notRepairedDamage', 'city']
+    'v_0', 'v_1', 'v_2', 'v_3', 'v_4', 'v_5', 'v_6', 'v_7', 'v_8', 'v_9', 'v_10',
+    'v_11', 'v_12', 'v_13', 'v_14',
+
+    'brand_amount', 'brand_price_average', 'brand_price_max',
+    'brand_price_median', 'brand_price_min', 'brand_price_std', 'brand_price_sum',
+
+    'bodyType_amount', 'bodyType_price_max', 'bodyType_price_median',
+    'bodyType_price_min', 'bodyType_price_sum', 'bodyType_price_std', 'bodyType_price_average',
+
+    'fuelType_amount', 'fuelType_price_max', 'fuelType_price_median',
+    'fuelType_price_min', 'fuelType_price_sum', 'fuelType_price_std', 'fuelType_price_average',
+
+    'gearbox_amount', 'gearbox_price_max', 'gearbox_price_median',
+    'gearbox_price_min', 'gearbox_price_sum', 'gearbox_price_std', 'gearbox_price_average',
+
+    'kilometer_amount', 'kilometer_price_max', 'kilometer_price_median',
+    'kilometer_price_min', 'kilometer_price_sum', 'kilometer_price_std', 'kilometer_price_average',
+
+    'power_cut_bin_amount', 'power_cut_bin_price_max', 'power_cut_bin_price_median',
+    'power_cut_bin_price_min', 'power_cut_bin_price_sum', 'power_cut_bin_price_std', 'power_cut_bin_price_average',
+
+    'diff_day_cut_bin_amount', 'diff_day_cut_bin_price_max', 'diff_day_cut_bin_price_median',
+    'diff_day_cut_bin_price_min', 'diff_day_cut_bin_price_sum', 'diff_day_cut_bin_price_std',
+    'diff_day_cut_bin_price_average']
+
+categorical_features = ['name', 'model', 'brand', 'bodyType', 'fuelType', 'gearbox', 'notRepairedDamage', 'city',
+                        'kilometer', 'power_cut_bin', 'diff_day_cut_bin']
 
 # In[]:
 # 3、连续特征偏度
@@ -402,43 +408,45 @@ than_one_columns = var_x_ln.tolist()
 fig, axe = plt.subplots(2, 1, figsize=(100, 16))
 skew, kurt, var_x_ln = ft.skew_distribution_test(train_data_3[than_one_columns], axe)
 # In[]:
+'''
 than_one_columns = ['fuelType_price_max',
-                    'brand_price_min',
-                    'fuelType_price_min',
-                    'fuelType_price_sum',
-                    'v_7',
-                    'v_2',
-                    'v_5',
-                    'kilometer_price_min',
-                    'kilometer_price_max',
-                    'v_11',
-                    'brand_price_median',
-                    'bodyType_price_min',
-                    'price',
-                    'brand_price_max',
-                    'bodyType_price_median',
-                    'kilometer_price_median',
-                    'kilometer_price_average',
-                    'diff_day_cut_bin_price_min',
-                    'kilometer',
-                    'power_cut_bin_price_max',
-                    'v_0',
-                    'gearbox_price_median',
-                    'gearbox_price_average',
-                    'gearbox_price_max',
-                    'gearbox_price_sum',
-                    'gearbox_amount',
-                    'gearbox_price_std',
-                    'brand_price_average',
-                    'kilometer_price_std',
-                    'v_14',
-                    'bodyType_price_max',
-                    'power_cut_bin_price_median',
-                    'diff_day_cut_bin_price_median',
-                    'diff_day_cut_bin_price_max',
-                    'diff_day_cut_bin_price_average',
-                    'diff_day_cut_bin_price_sum',
-                    'diff_day_cut_bin_price_std']
+ 'brand_price_min',
+ 'fuelType_price_min',
+ 'fuelType_price_sum',
+ 'v_7',
+ 'v_2',
+ 'v_5',
+ 'kilometer_price_min',
+ 'kilometer_price_max',
+ 'v_11',
+ 'brand_price_median',
+ 'bodyType_price_min',
+ 'price',
+ 'brand_price_max',
+ 'bodyType_price_median',
+ 'kilometer_price_median',
+ 'kilometer_price_average',
+ 'diff_day_cut_bin_price_min',
+ 'power_cut_bin_price_max',
+ 'v_0',
+ 'gearbox_price_median',
+ 'gearbox_price_average',
+ 'gearbox_price_max',
+ 'gearbox_price_sum',
+ 'gearbox_amount',
+ 'gearbox_price_std',
+ 'brand_price_average',
+ 'kilometer_price_std',
+ 'v_14',
+ 'bodyType_price_max',
+ 'power_cut_bin_price_median',
+ 'diff_day_cut_bin_price_median',
+ 'diff_day_cut_bin_price_max',
+ 'diff_day_cut_bin_price_average',
+ 'diff_day_cut_bin_price_sum',
+ 'diff_day_cut_bin_price_std']
+'''
+than_one_columns
 
 # In[]:
 f, axes = plt.subplots(1, 2, figsize=(23, 8))
@@ -476,37 +484,39 @@ train_data_3.drop(del_skew_columns, axis=1, inplace=True)
 temp_list = ft.set_diff(than_one_columns, del_skew_columns)
 stay_columns = temp_list[1]  # 差集
 # In[]:
-stay_columns = ['gearbox_price_median',
-                'gearbox_price_average',
-                'brand_price_max',
-                'v_14',
-                'gearbox_price_std',
-                'diff_day_cut_bin_price_average',
-                'v_7',
-                'power_cut_bin_price_median',
-                'gearbox_amount',
-                'kilometer_price_average',
-                'kilometer_price_std',
-                'price',
-                'diff_day_cut_bin_price_max',
-                'brand_price_median',
-                'power_cut_bin_price_max',
-                'bodyType_price_max',
-                'gearbox_price_sum',
-                'bodyType_price_median',
-                'kilometer',
-                'gearbox_price_max',
-                'diff_day_cut_bin_price_min',
-                'v_11',
-                'bodyType_price_min',
-                'diff_day_cut_bin_price_sum',
-                'v_0',
-                'diff_day_cut_bin_price_median',
-                'v_2',
-                'brand_price_average',
-                'v_5',
-                'kilometer_price_median',
-                'diff_day_cut_bin_price_std']
+'''
+stay_columns = ['price',
+ 'v_0',
+ 'kilometer_price_std',
+ 'diff_day_cut_bin_price_std',
+ 'kilometer_price_average',
+ 'gearbox_price_max',
+ 'power_cut_bin_price_median',
+ 'brand_price_average',
+ 'brand_price_max',
+ 'kilometer_price_median',
+ 'v_5',
+ 'diff_day_cut_bin_price_average',
+ 'gearbox_price_average',
+ 'gearbox_amount',
+ 'diff_day_cut_bin_price_min',
+ 'diff_day_cut_bin_price_median',
+ 'bodyType_price_max',
+ 'diff_day_cut_bin_price_sum',
+ 'diff_day_cut_bin_price_max',
+ 'v_7',
+ 'gearbox_price_std',
+ 'v_14',
+ 'power_cut_bin_price_max',
+ 'v_11',
+ 'v_2',
+ 'gearbox_price_median',
+ 'bodyType_price_min',
+ 'bodyType_price_median',
+ 'brand_price_median',
+ 'gearbox_price_sum']
+'''
+stay_columns
 
 # In[]:
 train_data_4 = train_data_3.copy()
@@ -515,8 +525,8 @@ test_data_4 = test_data_3.copy()
 # 导出保存：
 # ft.writeFile_outData(train_data_4, "train_data_4.csv")
 # ft.writeFile_outData(test_data_4, "test_data_4.csv")
-train_data_4 = ft.readFile_inputData('train_data_4.csv', index_col=0)
-test_data_4 = ft.readFile_inputData('test_data_4.csv', index_col=0)
+# train_data_4 = ft.readFile_inputData('train_data_4.csv', index_col=0)
+# test_data_4 = ft.readFile_inputData('test_data_4.csv', index_col=0)
 print(train_data_4[train_data_4['price'] <= 0].shape)
 # In[]:
 # log转换： 只能转一次哦
@@ -566,38 +576,38 @@ del_list, equal_list = ft.feature_select_corr_withY(train_data_4, numeric_skew_s
 # In[]:
 # equal_list存在对因变量Y贡献度相等的特征： ['gearbox_price_median=gearbox_price_sum']
 # 随便挑一个删除
-del_list.append('gearbox_price_median')
+# del_list.append('gearbox_price_median')
+
 # In[]:
 temp_data = train_data_4[numeric_skew_stay_cols_not_y].drop(del_list, axis=1)
 # In[]:
 # 皮尔森相似度 连续特征选择后 预留的连续特征
 '''
-['v_7',
- 'diff_day_cut_bin_price_max',
- 'v_2',
+reserve_columns = ['v_0',
  'power_cut_bin_price_median',
- 'gearbox_price_std',
- 'fuelType_price_median',
- 'diff_day_cut_bin_price_min',
- 'kilometer_price_median',
- 'v_0',
- 'power_cut_bin_price_max',
- 'gearbox_price_min',
- 'bodyType_price_median',
- 'v_11',
- 'v_10',
- 'bodyType_price_sum',
  'brand_price_max',
- 'brand_price_sum',
+ 'kilometer_price_median',
  'v_5',
- 'brand_price_median',
- 'diff_day_cut_bin_amount',
- 'kilometer',
- 'v_3',
+ 'gearbox_amount',
+ 'diff_day_cut_bin_price_min',
  'v_9',
- 'bodyType_price_min',
+ 'gearbox_price_min',
+ 'brand_price_sum',
+ 'v_3',
+ 'diff_day_cut_bin_price_max',
+ 'v_7',
  'v_14',
- 'power_cut_bin_amount']
+ 'power_cut_bin_price_max',
+ 'v_11',
+ 'v_2',
+ 'power_cut_bin_amount',
+ 'fuelType_price_median',
+ 'bodyType_price_min',
+ 'bodyType_price_sum',
+ 'bodyType_price_median',
+ 'diff_day_cut_bin_amount',
+ 'brand_price_median',
+ 'v_10']
 '''
 reserve_columns = temp_data.columns.tolist()
 reserve_columns
@@ -607,6 +617,39 @@ temp_data_miss = ft.missing_values_table(temp_data)
 # 这几个特征是有np.nan的
 temp_data_miss_col = temp_data_miss.index.tolist()  # 有7个特征有np.nan，所以要排除掉
 reserve_columns_not_miss = ft.set_diff(reserve_columns, temp_data_miss_col)[1]  # 差集： 27-7=20
+# In[]:
+'''
+temp_data_miss_col = ['fuelType_price_median',
+ 'gearbox_amount',
+ 'gearbox_price_min',
+ 'bodyType_price_min',
+ 'bodyType_price_sum',
+ 'bodyType_price_median']
+'''
+temp_data_miss_col
+# In[]:
+'''
+reserve_columns_not_miss = ['diff_day_cut_bin_price_max',
+ 'v_0',
+ 'v_2',
+ 'power_cut_bin_amount',
+ 'v_7',
+ 'v_14',
+ 'v_10',
+ 'diff_day_cut_bin_price_min',
+ 'v_9',
+ 'power_cut_bin_price_median',
+ 'power_cut_bin_price_max',
+ 'diff_day_cut_bin_amount',
+ 'v_3',
+ 'brand_price_median',
+ 'brand_price_max',
+ 'kilometer_price_median',
+ 'brand_price_sum',
+ 'v_11',
+ 'v_5']
+'''
+reserve_columns_not_miss
 
 # In[]:
 # 5.1.2、方差选择： （不能有np.nan）
@@ -647,9 +690,9 @@ import matplotlib.pyplot as plt
 temp_X = temp_data[reserve_columns_not_miss]  # 差不多剩下26个特征（每次运行都会有不同）
 y = train_data_4['price']
 # In[]:
-# 随机森林实例化： （不能有np.nan： 是随机森林 还是 模型选择 的要求？）
+# 随机森林实例化： （不能有np.nan： 是随机森林 还是 模型选择SelectFromModel 的要求？）
 RFC_ = RFC(n_estimators=10, random_state=0)
-# 筛选特征（数据）： 针对 树模型的 feature_importances_ 属性删选
+# 筛选特征（数据）： 针对 树模型的 feature_importances_ 属性删选； 因变量Y必须是int类型，否则报错，log型y就不能用，这不是扯么？？？
 X_embedded_1 = SelectFromModel(RFC_, threshold=0.04).fit_transform(temp_X, y)
 # In[]:
 sfmf = SelectFromModel(RFC_, threshold=0.005).fit(temp_X, y)
@@ -660,7 +703,55 @@ print(temp_X.columns[X_embedded_2_index])  # 特征选择后 特征的 原列名
 # 只能够分到大约0.001 = 1/780 的feature_importances_
 # 模型的维度明显被降低了
 
+
 # In[]:
+all_colunms = reserve_columns + categorical_features + ["price"]
+# In[]:
+'''
+all_colunms = ['v_0',
+ 'power_cut_bin_price_median',
+ 'brand_price_max',
+ 'kilometer_price_median',
+ 'v_5',
+ 'gearbox_amount',
+ 'diff_day_cut_bin_price_min',
+ 'v_9',
+ 'gearbox_price_min',
+ 'brand_price_sum',
+ 'v_3',
+ 'diff_day_cut_bin_price_max',
+ 'v_7',
+ 'v_14',
+ 'power_cut_bin_price_max',
+ 'v_11',
+ 'v_2',
+ 'power_cut_bin_amount',
+ 'fuelType_price_median',
+ 'bodyType_price_min',
+ 'bodyType_price_sum',
+ 'bodyType_price_median',
+ 'diff_day_cut_bin_amount',
+ 'brand_price_median',
+ 'v_10',
+ 'name',
+ 'model',
+ 'brand',
+ 'bodyType',
+ 'fuelType',
+ 'gearbox',
+ 'notRepairedDamage',
+ 'city',
+ 'kilometer',
+ 'power_cut_bin',
+ 'diff_day_cut_bin',
+ 'price']
+'''
+all_colunms
+
+# In[]:
+# 导出保存：
+ft.writeFile_outData(train_data_4[all_colunms], "train_data_5.csv")
+# ft.writeFile_outData(test_data_4[all_colunms], "test_data_5.csv") # test没做这些特征
 
 # In[]:
 

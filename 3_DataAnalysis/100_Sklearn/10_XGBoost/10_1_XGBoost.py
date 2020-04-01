@@ -83,7 +83,7 @@ plt.show()
 #cv = KFold(n_splits=5, shuffle = True, random_state=42) #交叉验证模式
 cv = ShuffleSplit(n_splits=5, test_size=.2, random_state=0)
 
-ft.plot_learning_curve(XGBR(n_estimators=100,random_state=420)
+ft.plot_learning_curve(XGBR(n_estimators=100,random_state=420,silent=True)
                     ,"XGB",Xtrain,Ytrain,ax=None,cv=cv)
 plt.show()
 '''
