@@ -2897,11 +2897,11 @@ gamma是如何控制过拟合？（gamma/γ复杂度惩罚项： 必调超参数
 # num_round/n_estimators 与 gamma/γ复杂度惩罚项 学习曲线： （xgboost原生交叉验证类： xgboost.cv）
 # 多个gamma/γ复杂度惩罚项参数  分别对  训练集/测试集 X轴随着num_round/n_estimators（树的数量）增加，Y轴评估指标曲线趋势（类似于learning_curve基于样本量的学习曲线）
 # 代码在： 1、10_2_XGBoost.py 中 “7.3、xgboost原生交叉验证类： xgboost.cv”； 2、10_3_XGBoost.py
-# 建议优先使用这种学习曲线的调参方式
+# 建议优先使用这种学习曲线的调参方式（和 最终的调参方式 代码相同）
 '''
 gamma/γ复杂度惩罚项 学习曲线 使用：
 1、将gamma/γ = 0： 使用之前经过“方差与泛化误差学习曲线”初步确定的超参数num_round/n_estimators（树的数量），看随着X轴（树数量的增加），评估指标曲线（默认RMSE）趋势。
-如果 Y轴的评估指标曲线（默认RMSE）趋势 提前在 X轴达到num_round/n_estimators（树的数量）值之前就趋于平稳了，则可以从新选择 小于 num_round/n_estimators（树的数量）超参数的值（这步从新选择num_round/n_estimators数量的操作是可选的）
+如果 Y轴的评估指标曲线（默认RMSE）趋势 提前在 X轴达到num_round/n_estimators（树的数量）值之前就趋于平稳了，则可以从新选择 小于 num_round/n_estimators（树的数量）超参数的值（这一步从新选择num_round/n_estimators数量的操作是可选的）
 2、gamma/γ = 20（例如），看 train和test的评估指标曲线之间的距离 是否较 gamma/γ = 0 时的距离缩短了（抑止过拟合）？ 正常情况下应该是缩短了，证明 gamma/γ复杂度惩罚项 生效了。
 3、但需注意的是： gamma/γ = 20时的test的评估指标曲线 必须最少 与 gamma/γ = 0时的test的评估指标曲线 重合（非常接近），意思就是测试集效果不能降低（如果测试集效果能更好当然更好了）。
 
@@ -2970,7 +2970,7 @@ def learning_curve_xgboost(X, y, param1, param2=None, num_round=300, metric="rms
     plt.show()
 
 
-# XGBoost调参方式： 非常重要（需必会） 建议优先使用这种学习曲线的调参方式
+# XGBoost调参方式： 非常重要（需必会） 建议优先使用这种学习曲线的调参方式： 3组参数/3个模型 在一个图中显示 进行评估指标对比调参
 # 代码在 10_3_XGBoost.py 中 “二、学习曲线调参： （重点：调参方式）”
 
 
