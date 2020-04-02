@@ -11,5 +11,5 @@ regressor.score(boston.data, boston.target)  # R方
 # 如果不写 neg_mean_squared_error，回归评估默认是R平方
 regressor = RandomForestRegressor(n_estimators=100, random_state=0, oob_score=True)  # 实例化
 scores = cross_val_score(regressor, boston.data, boston.target, cv=10
-                         , scoring="neg_mean_squared_error"  # 最小均方差
+                         , scoring="neg_mean_squared_error"  # 负最小均方差
                          )

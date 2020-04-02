@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -17,10 +16,11 @@ X_train, X_text, y_train, y_test = train_test_split(X, y, random_state=42)
 print(pd.value_counts(y_train, sort=True))
 
 
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
 
-# 默认就是使用决策树模型
-gb_clf = GradientBoostingClassifier(max_depth=2, n_estimators=30)
-gb_clf.fit(X_train, y_train)
-print(gb_clf)
-print(gb_clf.score(X_text, y_test))
+ada_clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=2), n_estimators=500)
+ada_clf.fit(X_train, y_train)
+print(ada_clf.score(X_text, y_test))
+
+

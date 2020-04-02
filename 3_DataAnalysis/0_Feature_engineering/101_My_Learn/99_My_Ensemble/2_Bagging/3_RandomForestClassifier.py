@@ -1,5 +1,3 @@
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn import datasets
@@ -12,8 +10,15 @@ plt.show()
 
 from sklearn.ensemble import RandomForestClassifier
 
-# RandomForestClassifier 其实就是集成了BaggingClassifier(DecisionTreeClassifier())。
-# 即包含决策树的参数、也包含了Bagging的参数。
+'''
+RandomForestClassifier 集成了 BaggingClassifier(DecisionTreeClassifier())，但是 RandomForestXXX 提供了更多的参数。
+1、Sklearn单独封装的随机森林类RandomForestClassifier：决策树在节点划分上，在随机的特征子集上寻找最优划分特征（并不是在所有特征上寻找最优化分特征，增加了集成学习中每个子模型的随机性）
+
+2、Extra-Trees：（极其随机 的 随机森林）
+决策树在节点划分上，使用随机的特征和随机的阈值。
+提供了额外的随机性，抑制过拟合（抑制了方差），但增大了bias（增大了偏差）。
+更快的训练速度。
+'''
 
 '''
 n_estimators：生成500个决策树子模型；
