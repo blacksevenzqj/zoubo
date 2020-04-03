@@ -1223,6 +1223,9 @@ def box_diagram_auto_col_category(data, categorical_features, y_name, function_t
     g = g.map(statistics_function, "value", y_name)
 
 
+# 线性回归的可视化： sns.lmplot函数，了解下。
+
+
 # In[]:
 # --------------------------------复用------------------------------
 # 连续特征 计算盒须图 区间：
