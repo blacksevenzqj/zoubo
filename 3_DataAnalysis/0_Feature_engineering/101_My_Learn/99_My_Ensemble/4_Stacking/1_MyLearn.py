@@ -580,5 +580,72 @@ rlb.ComprehensiveIndicatorFigure(y_test, decision_scores, axe[0], 1)
 rlb.ComprehensiveIndicatorSkLibFigure(y_test, decision_scores, axe[1])
 
 
+# In[]:
+# 一些其它方法：
+# 将特征放进模型中预测，并将预测结果变换并作为新的特征加入原有特征中再经过模型预测结果 （Stacking变化）
+# （可以反复预测多次将结果加入最后的特征中）
+def Ensemble_add_feature(train, test, target, clfs):
+    # n_flods = 5
+    # skf = list(StratifiedKFold(y, n_folds=n_flods))
 
+    train_ = np.zeros((train.shape[0], len(clfs * 2)))
+    test_ = np.zeros((test.shape[0], len(clfs * 2)))
+
+    for j, clf in enumerate(clfs):
+        '''依次训练各个单模型'''
+        # print(j, clf)
+        '''使用第1个部分作为预测，第2部分来训练模型，获得其预测的输出作为第2部分的新特征。'''
+        # X_train, y_train, X_test, y_test = X[train], y[train], X[test], y[test]
+
+        clf.fit(train, target)
+        y_train = clf.predict(train)
+        y_test = clf.predict(test)
+
+        # 注意： 它这个索引设置是有问题的
+        ## 新特征生成
+        train_[:, j * 2] = y_train ** 2
+        test_[:, j * 2] = y_test ** 2
+        train_[:, j + 1] = np.exp(y_train)
+        test_[:, j + 1] = np.exp(y_test)
+        # print("val auc Score: %f" % r2_score(y_predict, dataset_d2[:, j]))
+        print('Method ', j)
+
+    train_ = pd.DataFrame(train_)
+    test_ = pd.DataFrame(test_)
+    return train_, test_
+
+
+# In[]:
+from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.linear_model import LogisticRegression
+
+clf = LogisticRegression()
+
+data_0 = iris.data
+data = data_0[:100, :]
+
+target_0 = iris.target
+target = target_0[:100]
+
+x_train, x_test, y_train, y_test = train_test_split(data, target, test_size=0.3)
+x_train = pd.DataFrame(x_train);
+x_test = pd.DataFrame(x_test)
+
+# 模型融合中使用到的各个单模型
+clfs = [LogisticRegression(),
+        RandomForestClassifier(n_estimators=5, n_jobs=-1, criterion='gini'),
+        ExtraTreesClassifier(n_estimators=5, n_jobs=-1, criterion='gini'),
+        ExtraTreesClassifier(n_estimators=5, n_jobs=-1, criterion='entropy'),
+        GradientBoostingClassifier(learning_rate=0.05, subsample=0.5, max_depth=6, n_estimators=5)]
+
+New_train, New_test = Ensemble_add_feature(x_train, x_test, y_train, clfs)
+
+clf = LogisticRegression()
+# clf = GradientBoostingClassifier(learning_rate=0.02, subsample=0.5, max_depth=6, n_estimators=30)
+clf.fit(New_train, y_train)
+y_emb = clf.predict_proba(New_test)[:, 1]
+
+print("Val auc Score of stacking: %f" % (roc_auc_score(y_test, y_emb)))
+
+# In[]:
 
