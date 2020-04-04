@@ -194,12 +194,11 @@ dataset_blend_test = np.zeros((X_predict.shape[0], len(clfs)))
 # 5折stacking
 n_splits = 5
 skf = StratifiedKFold(n_splits)
-skf = skf.split(X, y)
 
 for j, clf in enumerate(clfs):
     # 依次训练各个单模型
     dataset_blend_test_j = np.zeros((X_predict.shape[0], 5))
-    for i, (train, test) in enumerate(skf):
+    for i, (train, test) in enumerate(skf.split(X, y)):
         # 5-Fold交叉训练，使用第i个部分作为预测，剩余的部分来训练模型，获得其预测的输出作为第i部分的新特征。
         X_train, y_train, X_test, y_test = X[train], y[train], X[test], y[test]
         clf.fit(X_train, y_train)
@@ -601,7 +600,7 @@ def Ensemble_add_feature(train, test, target, clfs):
         y_train = clf.predict(train)
         y_test = clf.predict(test)
 
-        # 注意： 它这个索引设置是有问题的
+        # 注意： 它这个列索引设置是有问题的！！！
         ## 新特征生成
         train_[:, j * 2] = y_train ** 2
         test_[:, j * 2] = y_test ** 2
