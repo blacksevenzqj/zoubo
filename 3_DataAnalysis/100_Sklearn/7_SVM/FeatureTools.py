@@ -154,8 +154,8 @@ def readFile_inputData_no_header(path, names=None, header=None, index_col=None, 
 
 
 # 保存数据
-def writeFile_outData(data, path, encoding="UTF-8"):
-    data.to_csv(path, encoding=encoding)
+def writeFile_outData(data, path, encoding="UTF-8", index=False):
+    data.to_csv(path, encoding=encoding, index=index)
 
 
 # 原生读取.txt文件（只是个示例）
@@ -750,7 +750,7 @@ def standardScaler_outlier(df, name):
 
 
 # 离群值检测： 使用 箱型图、散点趋势图 观测离群值
-def outlier_detection(X, feature, y=None, y_name=None, box_scale=1.5):
+def outlier_detection(X, feature, y=None, y_name=None, fit_type=1, box_scale=1.5):
     if type(feature) == list:
         # 盒须图 要求 特征必须为单特征，不能传['x']进来
         raise Exception('feature Type is Error, must not list')
@@ -762,7 +762,7 @@ def outlier_detection(X, feature, y=None, y_name=None, box_scale=1.5):
     # 利用 众数 减去 中位数 的差值  除以  四分位距来 查找是否有可能存在异常值
     # 如果值很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析
     f, axes = plt.subplots(1, 2, figsize=(23, 8))
-    box_more_index, hist_more_index = con_data_distribution(X, feature, axes, box_scale=box_scale)
+    box_more_index, hist_more_index = con_data_distribution(X, feature, axes, fit_type=fit_type, box_scale=box_scale)
     # 从直方图中可以看出： 如果数据有最大峰值，属于正常数据，不用清洗。
 
     # 盒须图的上下限
@@ -2891,6 +2891,10 @@ def learning_curve_xgboost_customize(axisx, X, y, ss, param_fixed, param_cycle_n
     plt.show()
 
 
+def mae_score(y_ture, y_pred):
+    return mean_absolute_error(y_true=y_ture, y_pred=y_pred)
+
+
 '''
 gamma是如何控制过拟合？（gamma/γ复杂度惩罚项： 必调超参数）
 1、gamma/γ复杂度惩罚项作用： 控制训练集上的训练：即，降低训练集上的表现（R^2降低、MSE升高），从而使训练集表现 和 测试集的表现 逐步趋近。
@@ -3068,100 +3072,7 @@ def stacking_cv_customize(stacking_model, X, y, ss):
     print(rs_mean_train, rs_var_train, ge_rs_train, mse_mean_train, mse_var_train, ge_mse_train)
     print(rs_mean_test, rs_var_test, ge_rs_test, mse_mean_test, mse_var_test, ge_mse_test)
 
-
 # In[]:
 # ====================================交叉验证 结束==================================
 
 
-# In[]:
-# =============================Stacking models：堆叠模型=========================
-from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
-
-# 1、平均基本模型（类似bagging）
-'''
-最简单的堆叠方法：平均基本模型:Simplest Stacking approach : Averaging base models（类似bagging）
-我们从平均模型的简单方法开始。 我们建立了一个新类，以通过模型扩展scikit-learn，并进行封装和代码重用（继承inheritance）。
-https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)
-
-理解：
-本堆叠模型进交叉验证时，每一折交叉验证所有模型都计算一次，并求所有模型对这一折交叉验证数据的预测结果指标均值。
-如 5折交叉验证时，每一折都是 所有模型的预测结果指标均值； 最后再求 5折交叉验证的均值。
-'''
-
-
-# Averaged base models class 平均基本模型
-class AveragingModels(BaseEstimator, RegressorMixin, TransformerMixin):
-    def __init__(self, models):
-        self.models = models
-
-    # we define clones of the original models to fit the data in
-    def fit(self, X, y):
-        self.models_ = [clone(x) for x in self.models]
-
-        # Train cloned base models
-        for model in self.models_:
-            model.fit(X, y)
-
-        return self
-
-    # Now we do the predictions for cloned models and average them
-    def predict(self, X):
-        predictions = np.column_stack([
-            model.predict(X) for model in self.models_
-        ])
-        return np.mean(predictions, axis=1)
-
-    # 2、堆叠平均模型类（类似boosting）
-
-
-# 入参 X、y 都是矩阵格式
-class StackingAveragedModels(BaseEstimator, RegressorMixin, TransformerMixin):
-    def __init__(self, base_models, meta_model, n_folds=5):
-        self.base_models = base_models
-        self.meta_model = meta_model
-        self.n_folds = n_folds
-
-    # We again fit the data on clones of the original models
-    def fit(self, X, y):
-        self.base_models_ = [list() for x in self.base_models]
-        self.meta_model_ = clone(self.meta_model)
-        kfold = KFold(n_splits=self.n_folds, shuffle=True)  # random_state=156
-
-        '''
-        重点：
-        如果调用者使用的是 交叉验证： 如下代码就是 交叉验证 中的 交叉验证。
-        如，外层5折交叉验证： 这里传入的X,y就是4折的总训练集： 总训练集*4/5。
-        1、for i, model in enumerate(self.base_models) 是循环 堆叠模型第一层中每一个基模型。
-        2、for train_index, holdout_index in kfold.split(X, y) 堆叠模型第一层中每一个基模型进行 内层手动交叉验证；
-        内层手动交叉验证 也是5折，那么 内层手动交叉验证 的训练集数量是： 总训练集*4/5*4/5， 测试集数量是： 总训练集*4/5*1/5。
-        3、所以 self.base_models_ 的shape为： 3行（堆叠模型第一层3个基模型）， 5列（内层5折手动交叉验证） 也就是 每个基模型 有5个 内层手动交叉验证 的训练模型。   
-        4、堆叠模型第一层中每一个基模型的 内层5折手动交叉验证 结果存入 out_of_fold_predictions 矩阵中，shape为： X.shape[0]行， 3列（堆叠模型第一层3个基模型）
-        5、self.meta_model_.fit(out_of_fold_predictions, y) 
-        将 堆叠模型第一层的结果out_of_fold_predictions 和 y 传入 堆叠模型第二层模型进行训练。
-        '''
-        # Train cloned base models then create out-of-fold predictions
-        # that are needed to train the cloned meta-model
-        out_of_fold_predictions = np.zeros((X.shape[0], len(self.base_models)))
-        for i, model in enumerate(self.base_models):
-            for train_index, holdout_index in kfold.split(X, y):
-                instance = clone(model)
-                self.base_models_[i].append(instance)
-                instance.fit(X[train_index], y[train_index])  # 矩阵的行索引： 取矩阵的一整行
-                y_pred = instance.predict(X[holdout_index])
-                out_of_fold_predictions[holdout_index, i] = y_pred.ravel()
-
-        # Now train the cloned  meta-model using the out-of-fold predictions as new feature
-        self.meta_model_.fit(out_of_fold_predictions, y)
-        return self
-
-    # 看 “StackingAveragedModels代码拆分解析” 中 self.base_models_ 的结构。
-    # Do the predictions of all base models on the test data and use the averaged predictions as
-    # meta-features for the final prediction which is done by the meta-model
-    def predict(self, X):
-        meta_features = np.column_stack([
-            np.column_stack([model.predict(X) for model in base_models]).mean(axis=1)
-            for base_models in self.base_models_])
-        return self.meta_model_.predict(meta_features)
-
-# In[]:
-# =============================Stacking models：堆叠模型=========================

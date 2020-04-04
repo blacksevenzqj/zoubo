@@ -15,7 +15,7 @@ from xgboost import XGBRegressor as XGBR
 import xgboost as xgb
 import re
 from sklearn.metrics import roc_auc_score, mean_absolute_error,  make_scorer
-from sklearn.metrics import mean_squared_error as MSE, r2_score
+from sklearn.metrics import mean_squared_error as MSE, r2_score, mean_absolute_error as MAE
 from sklearn.metrics import auc
 
 import matplotlib.pyplot as plt
@@ -33,6 +33,7 @@ import Binning_tools as bt
 
 # In[]:
 train_data_5 = ft.readFile_inputData('train_data_5.csv', index_col=0) # price是大于0的
+test_data_5 = ft.readFile_inputData('test_data_5.csv', index_col=0)
 # In[]:
 temp_data_miss =  ft.missing_values_table(train_data_5)
 
@@ -44,13 +45,18 @@ categorical_astype_str_col = ft.set_diff(categorical_features, temp_col)[1] # �
 # 1、特征类型转换
 #for i in categorical_astype_str_col:
 #    ft.num_to_char(train_data_5, i)
-#    
+#
 #train_data_5.dtypes
 # In[]:
 # 特征类型转换 以 减少内存消耗
 ft.reduce_mem_usage(train_data_5, False)
 
 train_data_5.dtypes
+# In[]:
+ft.reduce_mem_usage(test_data_5, False)
+
+test_data_5.dtypes
+
 
 # In[]:
 temp_data_miss2 =  ft.missing_values_table(train_data_5)
@@ -62,7 +68,6 @@ temp_data_miss_ = ft.missing_values_table(train_data_6)
 # In[]:
 # 接着 删除 特征中包含 np.nan 的行
 temp_data_miss_, train_data_6 = ft.missing_values_table(train_data_6, percent=0, del_type=2)
-# In[]:
 
 # In[]:
 feature_names = train_data_6.columns.tolist() # 36
@@ -88,17 +93,27 @@ categorical_features.remove('city')
 feature_names.remove("city")
 # In[]:
 train_data_6.drop('city', axis=1, inplace=True)
-
-
+test_data_6 = test_data_5.drop('city', axis=1)
 
 # In[]:
 train_data_6.dtypes
-
 # In[]:
-# 3、简单模型： 
+test_data_6.dtypes
+# In[]:
+# 导出保存：
+ft.writeFile_outData(train_data_6, "train_data_6.csv")
+ft.writeFile_outData(test_data_6, "test_data_6.csv")
+#train_data_6 = ft.readFile_inputData('train_data_6.csv', index_col=0) # price是大于0的
+#test_data_6 = ft.readFile_inputData('test_data_6.csv', index_col=0)
+# In[]:
 train_X = train_data_6[feature_names]
 train_y = train_data_6['price']
+test_X = test_data_6[feature_names]
+
+
+
 # In[]:
+# 3、简单模型：
 from sklearn.linear_model import LinearRegression
 
 model = LinearRegression(normalize=True)
@@ -158,7 +173,7 @@ print(train_X.columns[X_embedded_2_index]) # 特征选择后 特征的 原列名
 
 # In[]:
 # XGBoost：
-# 一、选 n_estimators： 
+# 一、选 n_estimators：
 # Sklearn库
 # 1.1、样本量学习曲线： 检测过拟合情况 （一折交叉验证，机器顶不住）
 cv = ShuffleSplit(n_splits=1, test_size=.2, random_state=0)
@@ -190,14 +205,14 @@ plt.show()
 
 
 # In[]:
-# xgb原生库： 
+# xgb原生库：
 # 2.1、评估指标要么在param的map中指定（非xgboost.cv函数）； 2、要么直接在xgb.cv函数中指定，不能一起指定。
-param1 = {'silent':True,'obj':'reg:squarederror',"gamma":0}  # "eval_metric":"rmse"，默认rmse
+param1 = {'silent':True,'obj':'reg:squarederror',"gamma":20}  # "eval_metric":"rmse"，默认rmse
 #param2 = {'silent':True,'obj':'reg:squarederror',"gamma":20}
 num_round = 250
 n_fold=3 # 必须最少3折交叉验证
 # 回归模型：默认均方误差
-ft.learning_curve_xgboost(train_X, train_y, param1, None, num_round, "rmse", n_fold, None, set_ylim_top=0.2) # 默认rmse
+ft.learning_curve_xgboost(train_X, train_y, param1, None, num_round, "mae", n_fold, None, set_ylim_top=0.04) # 默认rmse
 # 训练集并未平稳，还的继续调参，机器顶不住了，暂时就到这吧
 
 # In[]:
@@ -230,15 +245,47 @@ ax.plot(range(1,num_round+1),cvresult1.iloc[:,2],c="red",label="train,original")
 ax.plot(range(1,num_round+1),cvresult1.iloc[:,0],c="orangered",label="test,original")
 
 
+
 # In[]:
+# xgb原生库： obj：默认binary:logistic
+# 使用类Dmatrix读取数据
+dtrain = xgb.DMatrix(train_X, train_y)
+dtest = xgb.DMatrix(test_X)
+
+# 写明参数，silent默认为False，通常需要手动设置为True，将它关闭。
+# 原生库的 silent默认为False，打印日志；  Sklearn的 silent默认为False，打印日志（一般手动设置为True，不打印）
+param = {'silent':False,'objective':'reg:squarederror',"eta":0.13,"gamma":20} # 和前面的推测相同，不应该加subsample参数。
+num_round = 250 # 多少次迭代/多少颗树 相当于 Sklearn的XGB中的n_estimators
+#类 train，可以直接导入的参数是训练数据，树的数量，其他参数都需要通过params来导入
+bst = xgb.train(param, dtrain, num_round)
+# In[]:
+# 接口predict
+print(r2_score(train_y, bst.predict(dtrain))) # 0.8946301885375523
+print(MSE(train_y, bst.predict(dtrain))) # 0.0020066018
+print(MAE(train_y, bst.predict(dtrain))) # 0.03179782
+
+# In[]:
+predict_result = bst.predict(dtest)
+predict_result = pd.DataFrame(predict_result, columns=['predict'])
+# In[]:
+# 测试还原 price：
+train_data_4_min_price = 2.3978952727983707
+train_data_4_max_price = 10.676669748432332
+
+predict_result['predict_minmax'] = predict_result['predict'] * (train_data_4_max_price - train_data_4_min_price) + train_data_4_min_price
+predict_result['predict_minmax_log'] = np.exp(predict_result['predict_minmax'])
+predict_result['predict_final'] = np.round(predict_result['predict_minmax_log'])
+
+# In[]:
+# 生成提交文件
+sub = pd.DataFrame()
+sub['SaleID'] = test_X.index
+sub['price'] = predict_result['predict_final']
+
+ft.writeFile_outData(sub, "sub.csv")
 
 # In[]:
 
-# In[]:
-
-# In[]:
-
-# In[]:
 
 # In[]:
 

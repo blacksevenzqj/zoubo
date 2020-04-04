@@ -75,13 +75,28 @@ from sklearn.preprocessing import MinMaxScaler
 #区间缩放，返回值为缩放到[0, 1]区间的数据
 # 注意：fit_transform(aaa)函数，入参aaa必须为二维矩阵：（使用Padans：必须是DataFrame，不能是Seriers）
 mdata = MinMaxScaler().fit_transform(aaa) # iris.data
-# print(mdata[0:10])
+print(mdata)
+print("-"*30)
+min_col = np.zeros(3)
+max_col = np.zeros(3)
 mdatamy = np.zeros((3,3))
 for i in range(3):
+    min_col[i] = np.min(aaa[:,i], axis=0)
+    max_col[i] = np.max(aaa[:,i], axis=0)
     mdatamy[0,i] = (aaa[0][i] - np.min(aaa[:,i], axis=0)) / (np.max(aaa[:,i], axis=0) - np.min(aaa[:,i], axis=0))
     mdatamy[1,i] = (aaa[1][i] - np.min(aaa[:,i], axis=0)) / (np.max(aaa[:,i], axis=0) - np.min(aaa[:,i], axis=0))
     mdatamy[2,i] = (aaa[2][i] - np.min(aaa[:,i], axis=0)) / (np.max(aaa[:,i], axis=0) - np.min(aaa[:,i], axis=0))
-# print(mdatamy)
+print(mdatamy)
+print(aaa)
+print(min_col)
+print(max_col)
+# 还原：
+re_mdatamy = np.zeros((3,3))
+for i in range(3):
+    re_mdatamy[0, i] = mdatamy[0, i] * (max_col[i] - min_col[i]) + min_col[i]
+    re_mdatamy[1, i] = mdatamy[1, i] * (max_col[i] - min_col[i]) + min_col[i]
+    re_mdatamy[2, i] = mdatamy[2, i] * (max_col[i] - min_col[i]) + min_col[i]
+print(re_mdatamy)
 '''
 # 手动：
 data['power1'] = ((data['power1'] - np.min(data['power1'])) / (np.max(data['power1']) - np.min(data['power1'])))

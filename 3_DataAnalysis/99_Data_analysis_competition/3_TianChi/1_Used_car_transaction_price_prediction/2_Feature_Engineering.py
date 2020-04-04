@@ -72,20 +72,19 @@ test_data_1 = test_data.copy()
 # 2、异常值检测
 # 2.1、power发动机功率：
 box_more_index_power, hist_more_index_power = ft.outlier_detection(train_data_1, 'power', train_data_1, 'price',
-                                                                   box_scale=3)
-box_more_index_power_test, hist_more_index_power_test = ft.outlier_detection(test_data_1, 'power', box_scale=3)
+                                                                   fit_type=3, box_scale=3)
+# box_more_index_power_test, hist_more_index_power_test = ft.outlier_detection(test_data_1, 'power', box_scale=3)
 # In[]:
 print(len(box_more_index_power[0]), len(box_more_index_power[1]), len(hist_more_index_power[0]),
       len(hist_more_index_power[1]))
-print(len(box_more_index_power_test[0]), len(box_more_index_power_test[1]), len(hist_more_index_power_test[0]),
-      len(hist_more_index_power_test[1]))
+# print(len(box_more_index_power_test[0]), len(box_more_index_power_test[1]), len(hist_more_index_power_test[0]), len(hist_more_index_power_test[1]))
 # In[]:
 # 删5倍标准差以外的数据
 train_data_1.drop(hist_more_index_power[0], axis=0, inplace=True)
 train_data_1.drop(hist_more_index_power[1], axis=0, inplace=True)
-test_data_1.drop(hist_more_index_power_test[0], axis=0, inplace=True)
-test_data_1.drop(hist_more_index_power_test[1], axis=0, inplace=True)
-ft.recovery_index([train_data_1, test_data_1])
+# test_data_1.drop(hist_more_index_power_test[0], axis=0, inplace=True)
+# test_data_1.drop(hist_more_index_power_test[1], axis=0, inplace=True)
+ft.recovery_index([train_data_1])
 
 # In[]:
 # 2.2、price价格：
@@ -97,7 +96,7 @@ print(len(box_more_index_price[0]), len(box_more_index_price[1]), len(hist_more_
 # 删5倍标准差以外的数据
 train_data_1.drop(hist_more_index_price[0], axis=0, inplace=True)
 train_data_1.drop(hist_more_index_price[1], axis=0, inplace=True)
-ft.recovery_index([train_data_1, test_data_1])
+ft.recovery_index([train_data_1])
 
 # In[]:
 # 2.3、'creatDate', 'regDate'： creatDate - regDate 得到使用时间天数
@@ -188,12 +187,6 @@ for kind, kind_data in train_gb:
     all_info[kind] = info
 # all_info字典 转 DataFrame： 字典的key就是DataFrame的行索引index，所以要 .T置转 → .reset_index()重置行索引 → .rename(columns={"index": "brand"})跟换列名： 将all_info的key的原行索引名index（置转后现在列名）更新名称
 brand_fe = pd.DataFrame(all_info).T.reset_index().rename(columns={"index": "brand"})
-# In[]:
-# train_data_2 = train_data_2.merge(brand_fe, how='left', on='brand')
-# In[]:
-# temp_data = train_data_2[train_data_2['price'] > 0] # 数据 条件 提前做好
-# agg = {'brand_amount':len, "brand_price_max":np.max, "brand_price_median":np.median, "brand_price_min":np.min, "brand_price_sum":np.sum, "brand_price_std":np.std, "brand_price_average":np.mean}
-# brand_fe2 = tc.groupby_agg_oneCol(temp_data, ['brand'], 'price', agg, as_index=False)
 
 # In[]:
 # 2.9、车身类型的销售统计量
@@ -248,8 +241,8 @@ kilometer_fe = tc.groupby_agg_oneCol(temp_data, ['kilometer'], 'price', agg, as_
 # 当然还有很多原因，LightGBM 在改进 XGBoost 时就增加了数据分桶，增强了模型的泛化性
 # In[]:
 # 2.13、斯皮尔曼自动分箱： power发动机功率
-data_spearmanr_power, cut_updown, bin_num_power, r_list_power = bt.spearmanr_auto_bins(train_data_2['power'],
-                                                                                       train_data_2['price'])
+data_spearmanr_power, cut_updown_power, bin_num_power, r_list_power = bt.spearmanr_auto_bins(train_data_2['power'],
+                                                                                             train_data_2['price'])
 # In[]:
 unique_label_power, counts_label_power, unique_dict_power = ft.category_quantity_statistics_all(
     data_spearmanr_power['Bucket'])
@@ -258,11 +251,14 @@ ft.box_diagram(data_spearmanr_power, 'Bucket', 'price', is_violin=False)
 # In[]:
 ft.box_diagram(data_spearmanr_power, 'Bucket', 'price', is_violin=True)
 # In[]:
+cut_updown_power[0], cut_updown_power[-1] = -np.inf, np.inf
+# In[]:
+train_data_2['power_cut_bin'] = pd.cut(train_data_2['power'], cut_updown_power, retbins=False)
+# In[]:
 # 分类变量转换：
 le = LabelEncoder()
-data_spearmanr_power['power_cut_bin'] = le.fit_transform(data_spearmanr_power['Bucket'])
-# In[]:
-train_data_2 = pd.concat([train_data_2, data_spearmanr_power['power_cut_bin']], axis=1)
+le.fit(train_data_2['power_cut_bin'])
+train_data_2['power_cut_bin'] = le.transform(train_data_2['power_cut_bin'])
 # In[]:
 # 发动机功率类型的销售统计量
 ft.category_quantity_statistics_value_counts(train_data_2, ['power_cut_bin'])
@@ -275,8 +271,14 @@ agg = {'power_cut_bin_amount': len, "power_cut_bin_price_max": np.max, "power_cu
 power_cut_bin_fe = tc.groupby_agg_oneCol(temp_data, ['power_cut_bin'], 'price', agg, as_index=False)
 
 # In[]:
+# test数据集
+test_data_2["power_cut_bin"] = pd.cut(test_data_2['power'], cut_updown_power, retbins=False)  # 可以指定labels=[0,1,2,3]参数
+test_data_2['power_cut_bin'] = le.transform(test_data_2['power_cut_bin'])
+ft.category_quantity_statistics_value_counts(test_data_2, ['power_cut_bin'])
+
+# In[]:
 # 2.14、斯皮尔曼自动分箱： diff_day3使用时间（天数）
-data_spearmanr_diff_day, cut_updown, bin_num_diff_day, r_list_diff_day = bt.spearmanr_auto_bins(
+data_spearmanr_diff_day, cut_updown_diff_day, bin_num_diff_day, r_list_diff_day = bt.spearmanr_auto_bins(
     train_data_2['diff_day3'], train_data_2['price'])
 # In[]:
 unique_label_diff_day, counts_label_diff_day, unique_dict_diff_day = ft.category_quantity_statistics_all(
@@ -286,11 +288,14 @@ ft.box_diagram(data_spearmanr_diff_day, 'Bucket', 'price', is_violin=False)
 # In[]:
 ft.box_diagram(data_spearmanr_diff_day, 'Bucket', 'price', is_violin=True)
 # In[]:
+cut_updown_diff_day[0], cut_updown_diff_day[-1] = -np.inf, np.inf
+# In[]:
+train_data_2['diff_day_cut_bin'] = pd.cut(train_data_2['diff_day3'], cut_updown_diff_day, retbins=False)
+# In[]:
 # 分类变量转换：
 le = LabelEncoder()
-data_spearmanr_diff_day['diff_day_cut_bin'] = le.fit_transform(data_spearmanr_diff_day['Bucket'])
-# In[]:
-train_data_2 = pd.concat([train_data_2, data_spearmanr_diff_day['diff_day_cut_bin']], axis=1)
+le.fit(train_data_2['diff_day_cut_bin'])
+train_data_2['diff_day_cut_bin'] = le.transform(train_data_2['diff_day_cut_bin'])
 # In[]:
 # 发动机功率类型的销售统计量
 ft.category_quantity_statistics_value_counts(train_data_2, ['diff_day_cut_bin'])
@@ -303,26 +308,42 @@ agg = {'diff_day_cut_bin_amount': len, "diff_day_cut_bin_price_max": np.max, "di
 diff_day_cut_bin_fe = tc.groupby_agg_oneCol(temp_data, ['diff_day_cut_bin'], 'price', agg, as_index=False)
 
 # In[]:
+# test数据集
+test_data_2["diff_day_cut_bin"] = pd.cut(test_data_2['diff_day3'], cut_updown_diff_day,
+                                         retbins=False)  # 可以指定labels=[0,1,2,3]参数
+test_data_2['diff_day_cut_bin'] = le.transform(test_data_2['diff_day_cut_bin'])
+ft.category_quantity_statistics_value_counts(test_data_2, ['diff_day_cut_bin'])
+
+# In[]:
 train_data_3 = train_data_2.copy()
 test_data_3 = test_data_2.copy()
 
 # In[]:
 # 合并特征：
 train_data_3 = train_data_3.merge(brand_fe, how='left', on='brand')
+test_data_3 = test_data_3.merge(brand_fe, how='left', on='brand')
 # In[]:
 train_data_3 = train_data_3.merge(bodyType_fe, how='left', on='bodyType')
+test_data_3 = test_data_3.merge(bodyType_fe, how='left', on='bodyType')
 # In[]:
 train_data_3 = train_data_3.merge(fuelType_fe, how='left', on='fuelType')
+test_data_3 = test_data_3.merge(fuelType_fe, how='left', on='fuelType')
 # In[]:
 train_data_3 = train_data_3.merge(gearbox_fe, how='left', on='gearbox')
+test_data_3 = test_data_3.merge(gearbox_fe, how='left', on='gearbox')
 # In[]:
 train_data_3 = train_data_3.merge(kilometer_fe, how='left', on='kilometer')
+test_data_3 = test_data_3.merge(kilometer_fe, how='left', on='kilometer')
 # In[]:
 train_data_3 = train_data_3.merge(power_cut_bin_fe, how='left', on='power_cut_bin')
 train_data_3.drop('power', axis=1, inplace=True)
+test_data_3 = test_data_3.merge(power_cut_bin_fe, how='left', on='power_cut_bin')
+test_data_3.drop('power', axis=1, inplace=True)
 # In[]:
 train_data_3 = train_data_3.merge(diff_day_cut_bin_fe, how='left', on='diff_day_cut_bin')
 train_data_3.drop('diff_day3', axis=1, inplace=True)
+test_data_3 = test_data_3.merge(diff_day_cut_bin_fe, how='left', on='diff_day_cut_bin')
+test_data_3.drop('diff_day3', axis=1, inplace=True)
 
 # In[]:
 '''
@@ -361,8 +382,8 @@ train_data_3.columns
 test_data_3.columns
 # In[]:
 # 导出保存：
-# ft.writeFile_outData(train_data_3, "train_data_3.csv")
-# ft.writeFile_outData(test_data_3, "test_data_3.csv")
+ft.writeFile_outData(train_data_3, "train_data_3.csv")
+ft.writeFile_outData(test_data_3, "test_data_3.csv")
 # train_data_3 = ft.readFile_inputData('train_data_3.csv', index_col=0) # price是大于0的
 # test_data_3 = ft.readFile_inputData('test_data_3.csv', index_col=0)
 # In[]:
@@ -446,6 +467,7 @@ than_one_columns = ['fuelType_price_max',
  'diff_day_cut_bin_price_sum',
  'diff_day_cut_bin_price_std']
 '''
+print(len(than_one_columns))  # 36
 than_one_columns
 
 # In[]:
@@ -477,45 +499,48 @@ ft.con_data_distribution(train_data_3, 'brand_price_average', axes, fit_type=1, 
 # In[]:
 del_skew_columns = ['fuelType_price_max', 'brand_price_min', 'fuelType_price_min', 'fuelType_price_sum',
                     'kilometer_price_min', 'kilometer_price_max']
-train_data_3.drop(del_skew_columns, axis=1, inplace=True)
+# train_data_3.drop(del_skew_columns, axis=1, inplace=True)
+# test_data_3.drop(del_skew_columns, axis=1, inplace=True)
 
 # In[]:
 # 偏度>1的连续特征  -  手动需删除的偏度>1的连续特征  =  剩下的偏度>1的连续特征
 temp_list = ft.set_diff(than_one_columns, del_skew_columns)
 stay_columns = temp_list[1]  # 差集
 # In[]:
-'''
-stay_columns = ['price',
- 'v_0',
- 'kilometer_price_std',
- 'diff_day_cut_bin_price_std',
- 'kilometer_price_average',
- 'gearbox_price_max',
- 'power_cut_bin_price_median',
- 'brand_price_average',
- 'brand_price_max',
- 'kilometer_price_median',
- 'v_5',
- 'diff_day_cut_bin_price_average',
- 'gearbox_price_average',
- 'gearbox_amount',
- 'diff_day_cut_bin_price_min',
- 'diff_day_cut_bin_price_median',
- 'bodyType_price_max',
- 'diff_day_cut_bin_price_sum',
- 'diff_day_cut_bin_price_max',
- 'v_7',
- 'gearbox_price_std',
- 'v_14',
- 'power_cut_bin_price_max',
- 'v_11',
- 'v_2',
- 'gearbox_price_median',
- 'bodyType_price_min',
- 'bodyType_price_median',
- 'brand_price_median',
- 'gearbox_price_sum']
-'''
+# '''
+stay_columns = ['bodyType_price_max',
+                'bodyType_price_median',
+                'bodyType_price_min',
+                'brand_price_average',
+                'brand_price_max',
+                'brand_price_median',
+                'diff_day_cut_bin_price_average',
+                'diff_day_cut_bin_price_max',
+                'diff_day_cut_bin_price_median',
+                'diff_day_cut_bin_price_min',
+                'diff_day_cut_bin_price_std',
+                'diff_day_cut_bin_price_sum',
+                'gearbox_amount',
+                'gearbox_price_average',
+                'gearbox_price_max',
+                'gearbox_price_median',
+                'gearbox_price_std',
+                'gearbox_price_sum',
+                'kilometer_price_average',
+                'kilometer_price_median',
+                'kilometer_price_std',
+                'power_cut_bin_price_max',
+                'power_cut_bin_price_median',
+                'price',
+                'v_0',
+                'v_11',
+                'v_14',
+                'v_2',
+                'v_5',
+                'v_7']
+# '''
+print(len(stay_columns))  # 30
+stay_columns.sort()
 stay_columns
 
 # In[]:
@@ -525,14 +550,15 @@ test_data_4 = test_data_3.copy()
 # 导出保存：
 # ft.writeFile_outData(train_data_4, "train_data_4.csv")
 # ft.writeFile_outData(test_data_4, "test_data_4.csv")
-# train_data_4 = ft.readFile_inputData('train_data_4.csv', index_col=0)
-# test_data_4 = ft.readFile_inputData('test_data_4.csv', index_col=0)
+train_data_4 = ft.readFile_inputData('train_data_4.csv', index_col=0)
+test_data_4 = ft.readFile_inputData('test_data_4.csv', index_col=0)
 print(train_data_4[train_data_4['price'] <= 0].shape)
 # In[]:
 # log转换： 只能转一次哦
 # stay_columns为： 偏度>1的连续特征 - 手动需删除的偏度>1的连续特征 = 剩下的偏度>1的连续特征。 所以才取log：
 ft.logarithm(train_data_4, stay_columns, f_type=2)
 print(train_data_4[train_data_4['price'] <= 0].shape)
+ft.logarithm(test_data_4, ft.set_diff(stay_columns, ['price'])[1], f_type=2)
 # In[]:
 # 再看偏度
 fig, axe = plt.subplots(2, 1, figsize=(120, 16))
@@ -544,16 +570,31 @@ ft.con_data_distribution(train_data_4, 'gearbox_price_median', axes, fit_type=1,
 # In[]:
 # 4、归一化：
 # 经过 偏度筛选（偏度>1的都取log） 剩下的 所有连续特征
-numeric_skew_stay_cols = ft.set_diff(numeric_features, del_skew_columns)[1]  # 差集
+numeric_skew_stay_cols = ft.set_diff(numeric_features, del_skew_columns)[1]  # 差集 59
+numeric_skew_stay_cols.sort()
 # In[]:
 # 经过偏度处理剩下的 所有连续特征 标准化， 包括 因变量Y
 # ss = StandardScaler() # 理论取值范围是(-∞,+∞)，但经验上看大多数取值范围在[-4,4]之间
 mm = MinMaxScaler()  # 数据会完全落入[0,1]区间内（z-score没有类似区间）
-train_data_4[numeric_skew_stay_cols] = mm.fit_transform(train_data_4[numeric_skew_stay_cols])
+mm.fit(train_data_4[numeric_skew_stay_cols])
+train_data_4[numeric_skew_stay_cols] = mm.transform(train_data_4[numeric_skew_stay_cols])
 print(train_data_4[train_data_4['price'] <= 0].shape)  # 需要删除的
 # In[]:
 ft.simple_drop_data(train_data_4, train_data_4[train_data_4['price'] <= 0].index)
 print(train_data_4[train_data_4['price'] <= 0].shape)  # 需要删除的
+# In[]
+numeric_skew_stay_cols_no_price = ft.set_diff(numeric_skew_stay_cols, ['price'])[1]
+test_data_4[numeric_skew_stay_cols_no_price] = mm.fit_transform(test_data_4[numeric_skew_stay_cols_no_price])
+# In[]:
+# 为还原 price 准备：
+train_data_4_min_price = np.min(train_data_4['price'])  # 2.3978952727983707
+train_data_4_max_price = np.max(train_data_4['price'])  # 10.676669748432332
+# In[]:
+# 测试还原 price：
+train_data_4['price_1'] = train_data_4['price'] * (
+        train_data_4_max_price - train_data_4_min_price) + train_data_4_min_price
+print(np.exp(train_data_4['price_1']))
+train_data_4.drop('price_1', axis=1, inplace=True)
 
 # In[]:
 # 5、特征选择
@@ -583,34 +624,36 @@ temp_data = train_data_4[numeric_skew_stay_cols_not_y].drop(del_list, axis=1)
 # In[]:
 # 皮尔森相似度 连续特征选择后 预留的连续特征
 '''
-reserve_columns = ['v_0',
- 'power_cut_bin_price_median',
- 'brand_price_max',
- 'kilometer_price_median',
- 'v_5',
- 'gearbox_amount',
- 'diff_day_cut_bin_price_min',
- 'v_9',
- 'gearbox_price_min',
- 'brand_price_sum',
- 'v_3',
- 'diff_day_cut_bin_price_max',
- 'v_7',
- 'v_14',
- 'power_cut_bin_price_max',
- 'v_11',
- 'v_2',
- 'power_cut_bin_amount',
- 'fuelType_price_median',
+reserve_columns = ['bodyType_price_median',
  'bodyType_price_min',
  'bodyType_price_sum',
- 'bodyType_price_median',
- 'diff_day_cut_bin_amount',
+ 'brand_price_max',
  'brand_price_median',
- 'v_10']
+ 'brand_price_sum',
+ 'diff_day_cut_bin_amount',
+ 'diff_day_cut_bin_price_max',
+ 'diff_day_cut_bin_price_min',
+ 'fuelType_price_median',
+ 'gearbox_amount',
+ 'gearbox_price_min',
+ 'kilometer_price_median',
+ 'power_cut_bin_amount',
+ 'power_cut_bin_price_max',
+ 'power_cut_bin_price_median',
+ 'v_0',
+ 'v_10',
+ 'v_11',
+ 'v_14',
+ 'v_2',
+ 'v_3',
+ 'v_5',
+ 'v_7',
+ 'v_9']
 '''
 reserve_columns = temp_data.columns.tolist()
-reserve_columns
+reserve_columns.sort()
+print(len(reserve_columns))
+reserve_columns  # 25
 
 # In[]:
 temp_data_miss = ft.missing_values_table(temp_data)
@@ -619,36 +662,41 @@ temp_data_miss_col = temp_data_miss.index.tolist()  # 有7个特征有np.nan，�
 reserve_columns_not_miss = ft.set_diff(reserve_columns, temp_data_miss_col)[1]  # 差集： 27-7=20
 # In[]:
 '''
-temp_data_miss_col = ['fuelType_price_median',
- 'gearbox_amount',
- 'gearbox_price_min',
+temp_data_miss_col = ['bodyType_price_median',
  'bodyType_price_min',
  'bodyType_price_sum',
- 'bodyType_price_median']
+ 'fuelType_price_median',
+ 'gearbox_amount',
+ 'gearbox_price_min']
 '''
+temp_data_miss_col.sort()
+print(len(temp_data_miss_col))  # 6
 temp_data_miss_col
+
 # In[]:
 '''
-reserve_columns_not_miss = ['diff_day_cut_bin_price_max',
- 'v_0',
- 'v_2',
- 'power_cut_bin_amount',
- 'v_7',
- 'v_14',
- 'v_10',
- 'diff_day_cut_bin_price_min',
- 'v_9',
- 'power_cut_bin_price_median',
- 'power_cut_bin_price_max',
- 'diff_day_cut_bin_amount',
- 'v_3',
+reserve_columns_not_miss = ['brand_price_max',
  'brand_price_median',
- 'brand_price_max',
- 'kilometer_price_median',
  'brand_price_sum',
+ 'diff_day_cut_bin_amount',
+ 'diff_day_cut_bin_price_max',
+ 'diff_day_cut_bin_price_min',
+ 'kilometer_price_median',
+ 'power_cut_bin_amount',
+ 'power_cut_bin_price_max',
+ 'power_cut_bin_price_median',
+ 'v_0',
+ 'v_10',
  'v_11',
- 'v_5']
+ 'v_14',
+ 'v_2',
+ 'v_3',
+ 'v_5',
+ 'v_7',
+ 'v_9']
 '''
+reserve_columns_not_miss.sort()
+print(len(reserve_columns_not_miss))  # 19
 reserve_columns_not_miss
 
 # In[]:
@@ -658,8 +706,8 @@ from sklearn.feature_selection import VarianceThreshold
 # 实例化，不填参数默认方差为0
 selector = VarianceThreshold()
 # 获取删除不合格特征之后的新特征矩阵
-X_var0 = selector.fit_transform(temp_data[reserve_columns_not_miss])  # 20
-X_var0.shape  # (149168, 20) # 都保留了，没有方差为0的特征
+X_var0 = selector.fit_transform(temp_data[reserve_columns_not_miss])  # 19
+X_var0.shape  # (149166, 19) # 都保留了，没有方差为0的特征
 
 # In[]:
 # 5.1.3、互信息： （消耗大， 就不弄了）
@@ -706,54 +754,59 @@ print(temp_X.columns[X_embedded_2_index])  # 特征选择后 特征的 原列名
 
 # In[]:
 all_colunms = reserve_columns + categorical_features + ["price"]
+
+all_colunms_no_price = reserve_columns + categorical_features
 # In[]:
 '''
-all_colunms = ['v_0',
- 'power_cut_bin_price_median',
- 'brand_price_max',
- 'kilometer_price_median',
- 'v_5',
- 'gearbox_amount',
- 'diff_day_cut_bin_price_min',
- 'v_9',
- 'gearbox_price_min',
- 'brand_price_sum',
- 'v_3',
- 'diff_day_cut_bin_price_max',
- 'v_7',
- 'v_14',
- 'power_cut_bin_price_max',
- 'v_11',
- 'v_2',
- 'power_cut_bin_amount',
- 'fuelType_price_median',
+all_colunms = ['bodyType',
+ 'bodyType_price_median',
  'bodyType_price_min',
  'bodyType_price_sum',
- 'bodyType_price_median',
- 'diff_day_cut_bin_amount',
- 'brand_price_median',
- 'v_10',
- 'name',
- 'model',
  'brand',
- 'bodyType',
- 'fuelType',
- 'gearbox',
- 'notRepairedDamage',
+ 'brand_price_max',
+ 'brand_price_median',
+ 'brand_price_sum',
  'city',
- 'kilometer',
- 'power_cut_bin',
  'diff_day_cut_bin',
- 'price']
+ 'diff_day_cut_bin_amount',
+ 'diff_day_cut_bin_price_max',
+ 'diff_day_cut_bin_price_min',
+ 'fuelType',
+ 'fuelType_price_median',
+ 'gearbox',
+ 'gearbox_amount',
+ 'gearbox_price_min',
+ 'kilometer',
+ 'kilometer_price_median',
+ 'model',
+ 'name',
+ 'notRepairedDamage',
+ 'power_cut_bin',
+ 'power_cut_bin_amount',
+ 'power_cut_bin_price_max',
+ 'power_cut_bin_price_median',
+ 'price',
+ 'v_0',
+ 'v_10',
+ 'v_11',
+ 'v_14',
+ 'v_2',
+ 'v_3',
+ 'v_5',
+ 'v_7',
+ 'v_9']
 '''
+all_colunms.sort()
+print(len(all_colunms))
 all_colunms
 
 # In[]:
 # 导出保存：
 ft.writeFile_outData(train_data_4[all_colunms], "train_data_5.csv")
-# ft.writeFile_outData(test_data_4[all_colunms], "test_data_5.csv") # test没做这些特征
+ft.writeFile_outData(test_data_4[all_colunms_no_price], "test_data_5.csv")
 
 # In[]:
+
 
 # In[]:
 
