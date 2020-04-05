@@ -28,6 +28,7 @@ from sklearn.ensemble import RandomForestRegressor,GradientBoostingRegressor
 from xgboost import XGBRegressor as XGBR
 from lightgbm import LGBMRegressor as LGBMR
 import xgboost as xgb
+import joblib
 
 from math import isnan
 import FeatureTools as ft
@@ -37,7 +38,7 @@ import Binning_tools as bt
 import StackingModels as sm
 
 # In[]:
-train_data_6 = ft.readFile_inputData('train_data_6.csv', index_col=0) 
+train_data_6 = ft.readFile_inputData('train_data_6.csv', index_col=0)
 test_data_6 = ft.readFile_inputData('test_data_6.csv', index_col=0)
 # In[]:
 train_data_6 = train_data_6.fillna(-1)
@@ -77,6 +78,11 @@ num_round = 250 # 多少次迭代/多少颗树 相当于 Sklearn的XGB中的n_es
 #类 train，可以直接导入的参数是训练数据，树的数量，其他参数都需要通过params来导入
 bst = xgb.train(param, dtrain, num_round)
 # In[]:
+path = r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\100_Data_analysis_competition\3_TianChi\1_Used_car_transaction_price_prediction\models"
+clf_name = "xgboost_native"
+joblib.dump(bst, path + "\\" + clf_name + ".dat")
+
+# In[]:
 # 接口predict
 print(r2_score(Y_data, bst.predict(dtrain))) # 0.8946301885375523
 print(MSE(Y_data, bst.predict(dtrain))) # 0.0020066018
@@ -111,14 +117,28 @@ predict_result_skl = pd.DataFrame(predict_result, columns=['predict'])
 # In[]:
 # My Stacking：
 # 模型融合中使用到的各个单模型
-clfs = [XGBR(n_estimators=250, random_state=420, silent=True, objective="reg:squarederror", learning_rate=0.13, gamma=20)
-        , LGBMR(num_leaves=63,n_estimators=100,learning_rate=0.1)
-#        , GradientBoostingRegressor(loss='ls',subsample=0.85,max_depth=5,n_estimators=100,learning_rate=0.1) # 不能处理np.nan
-        ]
+clfs = {"XGBR" : XGBR(n_estimators=250, random_state=420, silent=True, objective="reg:squarederror", learning_rate=0.13, gamma=20)
+        , "LGBMR" : LGBMR(num_leaves=63,n_estimators=100,learning_rate=0.1)
+#        , "GBDT" :  GradientBoostingRegressor(loss='ls',subsample=0.85,max_depth=5,n_estimators=100,learning_rate=0.1) # 不能处理np.nan
+        }
 # In[]:
 # 调参测试 Stacking模型：
 sm.Stacking_Regressor_customize(clfs, X_data, Y_data)
+
 # In[]:
+# load训练模型，预测真实test：
+predict_result_stacking = sm.Stacking_Regressor_customize_load(clfs, X_test, n_splits=3)
+
+# In[]:
+predict_result_stacking = pd.DataFrame(predict_result_stacking, columns=['predict'])
+
+# 测试还原 price：
+train_data_4_min_price = 2.3978952727983707
+train_data_4_max_price = 10.676669748432332
+
+predict_result_stacking['predict_minmax'] = predict_result_stacking['predict'] * (train_data_4_max_price - train_data_4_min_price) + train_data_4_min_price
+predict_result_stacking['predict_minmax_log'] = np.exp(predict_result_stacking['predict_minmax'])
+predict_result_stacking['predict_final'] = np.round(predict_result_stacking['predict_minmax_log'])
 
 
 

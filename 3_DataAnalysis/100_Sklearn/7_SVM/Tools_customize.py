@@ -436,6 +436,13 @@ kkk["a"]["aaa"] = 11
 kkk["b"] = {}
 kkk["b"]["bbb"] = 22
 {point:0 for point in kkk} # 迭代的是dict的key
+
+# 字典循环：
+for k, v in d.items():
+    print(k + ':' + v)
+# 加了索引：
+for j, clf in enumerate(clfs.items()):
+    print(j,clf[0],clf[1])
 '''
 
 
