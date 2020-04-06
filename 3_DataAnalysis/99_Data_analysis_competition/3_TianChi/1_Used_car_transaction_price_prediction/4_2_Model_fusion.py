@@ -261,6 +261,7 @@ print('Predict Stacking-LR...')
 subA_Stacking = model_lr_Stacking.predict(Strak_X_test)
 
 # In[]:
+# 预测值出现负值： 后处理，无奈之举
 subA_Stacking[subA_Stacking < 10] = 10  ## 去除过小的预测值
 
 sub = pd.DataFrame()
