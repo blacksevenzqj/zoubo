@@ -571,8 +571,39 @@ def woe_mapping_simple(data, col, y_name, bin_list, feature_woe_series):
     return pd.cut(data[col], bin_list).map(feature_woe_series)
 
 
+# In[]
 # =============================================================================
-# 特征分箱选择过程记录：
+# In[]:
+# 二、分类特征“概化”： 对分类水平过多的变量进行合并（概化）： 每个箱子中的 样本数量 接近
+# 注意： 没有像 连续特征一样 使用 WOE分箱 → IV值 的方式选取最优分箱区间，之后可以自行测试对比一下。
+# 分类特征类别过多时，一般 “概化”（分箱） 到10个类别，最多到20个类别。
+def category_feature_generalization(data, var_d, y_name, bin_num=10):
+    # 1、统计每个水平的对应目标变量的均值，和每个水平数量
+    '''
+    注意： 因为 因变量Y 是二分类，取值区间[0,1]，所以groupby后求均值mean，就是求 分类特征中的每个类别 在y==1时的频次（概率）
+    将这些类别尽量以 大致均等的方式， 以 响应率（y==1） 为序 归结为bin_num个大类。 也就是说 响应率（y==1） 相近的类别会被分为一箱。
+    '''
+    grp = data[[var_d, y_name]].groupby(var_d, as_index=False)
+    demc = grp[y_name].agg({'mean': 'mean', 'count': 'count'}).sort_values("mean")  # 以 响应率（y==1） 为序
+
+    # 2、将这些类别尽量以 大致均等的方式， 以 响应率（y==1） 为序 归结为bin_num个大类。
+    demc["count_cumsum"] = demc["count"].cumsum()
+    # 按 值的累加和 分箱
+    new_feature_name = "new_" + var_d
+    demc[new_feature_name] = demc["count_cumsum"].apply(lambda x: x // (len(data) / bin_num))  # float64
+    demc[new_feature_name] = demc[new_feature_name].astype(int)
+
+    # 3、查看 分箱特征 中 每个类别 的 count样本数 是否接近。
+    print(demc.groupby(new_feature_name)["count"].sum())
+
+    # 4、将 分类特征 “概化”（分箱）结果 映射到 原数据集，替换 分类特征原始值
+    demc_new = demc[[var_d, new_feature_name]].set_index(var_d)  # DataFrame
+    data[var_d] = data[var_d].map(demc_new[new_feature_name])
+
+
+# In[]:
+# =============================================================================
+# 连续特征分箱选择过程记录：
 '''
 代码：04094_my.py
 # In[]:
@@ -611,6 +642,7 @@ bin_woe_map = sp_bins_woe["woe"]
 ft.seriers_change_index(bin_woe_map, sp_bins_woe["bin_index"])
 tmp_train_credit["credit_score_woe"] = bt.woe_mapping_simple(tmp_train_credit, "credit_score", "target", bin_list, bin_woe_map)
 '''
+
 
 
 

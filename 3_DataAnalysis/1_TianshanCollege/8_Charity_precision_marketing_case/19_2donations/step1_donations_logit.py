@@ -27,6 +27,7 @@ from woe import WoE  # 从本地导入
 import os
 import FeatureTools as ft
 import Tools_customize as tc
+import Binning_tools as bt
 
 os.chdir(
     r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\19_2donations")
@@ -153,11 +154,15 @@ X[var_c_s].describe().T
 abs((X[var_c_s].mode().iloc[0,] - X[var_c_s].median()) /
     (X[var_c_s].quantile(0.75) - X[var_c_s].quantile(0.25)))
 # PromCntAll 0.972222 值很大，需要进一步用直方图观测。
+# In[]:
+# 自己封装的：
+temp_outlier = ft.all_con_mode_median_iqr_outlier(X, var_c_s)
 
 # In[14]:
 # 对嫌疑最大的几个变量进行可视化分析
 plt.hist(X["PromCntAll"], bins=20);
 # 从直方图中可以看出： 数据有2个最大峰值，属于正常数据，不用清洗。
+
 
 # 2.2、对分类变量的统计探索
 # 查看是否 分类的 类别过多
@@ -177,7 +182,7 @@ len(X["DemCluster"].value_counts())  # 名族共54个。
 
 # In[19]:
 '''
-1、缺失值填充：不用“多重差补”。用均值和中位数填充，用模型开发时的均值填充，而不是运行时数据的均值填充。
+1、缺失值填充：不用“多重差补”。用均值或中位数填充，用模型开发时的均值填充，而不是运行时数据的均值填充。
 2、要保证模型数据的稳定性，最担心的就是变量飘逸：模型运行时X的均值发生变化，随之预测Y的均值也发生改变，模型就不起效了。
 '''
 fill_GiftAvgCard36 = X.GiftAvgCard36.median()  # 取GiftAvgCard36的中位数作为填充值。
@@ -266,17 +271,26 @@ X.DemCluster.value_counts()
 # 对分类变量进行woe转换
 # In[31]:
 X_rep = X.copy()  # 为了降维做准备（所有分类变量转换为连续变量），X第二次赋值。 X中的DemCluster名族字段已经分箱并赋值了。
+# In[31]:
+# 自己封装的：
+model_data_1 = model_data.copy()
+bt.category_feature_generalization(model_data_1, 'DemCluster', 'TARGET_B', bin_num=10)
+model_data_1 = model_data_1[['DemCluster', 'StatusCat96NK', 'TARGET_B']]
+# In[31]:
+bins_df, iv = ft.category_feature_iv(model_data_1, 'DemCluster', 'TARGET_B')
 
 # In[32]:
 # 3.3、将 分类概化 之后的 分类变量 进行 Woe转换 为 连续变量
 # 目前有一个Scorecardpy的包可以实现自动化分箱，可以用来试用，但是还没有经过全面的测试，不可直接使用。
 for i in var_d_s:  # ['StatusCat96NK', 'DemCluster']
     X_rep[i + "_woe"] = WoE(v_type='d').fit_transform(X_rep[i], Y)
+# In[31]:
+# 自己封装的：
+ft.all_feature_woe_mapping(model_data_1, var_d_s, 'TARGET_B', use_woe_library=True)
 
 # In[33]:
 # 将woe转换的过程保存.3、4
-# 因为 WOE转换后，X_rep数据中 StatusCat96NK 和 DemCluster分类变量 的每个相同的 类别 的WOE结果值是相同的，所以要删除重复项。
-# 只是为了 给DATA_CLEAN 赋值
+# 因为 WOE转换后，X_rep数据中 StatusCat96NK 和 DemCluster分类变量 的每个相同的 类别 的WOE结果值是相同的，所以要删除重复项： 为了 给DATA_CLEAN 赋值
 StatusCat96NK_woe = X_rep[["StatusCat96NK", "StatusCat96NK_woe"]].drop_duplicates().set_index("StatusCat96NK").to_dict()
 DemCluster_woe = X_rep[["DemCluster", "DemCluster_woe"]].drop_duplicates().set_index("DemCluster").to_dict()
 

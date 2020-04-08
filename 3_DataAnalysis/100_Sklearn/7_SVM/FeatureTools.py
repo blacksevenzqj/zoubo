@@ -533,6 +533,12 @@ def get_notMissing_values(data_temp, feature):
     return data_temp[data_temp[feature] == data_temp[feature]]  # 返回全部Data
 
 
+'''
+1、缺失值填充：不用“多重差补”。用均值或中位数填充，用模型开发时的均值填充，而不是运行时数据的均值填充。
+2、要保证模型数据的稳定性，最担心的就是变量飘逸：模型运行时X的均值发生变化，随之预测Y的均值也发生改变，模型就不起效了。
+'''
+
+
 # 缺失值填充
 def missValue_all_fillna(df, nan_cols=None, fill_value=None, fillna_type=1):
     if fillna_type == 1:
@@ -747,6 +753,22 @@ def standardScaler_outlier(df, name):
     print(low_range)
     print('\nouter range (high) of the distribution:')
     print(high_range)
+
+
+# 所有 连续特征 异常值对比检测：
+def all_con_mode_median_iqr_outlier(data, var_c_s):
+    if type(var_c_s) != list:
+        raise Exception('var_c_s Type is Error, must list')
+
+    # 利用 众数 减去 中位数 的差值  除以  四分位距 来 查找是否有可能存在异常值（案例2：精准营销的两阶段预测模型3 的 9分钟）
+    # 原理： 异常值一般表现为众数； 正常值一般表现为中位数； 看两者之间的差值 / 四分位距
+    # 如果 特征有两个峰值很突出，造成temp_outlier>0.9很大，这种情况属于正常情况，不用清洗。
+    iqr = data[var_c_s].quantile(0.75) - data[var_c_s].quantile(0.25)
+    temp_outlier = abs((data[var_c_s].mode().iloc[0,] - data[var_c_s].median()) / iqr)
+    print("如果 众数 减去 中位数 的差值 除以 四分位距 的值很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析")
+    temp_outlier = temp_outlier.sort_values(ascending=False)
+    print(temp_outlier)
+    return temp_outlier
 
 
 # 离群值检测： 使用 箱型图、散点趋势图 观测离群值
@@ -2000,8 +2022,14 @@ def linear_regression_coef(model, X_train, axe, head_num=10, tail_num=10):
     plt.show()
 
 
-# WOE转换 → 计算IV值可视化
 '''
+WOE转换 → 计算IV值 用法：
+1、分类特征 直接 WOE转换 → 计算IV值 做 IV值 的 特征选择； 
+2、特征分箱选择最优分箱区间：
+2.1、连续特征 WOE转换 → 计算IV值 选择最优分箱区间；
+2.2、分类特征“概化”（再分箱） WOE转换 → 计算IV值 选择最优分箱区间（只是理论上，代码未实现这种思路。实际代码：step1_donations_logit.py）
+2.3、最后再做 IV值 的 特征选择
+
 IV值 取值区间如下：
 1、0 --- 0.02 弱
 2、0.02 --- 0.1 有价值
@@ -2013,8 +2041,8 @@ IV值 取值区间如下：
 
 # 1.1.1、分类模型（二分类）： 分类特征 与 二分类因变量Y 的相关性 （分类特征 直接求WOE → IV值）
 # 注意： 分类模型（二分类）： 1、连续变量分箱 或 2、分类变量“概化”（再分箱） 都需要经过： WOE分箱→IV值检测 确定分箱区间； 工具类： Binning_tools.py
-def category_feature_iv(data, c_f_name, y_name):  # data 包含 二分类因变量Y
-    bins_df = tc.groupby_value_counts_unstack(data, c_f_name, y_name)
+def category_feature_iv(data, category_feature_name, y_name):  # data 包含 二分类因变量Y
+    bins_df = tc.groupby_value_counts_unstack(data, category_feature_name, y_name)
     df_change_colname(bins_df, columns={0: 'count_0', 1: 'count_1'})
     bins_df["total"] = bins_df.count_0 + bins_df.count_1  # 一个箱子当中所有的样本数： 按列相加
     bins_df["percentage"] = bins_df.total / bins_df.total.sum()  # 一个箱子里的样本数 占 所有样本 的比例
@@ -2050,9 +2078,21 @@ def get_all_category_feature_ivs(data, var_d, y_name, use_woe_library=False):
     return iv_d, var_d_s
 
 
+# 1.1.3、将 WOE值 映射到 原始数据：
+def all_feature_woe_mapping(data, var_d, y_name, use_woe_library=False):
+    from woe import WoE  # 大神封装的WOE工具类： woe.py
+
+    for i in var_d:
+        if use_woe_library:
+            data[i + "_woe"] = WoE(v_type='d').fit_transform(data[i], data[y_name])
+        else:
+            bins_df, _ = category_feature_iv(data, i, y_name)
+            data[i + "_woe"] = data[i].map(bins_df['woe'])
+
+
 # 1.2、分类模型（二分类）： 连续特征 与 二分类因变量Y 的相关性 （连续特征 分箱后 求WOE → IV值） 粗略的检测一下
 # 注意： 分类模型（二分类）： 1、连续变量分箱 或 2、分类变量“概化”（再分箱） 都需要经过： WOE分箱→IV值检测 确定分箱区间； 工具类： Binning_tools.py
-# 这里直接使用了 大神封装的WOE工具类： woe.py（大概是简略的求 连续特征 分箱后 求WOE → IV值，没细看源码），连续变量分箱 还是应该按照 Binning_tools.py 中的步骤进行。
+# 这里直接使用了 大神封装的WOE工具类： woe.py（直接指定qcut=3箱 简略求 连续特征 分箱后 求WOE → IV值，没细看源码），连续变量分箱 还是应该按照 Binning_tools.py 中的步骤进行。
 def get_all_con_feature_ivs(data, var_c, y_name):
     from woe import WoE  # 大神封装的WOE工具类： woe.py
 
@@ -2061,7 +2101,10 @@ def get_all_con_feature_ivs(data, var_c, y_name):
 
     iv_c = {}
     for i in var_c:  # 自变量X（连续）
-        iv_c[i] = WoE(v_type='c', t_type='b', qnt_num=3).fit(data[i], data[y_name]).iv
+        # qnt_num=3： pd.qcut为3箱；
+        # v_type='c'： 特征类型（'c'：连续特征； 'd'：分类特征）， 默认 v_type='c'
+        # t_type='b'： 因变量类型（'c'：连续因变量； 'b'：二分类因变量）， 默认 t_type='b'
+        iv_c[i] = WoE(v_type='c', t_type='b', qnt_num=3).fit(data[i], data[y_name]).iv  # v_type='d'求分类变量的WOE→IV值
 
     iv_c = pd.Series(iv_c).sort_values(ascending=False)
     var_c_s = list(iv_c[iv_c > 0.02].index)  # 取IV值大于0.02的 连续特征
@@ -2073,14 +2116,19 @@ def get_all_con_feature_ivs(data, var_c, y_name):
 疑问：
 分类模型（二分类） 的 特征筛选：
 1、连续特征 WOE分箱 → 选择IV值>0.02： 是使用 分箱后的连续特征； 还是继续使用 原始连续特征； 还是两者都保留？
-2、分类特征“概化”（再分箱） WOE分箱 → 选择IV值>0.02： 是使用 再分箱（“概化”）后的分类特征； 还是继续使用 原始分类特征； 还是两者都保留？
+2、分类特征“概化”（再分箱） WOE分箱 → 选择IV值>0.02（只是理论上，代码未实现这种思路）： 是使用 再分箱（“概化”）后的分类特征； 还是继续使用 原始分类特征； 还是两者都保留？
 
 例子：
-1、在 step1_donations_logit.py 中经过IV值删选后，依然使用 原始特征（连续/分类）。
+1、在 step1_donations_logit.py 中经过 IV值 的特征删选后， 依然使用： 
+1.1、原始连续特征； 
+1.2、分类特征“概化”（再分箱） 后的 分类特征（原分类特征删除）
+1.3、就为了最后做： PCA主成分分析、因子分析等 需要 连续特征 的算法。
+
 2、在 2_Scorecard_model_case_My.py 逻辑评分卡业务中 所有特征都需转换为WOE值： 
 2.1、连续特征 WOE分箱 → IV值 选择最优分箱区间； 
 2.2、计算 连续特征 按最优分箱区间分箱后 每个分箱区间的WOE值，最后完成连续特征的WOE值映射；
 2.3、所有 原始特征数据 现在都映射成WOE值，进模型训练（具体看代码中的逻辑）
+2.4、最后再做 IV值 的 特征选择
 '''
 
 # In[]:
