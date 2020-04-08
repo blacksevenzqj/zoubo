@@ -28,6 +28,7 @@ import os
 import FeatureTools as ft
 import Tools_customize as tc
 import Binning_tools as bt
+import Dimensionality_reduction as dr
 
 os.chdir(
     r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\19_2donations")
@@ -322,12 +323,11 @@ rfc_fi = pd.DataFrame()
 rfc_fi["features"] = list(X.columns)
 rfc_fi["importance"] = list(rfc_model.feature_importances_)
 rfc_fi = rfc_fi.set_index("features", drop=True).sort_values(by='importance', ascending=False)  # drop=True 删除掉原始索引
-var_sort = rfc_fi
-var_sort.plot(kind="bar");
+rfc_fi.plot(kind="bar");
 
 # In[37]:
 # 以 2% 作为选取变量的阈值
-var_x = list(var_sort.importance[var_sort.importance > 0.02].index)  # 第二次变量筛选，还有13个特征
+var_x = list(rfc_fi.importance[rfc_fi.importance > 0.02].index)  # 第二次变量筛选，还有13个特征
 # StatusCat96NK 的重要性 < 0.02，剔除。
 print(var_x)
 # print(X_rep.columns)
@@ -411,8 +411,11 @@ for i in pca.explained_variance_ratio_:
     if ratioAccSum >= 0.95:  # 保留8个主成分
         ratioValue = i
         break
+    # In[]:
+# 自己封装的：
+dr.pca_test(pcadata)
 
-    # In[45]:
+# In[45]:
 # 3.6.3、SparsePCA稀疏主成分分析 + 变量压缩 选择 原始特征
 from VarSelec import Var_Select
 

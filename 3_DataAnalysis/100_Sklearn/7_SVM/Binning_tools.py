@@ -575,15 +575,15 @@ def woe_mapping_simple(data, col, y_name, bin_list, feature_woe_series):
 # =============================================================================
 # In[]:
 # 二、分类特征“概化”： 对分类水平过多的变量进行合并（概化）： 每个箱子中的 样本数量 接近
-# 注意： 没有像 连续特征一样 使用 WOE分箱 → IV值 的方式选取最优分箱区间，之后可以自行测试对比一下。
 # 分类特征类别过多时，一般 “概化”（分箱） 到10个类别，最多到20个类别。
+# 注意： 没有像 连续特征 一样 使用 WOE分箱 → IV值 的方式选取最优分箱区间，之后可以自行测试对比一下。
 def category_feature_generalization(data, var_d, y_name, bin_num=10):
     # 1、统计每个水平的对应目标变量的均值，和每个水平数量
     '''
     注意： 因为 因变量Y 是二分类，取值区间[0,1]，所以groupby后求均值mean，就是求 分类特征中的每个类别 在y==1时的频次（概率）
     将这些类别尽量以 大致均等的方式， 以 响应率（y==1） 为序 归结为bin_num个大类。 也就是说 响应率（y==1） 相近的类别会被分为一箱。
     '''
-    grp = data[[var_d, y_name]].groupby(var_d, as_index=False)
+    grp = data[[var_d, y_name]].groupby(var_d, as_index=False)  # 注意： 必须使用 as_index=False
     demc = grp[y_name].agg({'mean': 'mean', 'count': 'count'}).sort_values("mean")  # 以 响应率（y==1） 为序
 
     # 2、将这些类别尽量以 大致均等的方式， 以 响应率（y==1） 为序 归结为bin_num个大类。
