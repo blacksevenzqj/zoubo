@@ -152,6 +152,7 @@ brand_fe2 = tc.groupby_agg_oneCol(temp_data, ['brand'], 'price', agg, as_index=F
 
 # groupby的value_counts结果使用unstack()来将树状结构变成表状结构（相当于statistical_col=1或0时做两次groupby）
 # 分组中某一组统计数量为0时，value_counts维度报错（改为使用分别groupby的方式，保险一些）
+# 注意： 不能使用 as_index=True/False
 def groupby_value_counts_unstack(data, group_col, statistical_col):
     return data.groupby(group_col)[statistical_col].value_counts().unstack()
 

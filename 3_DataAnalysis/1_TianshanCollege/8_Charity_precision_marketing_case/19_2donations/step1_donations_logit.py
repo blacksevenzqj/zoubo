@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 
 from woe import WoE  # 从本地导入
 import os
+import FeatureTools as ft
+import Tools_customize as tc
 
 os.chdir(
     r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\19_2donations")
@@ -104,10 +106,12 @@ for i in var_d:  # 自变量X（分类）
     iv_d[i] = WoE(v_type='d').fit(X[i], Y).iv
 
 pd.Series(iv_d).sort_values(ascending=False)
-
 # In[8]:
 # 保留iv值较高的分类变量，> 0.02 作为阈值。
 var_d_s = ['StatusCat96NK', 'DemCluster']  # 剔除了 'DemHomeOwner', 'DemGender'
+# In[8]:
+# 自己封装的
+iv_d, var_d_s = ft.get_all_category_feature_ivs(model_data, var_d, 'TARGET_B', False)
 
 # In[9]:
 # 1.2、自变量X（连续） 与 因变量Y（分类）
@@ -117,7 +121,6 @@ for i in var_c:  # 自变量X（连续）
 
 sort_iv_c = pd.Series(iv_c).sort_values(ascending=False)
 print(sort_iv_c)
-
 # In[10]:
 # 以 2% 作为选取变量的阈值
 '''
@@ -132,6 +135,9 @@ StatusCatStarAll    0.000000
 '''
 var_c_s = list(sort_iv_c[sort_iv_c > 0.02].index)
 print(var_c_s)
+# In[10]:
+# 自己封装的
+iv_c, var_c_s = ft.get_all_con_feature_ivs(model_data, var_c, 'TARGET_B')
 
 # In[11]:
 X = model_data[var_c_s + var_d_s].copy()  # 第一次变量筛选之后 X第一次赋值（IV值筛选）

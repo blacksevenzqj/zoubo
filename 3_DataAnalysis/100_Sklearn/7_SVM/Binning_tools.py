@@ -478,6 +478,16 @@ def spearmanr_visualization(df, y_name, bins_of_col):
 
 
 # 3、IV可视化（特征选择）
+'''
+IV值 取值区间如下：
+1、0 --- 0.02 弱
+2、0.02 --- 0.1 有价值
+3、0.1 --- 0.4 很有价值
+4、0.4 --- 0.6 非常强
+5、0.6 以上 单独将变量拿出来，如果是信用评级，单独做一条规则。
+'''
+
+
 def iv_visualization(bins_of_col):
     ivlist = []  # 各变量IV
     index = []  # x轴的标签
