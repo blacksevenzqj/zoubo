@@ -1330,7 +1330,8 @@ def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
     sns.boxplot(y=feature, data=data, ax=axes[1])
     iqr = data[feature].quantile(0.75) - data[feature].quantile(0.25)
 
-    # 利用 众数 减去 中位数 的差值  除以  四分位距 来 查找是否有可能存在异常值
+    # 利用 众数 减去 中位数 的差值  除以  四分位距 来 查找是否有可能存在异常值（案例2：精准营销的两阶段预测模型3 的 9分钟）
+    # 异常值一般表现为众数； 正常值一般表现为中位数； 看两者之间的差值 / 四分位距
     temp_outlier = abs((data[feature].mode().iloc[0,] - data[feature].median()) / iqr)
     print("如果 众数 减去 中位数 的差值 除以 四分位距 的值 %s 很大，需要进一步用直方图观测，对嫌疑大的变量进行可视化分析" % temp_outlier)
 
