@@ -19,7 +19,7 @@ X5 环境：指外部经济、政策环境对客户的影响
 # In[1]:
 import pandas as pd
 import os
-os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\8_Charity_precision_marketing_case\13Dimensionality_reduction")
+os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\13Dimensionality_reduction")
 model_data = pd.read_csv("Loan_aply.csv",encoding='gbk')
 model_data.head()
 
@@ -59,12 +59,15 @@ from sklearn.decomposition import PCA
 pca=PCA()
 pca.fit(data)
 # explained_variance_： 解释方差
-print(pca.explained_variance_) #建议保留1个主成分
+print(pca.explained_variance_) # 建议保留1个主成分
 '''
 解释方差：
 [4.67909448 0.42595504 0.33051612 0.0883994  0.03159051]
 只有 第一个主成分的方差 > 1
 '''
+
+# 有5个特征，做了ZScore标准化： 方差和大概为5，那么以第一个主成分为例： 解释方差4.67909448，解释方差占比 = 4.67909448/大概为5 = 0.93
+# 和实际 解释方差占比 0.84223701 有差距， 但可以这样理解。
 
 # explained_variance_ratio_： 解释方差占比（累计解释方差占比 自己手动加）
 print(pca.explained_variance_ratio_) #建议保留1个主成分
@@ -78,25 +81,18 @@ print(pca.explained_variance_ratio_) #建议保留1个主成分
 #%%
 pca = PCA(n_components=1).fit(data) # 取一个主成分
 '''
-相当于 PX = Y，P为特征矩阵共5维（因X的特征为5维）。
-现只取一个主成分（即只取P的第一行），那么相当于将X原来的特征5维降到1维。
+pca.fit_transform(data) 就是 PX = Y， data是X、计算结果是Y： 通过 特征矩阵P（特征矩阵P共5维：因X的特征为5维）现只取一个主成分（即只取P的第一行） 将 X 降到 1维。
 '''
-newdata = pca.fit_transform(data) 
+newdata = pca.fit_transform(data) # newdata 就是 降维结果Y， 意思就是将 5维特征的X 压缩到 1维特征
 citi10_pca = model_data.join(pd.DataFrame(newdata))
 print(citi10_pca)
 
 # In[6]:
 '''
-通过主成分在每个变量上的权重的绝对值大小，确定每个主成分的代表性
+通过 主成分P 在每个特征上的权重的绝对值大小，确定每个 主成分P 的代表性
 pca.components_ 即为上面PCA模型中训练好的 特征向量矩阵P
 因上面只取了一个主成分，所以 pca.components_ 为 1行5列 （按照 特征矩阵 的格式看）
-          0
-0  0.413490
-1  0.472893
-2  0.465599
-3  0.454653
-4  0.426504
-点乘 X 就得到 降维后的数据。
+[[0.41348998 0.47289329 0.46559941 0.45465337 0.42650378]] 点乘 X^T 就得到 降维后的数据的转置。
 '''
 print(pca.components_)
 print(pd.DataFrame(pca.components_).T) # 以 列 的方式呈现
@@ -107,6 +103,6 @@ print(Dmatrix) # 结果和 pca.fit_transform(data) 相同
 
 
 Dmatrix2 = data.dot(pca.components_.T) # X · W^T
-print(Dmatrix2.T)
+print(Dmatrix2.T) # 结果和 pca.fit_transform(data) 相同
 
 
