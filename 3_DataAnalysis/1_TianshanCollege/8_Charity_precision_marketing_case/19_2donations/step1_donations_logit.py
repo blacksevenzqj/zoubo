@@ -413,7 +413,7 @@ for i in pca.explained_variance_ratio_:
         break
     # In[]:
 # 自己封装的：
-dr.pca_test(pcadata)
+dr.pca_test(pcadata, 13)
 
 # In[45]:
 # 3.6.3、SparsePCA稀疏主成分分析 + 变量压缩 选择 原始特征
