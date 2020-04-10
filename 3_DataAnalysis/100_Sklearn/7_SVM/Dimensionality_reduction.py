@@ -64,3 +64,67 @@ print(Dmatrix2.T) # 结果和 pca.fit_transform(data) 相同
 '''
 
 
+# 因子分析： 1、data必须经过 标准化（Z分数）；  2、需PCA已经确定 保留主成分个数
+# 参考代码： chapter13_2 PCA_FCA_Varselect_city10.py
+def factor_analysis(data, num_keep):
+    from fa_kit import FactorAnalysis
+    from fa_kit import plotting as fa_plotting
+
+    # 一、计算特征向量矩阵P：（因子旋转前 主成分）； 通过主成分在每个变量上的权重的绝对值大小，确定每个主成分的代表性
+    pca = PCA(n_components=num_keep).fit(data)  # PCA确定保留主成分个数
+    e_matrix = pd.DataFrame(pca.components_).T  # 以 列 的方式呈现
+    print("因子旋转前的 特征向量矩阵P：（因子旋转前 主成分）：（P已降维）")
+    print(e_matrix)
+    print("-" * 30)
+
+    # 另1： 如果是两个主成分： 可以做 因子旋转前的 两个主成分作散点图
+
+    # 二、因子分析：
+    # 1、数据导入和转换
+    fa = FactorAnalysis.load_data_samples(
+        data,  # 数据必须经过 标准化（Z分数）
+        preproc_demean=True,
+        preproc_scale=True
+    )
+
+    # 2、抽取主成分
+    fa.extract_components()
+
+    # 3、使用top_n法保，留2个主成分，上面PCA已算出
+    fa.find_comps_to_retain(method='top_n', num_keep=num_keep)  # num_keep 保留主成分个数
+
+    # 4、varimax： 使用 最大方差法 进行 因子旋转
+    fa.rotate_components(method='varimax')
+
+    # 5、因子旋转后的 因子权重（因子载荷矩阵A） 相当于 特征矩阵P
+    fas = pd.DataFrame(fa.comps["rot"])  # rot： 使用因子旋转法
+    print("因子旋转后的 因子权重（因子载荷矩阵A）：（A已降维）")
+    print(fas)
+    print("-" * 30)
+
+    # 6、第一图为主成分保留个数； 第二、三图为 因子旋转 前、后 的因子权重 可视化
+    fa_plotting.graph_summary(fa)
+    # - 说明：可以通过第三张图观看 因子旋转后 每个因子在每个变量上的权重，权重越高，代表性越强
+
+    # 另2： 如果是两个主成分： 可以做 因子旋转后的 因子权重（因子载荷矩阵A） 两个因子权重作散点图
+
+    # 7、因子得分：
+    # 到目前还没有与PCA中fit_transform类似的函数，因此只能手工计算因子得分
+    # 以下是矩阵相乘的方式计算因子得分： 因子得分 = 原始数据（n*k） · 权重矩阵(k*num_keep)
+    data = pd.DataFrame(data)  # 注意data数据需要标准化
+    fa_score = pd.DataFrame(np.dot(data, fas))
+    print("因子得分：（结果已降维）")
+    print(fa_score)
+    print("-" * 30)
+
+    # 另3： 如果是两个主成分： 可以做 因子得分的散点图
+
+    return fa_score
+
+
+
+
+
+
+
+

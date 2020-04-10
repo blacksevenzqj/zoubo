@@ -17,11 +17,12 @@ CNT_CSC 有偿服务次数
 # In[1]:
 import pandas as pd
 import os
+import Dimensionality_reduction as dr
 
 os.chdir(
     r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\13Dimensionality_reduction")
 model_data = pd.read_csv("profile_bank.csv")  # DataFrame
-data = model_data.ix[:, 'CNT_TBM':'CNT_CSC']
+data = model_data.loc[:, 'CNT_TBM':'CNT_CSC']
 
 # - 2、查看相关系数矩阵，判定做变量降维的必要性（非必须）
 # In[3]:
@@ -123,8 +124,11 @@ a = fa_score.rename(columns={0: "自动交易", 1: "柜台交易", 2: "有偿服
 profile_bank_fa = model_data.join(a)
 print(profile_bank_fa.head())
 
-
 # 因有 3个因子载荷矩阵A，需要做成3维图显示。
+
+# In[25]:
+# 自己封装的：
+fa_score_my = dr.factor_analysis(data, num_keep=3)
 
 
 # %%

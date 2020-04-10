@@ -16,6 +16,7 @@ X9	地方财政收入
 # In[1]:
 import pandas as pd
 import os
+import Dimensionality_reduction as dr
 
 os.chdir(
     r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\13Dimensionality_reduction")
@@ -115,7 +116,7 @@ fa.find_comps_to_retain(method='top_n', num_keep=2)  # num_keep 保留主成分�
 # varimax： 使用 最大方差法 进行 因子旋转
 fa.rotate_components(method='varimax')
 
-# 因子旋转后的 因子权重（因子载荷矩阵A）
+# 因子旋转后的 因子权重（因子载荷矩阵A） 相当于 特征矩阵P
 temp = pd.DataFrame(fa.comps["rot"])  # rot： 使用因子旋转法
 print(temp)
 
@@ -126,7 +127,7 @@ fa_plotting.graph_summary(fa)
 # In[19]:
 import numpy as np
 
-# 因子旋转后的 因子权重（因子载荷矩阵A）
+# 因子旋转后的 因子权重（因子载荷矩阵A） 相当于 特征矩阵P
 fas = pd.DataFrame(fa.comps["rot"])  # rot： 使用因子旋转法
 print(fas)
 # interest = ['X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'X8', 'X9']
@@ -153,7 +154,7 @@ for a, b, l in zip(x, y, label):
 plt.show()
 
 # 到目前还没有与PCA中fit_transform类似的函数，因此只能手工计算因子得分
-# 以下是矩阵相乘的方式计算因子得分：因子得分 = 原始数据（n*k） * 权重矩阵(k*num_keep)
+# 以下是矩阵相乘的方式计算因子得分：因子得分 = 原始数据（n*k） · 权重矩阵(k*num_keep)
 data = pd.DataFrame(data)  # 注意data数据需要标准化
 fa_score = pd.DataFrame(np.dot(data, fas))
 print(fa_score)
@@ -188,6 +189,10 @@ for a, b, l in zip(x, y, label):
     plt.text(a, b + 0.1, '%s.' % l, ha='center', va='bottom', fontsize=14)
 
 plt.show()
+
+# In[49]:
+# 自己封装的：
+fa_score_my = dr.factor_analysis(data, num_keep=2)
 
 # %%
 '''
