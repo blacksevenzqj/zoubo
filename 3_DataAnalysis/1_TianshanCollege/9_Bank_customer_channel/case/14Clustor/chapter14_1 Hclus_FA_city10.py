@@ -16,7 +16,8 @@ X9	地方财政收入
 # 第一步：手动测试主成分数量
 # 1.1、引入数据
 import os
-os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\9_Bank_customer_channel\case\14Clustor")
+import Dimensionality_reduction as dr
+os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\9_Bank_customer_channel\case\14Clustor")
 
 # In[1]:
 import pandas as pd
@@ -87,8 +88,10 @@ fa_plotting.graph_summary(fa)
 import numpy as np
 
 fas = pd.DataFrame(fa.comps["rot"])
-data = pd.DataFrame(data)
 score = pd.DataFrame(np.dot(data, fas))
+# In[19]:
+# 自己封装的：
+fa_score = dr.factor_analysis(data, 2)
 
 
 
@@ -121,9 +124,9 @@ import scipy.cluster.hierarchy as sch
 # 1、层次聚类：AGNES
 
 # 1.1、生成点与点之间的距离矩阵,这里用的欧氏距离:（如：[4,2]的坐标点矩阵 计算后 得到是一维向量，不是距离矩阵形式）
-#disMat = sch.distance.pdist(citi10_fa[['Gross','Avg']],'euclidean') 
+#disMat = sch.distance.pdist(citi10_fa[['Gross','Avg']],'euclidean')
 # 进行层次聚类:
-#Z = sch.linkage(disMat,method='ward') 
+#Z = sch.linkage(disMat,method='ward')
 
 # 1.2、直接传入 坐标点数据（矩阵）
 Z = sch.linkage(citi10_fa[['Gross','Avg']], metric='euclidean', method='ward')
@@ -132,7 +135,13 @@ Z = sch.linkage(citi10_fa[['Gross','Avg']], metric='euclidean', method='ward')
 P = sch.dendrogram(Z,labels=['辽宁','山东','河北','天津','江苏','上海','浙江','福建','广东','广西'])
 plt.savefig('plot_dendrogram1.png')
 
-cluster = sch.fcluster(Z, t=1) 
+cluster = sch.fcluster(Z, t=1)
+
+# In[49]:
+dr.hierarchical_clustering(data, 2, {0: "Gross", 1: "Avg"}, model_data['AREA'].values)
+# In[49]:
+type(model_data['AREA'].values)
+#type(list())
 
 
 
