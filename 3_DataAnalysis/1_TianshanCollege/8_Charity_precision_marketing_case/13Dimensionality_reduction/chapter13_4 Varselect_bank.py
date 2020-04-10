@@ -7,12 +7,12 @@ Created on Mon Aug 12 19:53:24 2019
 
 # In[66]:
 import os
-os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\8_Charity_precision_marketing_case\13Dimensionality_reduction")
+os.chdir(r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\8_Charity_precision_marketing_case\13Dimensionality_reduction")
 
 import pandas as pd
 
 model_data = pd.read_csv("profile_bank.csv") # (100000, 4)
-data = model_data.ix[ :,'CNT_TBM':'CNT_CSC'] # DataFrame
+data = model_data.loc[ :,'CNT_TBM':'CNT_CSC'] # DataFrame
 k=3
 alphaMax = 5
 alphastep=0.2
@@ -96,7 +96,7 @@ for id in var_list:
     if id not in news_ids:
         news_ids.append(id)
 print(news_ids)
-orgdata = model_data.ix[:, 'CNT_TBM':'CNT_CSC']
+orgdata = model_data.loc[:, 'CNT_TBM':'CNT_CSC']
 data_vc = orgdata.iloc[:, np.array(news_ids).reshape(len(news_ids))]
 
 
