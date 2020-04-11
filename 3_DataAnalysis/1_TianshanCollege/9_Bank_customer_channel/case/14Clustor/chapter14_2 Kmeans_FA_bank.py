@@ -4,6 +4,7 @@
 # 第一步：手动测试主成分数量
 # 1、引入数据
 import os
+import Dimensionality_reduction as dr
 
 """
 CNT_TBM 柜台交易次数	
@@ -12,7 +13,7 @@ CNT_POS POS机交易次数
 CNT_CSC 有偿服务次数
 """
 os.chdir(
-    r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\TianshanCollege\9_Bank_customer_channel\case\14Clustor")
+    r"E:\soft\Anaconda\Anaconda_Python3.6_code\data_analysis\1_TianshanCollege\9_Bank_customer_channel\case\14Clustor")
 
 # In[1]:
 import pandas as pd
@@ -78,7 +79,7 @@ fa_plotting.graph_summary(fa)
 # In[13]:
 import numpy as np
 
-fas = pd.DataFrame(fa.comps["rot"])
+fas = pd.DataFrame(fa.comps["rot"])  # 默认就以 列 的方式呈现
 data = pd.DataFrame(data)
 score = pd.DataFrame(np.dot(data, fas))
 
@@ -86,7 +87,21 @@ score = pd.DataFrame(np.dot(data, fas))
 # In[14]:
 fa_scores = score.rename(columns={0: "ATM_POS", 1: "TBM", 2: "CSC"})
 fa_scores.head()
+# In[]:
+import FeatureTools as ft
+import matplotlib.pyplot as plt
 
+# In[]:
+f, axes = plt.subplots(1, 2, figsize=(23, 8))
+ft.con_data_distribution(fa_scores, 'ATM_POS', axes, fit_type=1, box_scale=1.5)  # 右偏
+# In[]:
+f, axes = plt.subplots(1, 2, figsize=(23, 8))
+ft.con_data_distribution(fa_scores, 'TBM', axes, fit_type=1, box_scale=1.5)
+# In[]:
+f, axes = plt.subplots(1, 2, figsize=(23, 8))
+ft.con_data_distribution(fa_scores, 'CSC', axes, fit_type=1, box_scale=1.5)
+
+# In[]:
 # 第四步：使用因子得分进行k-means聚类
 # 4.1、k-means聚类的第一种方式：不进行变量分布的正态转换--用于寻找异常值
 # - 1、查看变量的偏度
@@ -98,6 +113,10 @@ for i in var:
 
 skew = pd.Series(skew_var).sort_values(ascending=False)
 print(skew)
+# In[15]:
+skew, kurt, var_x_ln = ft.skew_distribution_test(fa_scores)
+# In[15]:
+var_x_ln.tolist()
 
 # - 2、进行k-means聚类
 # In[16]:
@@ -139,6 +158,16 @@ for i in var:
 skew = pd.Series(skew_var).sort_values(ascending=False)
 print(skew)
 
+# In[]:
+f, axes = plt.subplots(1, 2, figsize=(23, 8))
+ft.con_data_distribution(fa_scores_trans, 'ATM_POS', axes, fit_type=1, box_scale=1.5)  # 右偏
+# In[]:
+f, axes = plt.subplots(1, 2, figsize=(23, 8))
+ft.con_data_distribution(fa_scores_trans, 'TBM', axes, fit_type=1, box_scale=1.5)
+# In[]:
+f, axes = plt.subplots(1, 2, figsize=(23, 8))
+ft.con_data_distribution(fa_scores_trans, 'CSC', axes, fit_type=1, box_scale=1.5)
+
 # - 2、进行k-means聚类
 # In[21]:
 from sklearn.cluster import KMeans
@@ -159,6 +188,7 @@ model_data_l.head()
 model_data_l.clustor.value_counts().plot(kind='pie')
 
 # In[31]:
+# 使用 决策树 对 KMeans结果进行验证（叶子分的不干净，则再重新调整KMeans的k值，再次得到结果 → 决策树验证 ...）
 data1 = model_data.loc[:, 'CNT_TBM':'CNT_CSC']  # data1 为 原始数据
 
 from sklearn import tree
@@ -182,4 +212,12 @@ dot_data = tree.export_graphviz(clf,
 graph = pydotplus.graph_from_dot_data(dot_data)
 Image(graph.create_png())  # 每一个分叉节点，左边是True，右边是False
 
-# %%
+# In[49]:
+fa_score = dr.kmeans_roughly_average_categories_part1(data, 3, {0: "ATM_POS", 1: "TBM", 2: "CSC"}, model_data, 3)
+# In[49]:
+# 需要不停调整n_clusters： KMeans的k值，从而让 决策树 验证 KMeans聚类结果
+dr.kmeans_roughly_average_categories_part2(model_data, fa_score, 4, ['CNT_TBM', 'CNT_ATM', 'CNT_POS', 'CNT_CSC'])
+
+# In[49]:
+
+

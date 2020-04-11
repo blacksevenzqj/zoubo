@@ -1551,9 +1551,7 @@ def normal_comprehensive(data, skew_limit=1):  # skew_limit=0.75
         logarithm_nagative(temp_data, var_x_ln, 2)
 
         normal_distribution_test(temp_data)
-        skew, kurt = skew_distribution_test(temp_data, skew_limit)
-
-        var_x_ln = skew.index[skew > skew_limit]  # skew的索引 --- data的列名
+        skew, kurt, var_x_ln = skew_distribution_test(temp_data, skew_limit)
         print(var_x_ln, len(var_x_ln))
         for i, var in enumerate(var_x_ln):
             f, axes = plt.subplots(1, 2, figsize=(23, 8))
