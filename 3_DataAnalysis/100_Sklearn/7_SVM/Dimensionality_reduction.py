@@ -164,8 +164,12 @@ def hierarchical_clustering(data, num_keep, columns, labels):  # data为只做�
 
 '''
 一、快速聚类的两种运用场景 K-Means 聚类要点：
-1、发现异常情况： 如果不对数据进行任何形式的转换，只是经过中心标准化或级差标准化就进行快速聚类，会根据数据分布特征得到聚类结果。这种聚类会将极端数据聚为几类。方法一会演示这种情况。这种方法适用于统计分析之前的异常值剔除，对异常行为的挖掘，比如监控银行账户是否有洗钱行为、监控POS机是有从事套现、监控某个终端是否是电话卡养卡客户等等。
-2、将个案数据做划分： 出于客户细分目的的聚类分析一般希望聚类结果为大致平均的几大类，因此需要将数据进行转换，比如使用原始变量的百分位秩、 Turkey正态评分、对数转换等等。在这类分析中数据的具体数值并没有太多的意义，重要的是相对位置。方法二会演示这种情况。这种方法适用场景包括客户消费行为聚类、客户积分使用行为聚类等等。
+1、发现异常情况： 如果不对数据进行任何形式的转换，只是经过中心标准化或级差标准化就进行快速聚类，会根据数据分布特征得到聚类结果。
+这种聚类会将极端数据聚为几类。方法一会演示这种情况。这种方法适用于统计分析之前的异常值剔除，对异常行为的挖掘，比如监控银行账户是否有洗钱行为、监控POS机是有从事套现、监控某个终端是否是电话卡养卡客户等等。
+
+2、将个案数据做划分： 出于客户细分目的的聚类分析一般希望聚类结果为大致平均的几大类，因此需要将数据进行转换，
+比如使用原始变量的百分位秩、 Turkey正态评分、对数转换等等。在这类分析中数据的具体数值并没有太多的意义，重要的是相对位置。
+方法二会演示这种情况。这种方法适用场景包括客户消费行为聚类、客户积分使用行为聚类等等。
 '''
 
 
@@ -181,7 +185,7 @@ def kmeans_roughly_average_categories_part1(data, num_keep, columns, original_da
     fa_score = factor_analysis(data, num_keep)  # 因子得分（DataFrame）
     ft.df_change_colname(fa_score, columns)
 
-    # 1、初始的聚类： 只是为了先看KMeans的聚类效果：
+    # 1、初始的聚类： （查看 因子得分 的聚类情况，反应了 数据的真实 分布情况）
     kmeans = KMeans(n_clusters=init_n_clusters)  # MiniBatchKMeans()分批处理
     # kmeans = cluster.KMeans(n_clusters=3, init='random', n_init=1)
     result = kmeans.fit(fa_score)  # result 为 因子分析结果 → k-Means的结果
@@ -210,6 +214,8 @@ def kmeans_roughly_average_categories_part1(data, num_keep, columns, original_da
 # 使用 因子得分 作为特征 进 KMeans 得到聚类结果  →  原始特征（做因子分析的特征列） + 聚类结果作为因变量Y（多分类） 进 决策树 训练， 看叶子节点分类情况
 # dr.kmeans_roughly_average_categories_part2(model_data, fa_score, 4, ['CNT_TBM', 'CNT_ATM', 'CNT_POS', 'CNT_CSC'])
 def kmeans_roughly_average_categories_part2(original_data, fa_score, n_clusters, columns):  # columns为做 因子分析 的 特征列
+
+    # 2、再聚类： 如果 因子得分 进行了 Tukey正态分布打分（聚类模型）（幂变换：隐射到 正太分布），那么业务就类似于： "2" 客户细分目的的聚类分析一般希望聚类结果为大致平均的几大类 的目标
     kmeans = KMeans(n_clusters=n_clusters)  # MiniBatchKMeans()分批处理
     # kmeans = cluster.KMeans(n_clusters=3, init='random', n_init=1)
     result = kmeans.fit(fa_score)  # result 为 因子分析结果 经过 变量分布正太转换后 k-Means的结果
