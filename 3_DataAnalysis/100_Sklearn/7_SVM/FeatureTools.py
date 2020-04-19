@@ -1322,6 +1322,8 @@ def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
     (mu, sigma) = scipy.stats.norm.fit(data[feature])  # mu均值、sigma标准差： 也就是图中黑色线所示标准正太分布
     print('\n mu = {:.2f} and sigma = {:.2f}\n'.format(mu, sigma))
 
+    # 教程上说： 1、落在 均值±1倍标准差内概率 69%； 2、落在 均值±1.96倍标准差内概率 95%； 3、落在 均值±2.58倍标准差内概率 99%
+
     # mu - sigma  →  mu + sigma = 68%
     axes[0].plot((mu - sigma, mu - sigma), (0, 1), c='r', lw=1.5, ls='--', alpha=0.3)  # 68%
     axes[0].plot((mu + sigma, mu + sigma), (0, 1), c='r', lw=1.5, ls='--', alpha=0.3)
