@@ -349,6 +349,31 @@ t2['max_date_received'] = t2.date_received.apply(lambda s:max([pd.Timestamp(d) f
 t2['min_date_received'] = t2.date_received.apply(lambda s:min([pd.Timestamp(d) for d in s.split(':')]))
 '''
 
+# In[]:
+# ==================================时间分段=================================
+# In[]:
+'''
+# 代码在：1_xiecheng_customer_churn包下代码中
+time_period = [(0,(0,5)), (1,(5,6)), (2,(6,8)), (3,(8,11)), (4,(11,13)), (5,(13,17)), (6,(17,18)), (7,(18,24))]
 
+def time_segmentation(x):
+    midle_index = len(time_period) // 2
+    start = time_period[midle_index][1][0]
+    end = time_period[midle_index][1][1]
+    if x >= start and x < end:
+        return time_period[midle_index][0]
+    elif x >= end:
+        for i in range(midle_index+1, len(time_period)):
+            start = time_period[i][1][0]
+            end = time_period[i][1][1]
+            if x >= start and x < end:
+                return time_period[i][0]
+    elif x < start:
+        for i in range(midle_index-1, -1, -1):
+            start = time_period[i][1][0]
+            end = time_period[i][1][1]
+            if x >= start and x < end:
+                return time_period[i][0]
 
-
+train_data['h_bins'] = train_data['h'].map(time_segmentation)
+'''

@@ -452,12 +452,12 @@ def missing_values_table(df, customize_axis=0, percent=None, del_type=1):
 
     if customize_axis == 0 and percent is not None:
         if del_type == 1:  # 删特征列
-            temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
+            temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] >= percent].index.tolist()
             df_nm = df.copy()
             df_nm.drop(temp_drop_col, axis=1, inplace=True)
             return mis_val_table_ren_columns, df_nm
         elif del_type == 2:  # 删数据行
-            temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
+            temp_drop_col = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] >= percent].index.tolist()
             df_nm = df.copy()
             for i in temp_drop_col:
                 df_nm.drop(df_nm.loc[df_nm[i].isnull()].index, axis=0, inplace=True)
@@ -467,7 +467,7 @@ def missing_values_table(df, customize_axis=0, percent=None, del_type=1):
         else:
             return mis_val_table_ren_columns
     elif customize_axis == 1 and percent is not None:
-        temp_drop_row = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] > percent].index.tolist()
+        temp_drop_row = mis_val_table_ren_columns[mis_val_table_ren_columns.iloc[:, 1] >= percent].index.tolist()
         df_nm = df.copy()
         df_nm.drop(temp_drop_row, axis=0, inplace=True)
         # 恢复索引（删除行数据 需要恢复索引）
@@ -825,6 +825,15 @@ def delete_outliers(X_Seriers, X_name, X_value, y_Seriers, y_name, y_value):
         y_Seriers.drop(del_index, axis=0, inplace=True)
         # 恢复索引
         recovery_index([X_Seriers, y_Seriers])
+
+
+# In[]:
+# 异常值检测：
+# 最小值<0的特征
+def exception_values(data):
+    temp_describe = data.describe().T
+    less_zero_cols = temp_describe[temp_describe['min'] < 0].index.tolist()
+    return less_zero_cols
 
 
 # In[]:
@@ -1314,8 +1323,10 @@ def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
         distplot_title = 'Johnson SU'
 
     sns.set()  # 切换到seaborn的默认运行配置
-    # sns.distplot直方图（默认带KDE）
-    sns.distplot(data[feature], bins=100, fit=fit_function, color='green', ax=axes[0])  # rug=True分布观测条显示
+    # sns.distplot直方图（默认带KDE）， rug=True分布观测条显示
+    y_values = [h.get_height() for h in
+                sns.distplot(data[feature], bins=100, kde=True, fit=fit_function, color='green', ax=axes[0]).patches]
+    y_max = np.max(y_values)
 
     # Get the fitted parameters used by the function
     # 现在只能以 norm正太分布方式 计算均值 和 标准差（其他两个分布，暂时没有查询到怎么计算）
@@ -1325,25 +1336,25 @@ def con_data_distribution(data, feature, axes, fit_type=1, box_scale=1.5):
     # 教程上说： 1、落在 均值±1倍标准差内概率 69%； 2、落在 均值±1.96倍标准差内概率 95%； 3、落在 均值±2.58倍标准差内概率 99%
 
     # mu - sigma  →  mu + sigma = 68%
-    axes[0].plot((mu - sigma, mu - sigma), (0, 1), c='r', lw=1.5, ls='--', alpha=0.3)  # 68%
-    axes[0].plot((mu + sigma, mu + sigma), (0, 1), c='r', lw=1.5, ls='--', alpha=0.3)
+    axes[0].plot((mu - sigma, mu - sigma), (0, y_max), c='r', lw=1.5, ls='--', alpha=0.3)  # 68%
+    axes[0].plot((mu + sigma, mu + sigma), (0, y_max), c='r', lw=1.5, ls='--', alpha=0.3)
 
     # mu - 2sigma  →  mu + 2sigma = 95%
-    axes[0].plot((mu - 2 * sigma, mu - 2 * sigma), (0, 1), c='black', lw=1.5, ls='--', alpha=0.3)  # 95%
-    axes[0].plot((mu + 2 * sigma, mu + 2 * sigma), (0, 1), c='black', lw=1.5, ls='--', alpha=0.3)
+    axes[0].plot((mu - 2 * sigma, mu - 2 * sigma), (0, y_max), c='black', lw=1.5, ls='--', alpha=0.3)  # 95%
+    axes[0].plot((mu + 2 * sigma, mu + 2 * sigma), (0, y_max), c='black', lw=1.5, ls='--', alpha=0.3)
 
     # mu - 3sigma  →  mu + 3sigma = 99%
-    axes[0].plot((mu - 3 * sigma, mu - 3 * sigma), (0, 1), c='b', lw=1.5, ls='--', alpha=0.3)  # 99%
-    axes[0].plot((mu + 3 * sigma, mu + 3 * sigma), (0, 1), c='b', lw=1.5, ls='--', alpha=0.3)
+    axes[0].plot((mu - 3 * sigma, mu - 3 * sigma), (0, y_max), c='b', lw=1.5, ls='--', alpha=0.3)  # 99%
+    axes[0].plot((mu + 3 * sigma, mu + 3 * sigma), (0, y_max), c='b', lw=1.5, ls='--', alpha=0.3)
 
     # mu - 5sigma  →  mu + 5sigma = 5倍标准差之外的数据
     hist_left_more_index = data.loc[data[feature] < mu - 5 * sigma, feature].index
     hist_right_more_index = data.loc[data[feature] > mu + 5 * sigma, feature].index
 
     if len(hist_left_more_index) > 0:
-        axes[0].plot((mu - 5 * sigma, mu - 5 * sigma), (0, 1), c='y', lw=1.5, ls='--', alpha=0.3)  # 5倍标准差之外的数据
+        axes[0].plot((mu - 5 * sigma, mu - 5 * sigma), (0, y_max), c='y', lw=1.5, ls='--', alpha=0.3)  # 5倍标准差之外的数据
     if len(hist_right_more_index) > 0:
-        axes[0].plot((mu + 5 * sigma, mu + 5 * sigma), (0, 1), c='y', lw=1.5, ls='--', alpha=0.3)
+        axes[0].plot((mu + 5 * sigma, mu + 5 * sigma), (0, y_max), c='y', lw=1.5, ls='--', alpha=0.3)
     # Now plot the distribution
     axes[0].legend(['Normal dist. ( $\mu=$ {:.2f} and $\sigma=$ {:.2f} )'.format(mu, sigma)],
                    loc='best')
