@@ -217,6 +217,22 @@ def get_graph_from_data(input_file, split_char="::", score_thr=3.0, title_num=No
     return graph
 
 
+# 读取Mysql的数据源：
+'''
+ValueError: unsupported format character 'Y' (0x59) at index 148
+产生原因:因为python执行的sql中存在类似DATE_FORMAT(MAX(CREATE_TIME), ‘%Y-%m-%d’) 的写法,其中%Y与python的参数%s冲突。
+解决方法:将DATE_FORMAT(MAX(CREATE_TIME), ‘%Y-%m-%d’) 修改为DATE_FORMAT(MAX(CREATE_TIME), ‘%%Y-%%m-%%d’) 即可。
+'''
+
+
+def read_from_mysql(sql, user="root", passwd="root", host="127.0.0.1", port="3306", db_name="feiji", charset="utf8mb4"):
+    from sqlalchemy import create_engine
+    connect_info = 'mysql+pymysql://{0}:{1}@{2}:{3}/{4}?charset={5}'.format(user, passwd, host, port, db_name, charset)
+    engine = create_engine(connect_info)
+    df = pd.read_sql(sql, engine)
+    return df
+
+
 # 合并数据源（列向）
 def consolidated_data_col(train_X, train_y, axis=1):
     return pd.concat([train_X, train_y], axis=axis)
