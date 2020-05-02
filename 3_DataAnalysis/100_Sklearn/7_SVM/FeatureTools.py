@@ -1123,6 +1123,18 @@ def category_quantity_statistics_value_counts(data, category_index, continuous_i
                 print("=======================================================================")
 
 
+def category_quantity_statistics_simple(data, features):
+    if type(features) != list:
+        raise Exception('features Type is Error, must list')
+
+    def unique_concat(x):
+        l = pd.Series([])
+        a = pd.Series(np.unique(x))
+        return pd.concat([l, a])
+
+    print(data[features].apply(unique_concat, axis=0))
+
+
 # In[]:
 # ================================基础操作 结束==============================
 
