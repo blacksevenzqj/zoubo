@@ -44,11 +44,17 @@ def merge_test():
 
 
 # https://www.cnblogs.com/nxf-rabbit75/p/10475320.html
+#  两个DataFrame连接：
 def concat(objs):
     # ignore_index： 默认False，当为True时： 1、合并之后重置索引； 2、如果遇到两张表的列字段本来就不一样，但又想将两个表合并，其中无效的值用nan来表示。那么可以使用ignore_index来实现。
     # keys： 默认None，用来给合并后的表增加key来区分不同的表数据来源 （索引会多出一列 数据来源列）
     return pd.concat(objs, axis=0, join='outer', join_axes=None, ignore_index=False, keys=None, levels=None, names=None,
                      verify_integrity=False)
+
+
+# DataFrame连接Seriers：
+def append(dataframe, seriers):
+    return dataframe.append(seriers, ignore_index=True)
 
 
 # 集合去重合并为一维列表：
@@ -96,7 +102,7 @@ def groupby_agg(data, group_cols, aggs, as_index=True):  # group_keys在普通gr
     # aggs中必须是 DataFrame中存在的、 待统计的特征。
     data_group = data.groupby(group_cols, as_index=as_index).agg(aggs)
     # '_'.join(col).strip()连接列名： ('item_id', '') 和 ('rating', 'mean') 得到： item_id_, rating_mean
-    data_group.columns = ['_'.join(col).strip() for col in data_group.columns.values]
+    #    data_group.columns = ['_'.join(col).strip() for col in data_group.columns.values]
     return data_group
 
 
@@ -298,13 +304,14 @@ def special_groupby_example(data):
 # https://blog.csdn.net/bqw18744018044/article/details/80015840
 # index相当于分组key； margins总计
 def pivot_table_statistical(df, statistical_cols, index=None, columns=None, aggfunc='mean', margins=True):
-    #    pd.pivot_table(df, index=['产地','类别'], values=['价格', '数量'], aggfunc=np.mean) # values 相当于 statistical_cols 待统计字段； index行名称； columns列名称
-    return df.pivot_table(statistical_cols, index=index, columns=columns, aggfunc=aggfunc, margins=margins)
+    #    pd.pivot_table(df, index=['产地','类别'], values=['价格', '数量'], aggfunc=np.mean) # values 待统计字段； index行名称； columns列名称
+    return df.pivot_table(statistical_cols, index=index, columns=columns, aggfunc=aggfunc,
+                          margins=margins)  # statistical_cols 相当于 values 待统计字段
 
 
 # 交叉表(crossTab)： 相当于 df.groupby([col1, col2])[X].count() 展开显示
 '''
-sub_sch=pd.crosstab(dat0.subway,dat0.school)
+sub_sch = pd.crosstab(dat0.subway,dat0.school)
 sub_sch1 = sub_sch.div(sub_sch.sum(axis=1), axis = 0) # sub_sch.sum(axis=1) 以 行索引subway 是否有地铁为分母
 sub_sch2 = sub_sch.div(sub_sch.sum(axis=0), axis = 1) # sub_sch.sum(axis=0) 以 列索引school 是否是学区房为分母
 '''
