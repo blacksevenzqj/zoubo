@@ -111,7 +111,14 @@ print(result, type(result))
 
 # In[]:
 # 三、Pandas时间模块
-# pd.to_datetime方法可以整个特征一起修改，且 Python的原始None类型值，自动转换为 类型为<class 'pandas._libs.tslib.NaTType'>，值为 pd.NaT。
+'''
+1、pd.to_datetime方法可以 将DataFrame的一个特征一并修改，且 Python的原始None类型值，自动转换为 <class 'pandas._libs.tslib.NaTType'>类型，值为 pd.NaT。
+2.1、DataFrame的 PD时间特征 .dtype 或 .dtypes 为 datetime64[ns]。
+2.2、每个元素 非空值得类型为 <class 'pandas._libs.tslibs.timestamps.Timestamp'>；空值(pd.NaT) 类型为 <class 'pandas._libs.tslibs.nattype.NaTType'>
+2.3、判断 DataFrame的 PD时间特征 为 datetime64[ns]：
+col_type = df[col].dtype
+if col_type != object and col_type != 'datetime64[ns]':  必须以字符串形式 'datetime64[ns]' 给出，且要使用 =或!= 符号进行比较。
+'''
 print(pd.Timestamp.now())
 print(pd.Timestamp.today())
 # In[]:

@@ -391,7 +391,7 @@ def reduce_mem_usage(df, is_set_category=False):
     for col in df.columns:
         col_type = df[col].dtype
 
-        if col_type != object:
+        if col_type != object and col_type != 'datetime64[ns]':
             c_min = df[col].min()
             c_max = df[col].max()
             if str(col_type)[:3] == 'int':
