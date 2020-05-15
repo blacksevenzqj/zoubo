@@ -111,6 +111,7 @@ print(result, type(result))
 
 # In[]:
 # 三、Pandas时间模块
+# pd.to_datetime方法可以整个特征一起修改，且 Python的原始None类型值，自动转换为 类型为<class 'pandas._libs.tslib.NaTType'>，值为 pd.NaT。
 print(pd.Timestamp.now())
 print(pd.Timestamp.today())
 # In[]:
