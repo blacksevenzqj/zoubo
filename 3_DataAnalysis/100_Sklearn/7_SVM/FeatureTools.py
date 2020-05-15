@@ -61,8 +61,8 @@ NAN、na
 2.1.1.1、自动转换为pd.lib.NaT 的输入字符串：
 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT
 则整个 字段Seriers类型 为datetime64[ns]； 日期元素类型为<class 'pandas._libs.tslib.Timestamp'>；
-其中的 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>也就是pd.lib.NaT。
-只能使用 元素 is pd.lib.NaT 来判断； 不能使用 元素 is np.nan 来判断（pd.lib.NaT 与 np.nan 不是同一个类型）
+其中的 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>，值为 pd.NaT。
+只能使用 元素 is pd.NaT 来判断； 不能使用 元素 is np.nan 来判断（pd.NaT 与 np.nan 不是同一个类型）
 注意：能使用 DataFrame.isnull().sum() 检测。
 
 2.1.1.2、如果 输入中包含 非日期格式字符串：（PD转换日期失败）
