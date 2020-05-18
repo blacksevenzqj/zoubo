@@ -78,7 +78,9 @@ def set_union(seriers1, seriers2, reverse=False):
 # https://www.jianshu.com/p/42f1d2909bb6
 # https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
 
-# groupby() 之后直接 sum()： 得到分组后各特征求和的数据矩阵（sum只是一个示例），可数据是非标准的DataFrame，必须进行reset_index()变为标准的DataFrame
+# 1、groupby() 之后直接 sum()： 得到分组后各特征求和的数据矩阵（sum只是一个示例），可数据是非标准的DataFrame，必须进行reset_index()变为标准的DataFrame
+# 2、xxx.groupby(['f1', 'f2'], as_index=False).size()： 当直接使用.size()统计时： as_index关键词失效（无论True/False），分组特征f1、f2都将作为索引。
+# 3、xxx.groupby('f1').groups： 得到的是 dict 字典类型： key是分组特征f1； value是 根据分组特征f1 分组后 得到集合 的 原索引数组。
 def groupby_sum(data, group_cols, as_index=True):
     if type(group_cols) != list:
         raise Exception('group_cols Type is Error, must list')

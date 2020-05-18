@@ -58,7 +58,7 @@ NAN、na
 2、日期类型 导入：
 2.1、Excel的 时间字段 单元格格式 为 日期格式 或 自定义日期格式。
 2.1.1、使用parse_dates=['auth_time']方式指定日期字段，且导入日期数据必须为 字符串时间类型。不能使用dtype={"auth_time":datetime.datetime或pd.Timestamp}方式（无效）。
-2.1.1.1、自动转换为pd.lib.NaT 的输入字符串：
+2.1.1.1、自动转换为pd.NaT 的输入字符串：
 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT
 则整个 字段Seriers类型 为datetime64[ns]； 日期元素类型为<class 'pandas._libs.tslib.Timestamp'>；
 其中的 空单元格、NA、nan、NaN、null、NULL、NAN、NaT、nat、NAT 元素类型全部变为<class 'pandas._libs.tslib.NaTType'>，值为 pd.NaT。
